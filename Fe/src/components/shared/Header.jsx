@@ -1,22 +1,49 @@
 // Migrated from: index.html, lines 57-194; cart.html lines 55-197
 // HTML->JSX conversion: class -> className, for -> htmlFor, img self-closing, Link integration, i18n support
-import { Link, useLocation } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useCartContext } from "../../providers/CartContext";
+import { Link, useLocation } from "react-router-dom";
 import { useStickyHeader } from "../../hooks/useStickyHeader";
+import { useAuth } from "../../providers/AuthContext";
+import { useCartContext } from "../../providers/CartContext";
 import LanguageSwitcher from "../ui/LanguageSwitcher";
 
 export const Header = () => {
   const { openCart, toggleMobileMenu } = useCartContext();
+  const { user, isAdmin, openAuthModal, logout } = useAuth();
   const { t } = useTranslation();
   const isSticky = useStickyHeader(130);
   const location = useLocation();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const userMenuRef = useRef(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setShowUserMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const isCurrent = (path) => {
     return (
       location.pathname === path ||
       (path === "/" && location.pathname === "/index.html")
     );
+  };
+
+  const handleUserClick = (e) => {
+    e.preventDefault();
+    if (user) {
+      setShowUserMenu((prev) => !prev);
+    } else {
+      openAuthModal("login");
+    }
   };
 
   return (
@@ -42,24 +69,76 @@ export const Header = () => {
           <div className="col-lg-4 col-md-6 col-6">
             <div className="header-end">
               <div className="header-buttons d-flex align-items-center">
-                <Link to="/" className="button-block">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="19"
-                    height="18"
-                    viewBox="0 0 19 18"
-                    fill="none"
+                <div className="user-menu-wrapper" ref={userMenuRef}>
+                  <button
+                    type="button"
+                    className="button-block border-0 bg-transparent p-0"
+                    onClick={handleUserClick}
+                    aria-label={user ? "User Menu" : "Sign In / Register"}
+                    title={
+                      user
+                        ? `${user.fullName} (${user.role})`
+                        : "Sign In / Register"
+                    }
                   >
-                    <path
-                      d="M9.71387 0C7.09687 0 4.96777 2.1291 4.96777 4.74609C4.96777 7.36309 7.09687 9.49219 9.71387 9.49219C12.3309 9.49219 14.46 7.36309 14.46 4.74609C14.46 2.1291 12.3309 0 9.71387 0ZM9.71387 8.4375C7.67843 8.4375 6.02246 6.78154 6.02246 4.74609C6.02246 2.71065 7.67843 1.05469 9.71387 1.05469C11.7493 1.05469 13.4053 2.71065 13.4053 4.74609C13.4053 6.78154 11.7493 8.4375 9.71387 8.4375Z"
-                      fill="#1E1F20"
-                    />
-                    <path
-                      d="M15.6189 12.5928C14.3195 11.2734 12.597 10.5469 10.7686 10.5469H8.65918C6.83077 10.5469 5.10819 11.2734 3.80881 12.5928C2.5158 13.9057 1.80371 15.6387 1.80371 17.4727C1.80371 17.7639 2.03982 18 2.33105 18H17.0967C17.3879 18 17.624 17.7639 17.624 17.4727C17.624 15.6387 16.9119 13.9057 15.6189 12.5928ZM2.8816 16.9453C3.1458 13.954 5.63613 11.6016 8.65918 11.6016H10.7686C13.7916 11.6016 16.2819 13.954 16.5461 16.9453H2.8816Z"
-                      fill="#1E1F20"
-                    />
-                  </svg>
-                </Link>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="19"
+                      height="18"
+                      viewBox="0 0 19 18"
+                      fill="none"
+                    >
+                      <path
+                        d="M9.71387 0C7.09687 0 4.96777 2.1291 4.96777 4.74609C4.96777 7.36309 7.09687 9.49219 9.71387 9.49219C12.3309 9.49219 14.46 7.36309 14.46 4.74609C14.46 2.1291 12.3309 0 9.71387 0ZM9.71387 8.4375C7.67843 8.4375 6.02246 6.78154 6.02246 4.74609C6.02246 2.71065 7.67843 1.05469 9.71387 1.05469C11.7493 1.05469 13.4053 2.71065 13.4053 4.74609C13.4053 6.78154 11.7493 8.4375 9.71387 8.4375Z"
+                        fill={user ? "#e9613f" : "#1E1F20"}
+                      />
+                      <path
+                        d="M15.6189 12.5928C14.3195 11.2734 12.597 10.5469 10.7686 10.5469H8.65918C6.83077 10.5469 5.10819 11.2734 3.80881 12.5928C2.5158 13.9057 1.80371 15.6387 1.80371 17.4727C1.80371 17.7639 2.03982 18 2.33105 18H17.0967C17.3879 18 17.624 17.7639 17.624 17.4727C17.624 15.6387 16.9119 13.9057 15.6189 12.5928ZM2.8816 16.9453C3.1458 13.954 5.63613 11.6016 8.65918 11.6016H10.7686C13.7916 11.6016 16.2819 13.954 16.5461 16.9453H2.8816Z"
+                        fill={user ? "#e9613f" : "#1E1F20"}
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Logged in User Menu Dropdown */}
+                  {user && showUserMenu && (
+                    <div className="user-menu-dropdown">
+                      <div className="user-menu-header">
+                        <div className="user-menu-name">
+                          {user.fullName || "User"}
+                        </div>
+                        <div className="user-menu-email">{user.email}</div>
+                        <span
+                          className={`user-role-badge ${
+                            isAdmin ? "user-role-admin" : "user-role-patient"
+                          }`}
+                        >
+                          {isAdmin ? "Admin" : "Patient"}
+                        </span>
+                      </div>
+                      {isAdmin && (
+                        <Link
+                          to="/admin"
+                          className="user-menu-item"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <i className="fa-solid fa-gauge-high color-primary"></i>
+                          <span>Admin Dashboard</span>
+                        </Link>
+                      )}
+                      <button
+                        type="button"
+                        className="user-menu-item text-danger"
+                        onClick={() => {
+                          logout();
+                          setShowUserMenu(false);
+                        }}
+                      >
+                        <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
                 <LanguageSwitcher className="mx-2" />
                 <a
                   href="#sidebar-cart"

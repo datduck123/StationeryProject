@@ -1,13 +1,15 @@
 // Migrated from: index.html, lines 3241-3270; assets/js/app.js lines 139-174
 // HTML->JSX conversion: class -> className, Link integration, sub-menu accordion state, i18n support
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router-dom";
+import { useAuth } from "../../providers/AuthContext";
 import { useCartContext } from "../../providers/CartContext";
 import LanguageSwitcher from "../ui/LanguageSwitcher";
 
 export const MobileMenu = () => {
   const { isMobileMenuOpen, closeMobileMenu } = useCartContext();
+  const { user, isAdmin, openAuthModal, logout } = useAuth();
   const { t } = useTranslation();
   const [expandedSubMenu, setExpandedSubMenu] = useState(false);
 
@@ -104,6 +106,54 @@ export const MobileMenu = () => {
           </div>
         </div>
         <div className="px-3 mb-3">
+          {user ? (
+            <div className="bg-white p-3 rounded br-10 mb-2 border">
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <span className="fw-600 fs-14">{user.fullName}</span>
+                <span
+                  className={`user-role-badge ${
+                    isAdmin ? "user-role-admin" : "user-role-patient"
+                  }`}
+                >
+                  {isAdmin ? "Admin" : "Patient"}
+                </span>
+              </div>
+              <div className="fs-13 text-muted mb-2">{user.email}</div>
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className="btn btn-sm btn-outline-danger w-100 mb-2"
+                  onClick={closeMobileMenu}
+                >
+                  <i className="fa-solid fa-gauge-high me-1"></i> Admin
+                  Dashboard
+                </Link>
+              )}
+              <button
+                type="button"
+                className="btn btn-sm btn-light w-100 text-danger"
+                onClick={() => {
+                  logout();
+                  closeMobileMenu();
+                }}
+              >
+                <i className="fa-solid fa-arrow-right-from-bracket me-1"></i>{" "}
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="cus-btn w-100 text-center mb-2 border-0"
+              onClick={() => {
+                closeMobileMenu();
+                openAuthModal("login");
+              }}
+            >
+              <span className="btn-text">Sign In / Register</span>
+              <span>Sign In / Register</span>
+            </button>
+          )}
           <LanguageSwitcher />
         </div>
         <ul className="mobile-nav__contact list-unstyled">

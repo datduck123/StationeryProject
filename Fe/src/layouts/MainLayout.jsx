@@ -2,14 +2,15 @@
 // HTML->JSX conversion: class -> className, Outlet integration
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
-import Preloader from "../components/shared/Preloader";
-import Header from "../components/shared/Header";
-import Footer from "../components/shared/Footer";
+import AuthModal from "../components/auth/AuthModal";
 import BackToTop from "../components/shared/BackToTop";
-import MobileMenu from "../components/shared/MobileMenu";
-import SidebarCart from "../components/shared/SidebarCart";
-import QuickViewModal from "../components/shared/QuickViewModal";
 import CompareModal from "../components/shared/CompareModal";
+import Footer from "../components/shared/Footer";
+import Header from "../components/shared/Header";
+import MobileMenu from "../components/shared/MobileMenu";
+import Preloader from "../components/shared/Preloader";
+import QuickViewModal from "../components/shared/QuickViewModal";
+import SidebarCart from "../components/shared/SidebarCart";
 
 export const MainLayout = () => {
   useEffect(() => {
@@ -35,6 +36,7 @@ export const MainLayout = () => {
       <SidebarCart />
       <QuickViewModal />
       <CompareModal />
+      <AuthModal />
     </>
   );
 };
