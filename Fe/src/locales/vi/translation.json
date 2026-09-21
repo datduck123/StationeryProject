@@ -32,7 +32,11 @@
     "productDetail": "Chi Tiết Sản Phẩm",
     "cart": "Giỏ Hàng",
     "checkout": "Thanh Toán",
-    "brands": "Thương Hiệu"
+    "brands": "Thương Hiệu",
+    "signIn": "Đăng Nhập",
+    "register": "Đăng Ký",
+    "adminDashboard": "Trang Quản Trị",
+    "signOut": "Đăng Xuất"
   },
   "footer": {
     "desc": "Cung cấp các sản phẩm văn phòng phẩm chất lượng cao, khơi nguồn sáng tạo và nâng cao năng suất công việc mỗi ngày.",

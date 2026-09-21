@@ -32,7 +32,11 @@
     "productDetail": "Product Detail",
     "cart": "Cart",
     "checkout": "Checkout",
-    "brands": "Brands"
+    "brands": "Brands",
+    "signIn": "Sign In",
+    "register": "Register",
+    "adminDashboard": "Admin Dashboard",
+    "signOut": "Sign Out"
   },
   "footer": {
     "desc": "Integer turpis tortor, vehicula vel quam at, aliquet efficitur arcu nam vestibulu risus at faucibus.",
