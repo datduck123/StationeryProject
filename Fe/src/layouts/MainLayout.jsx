@@ -1,5 +1,3 @@
-// Migrated from: index.html, lines 30-55, 3230-3272
-// HTML->JSX conversion: class -> className, Outlet integration
 import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import AuthModal from "../components/auth/AuthModal";
