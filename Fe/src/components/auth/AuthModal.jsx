@@ -3,8 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastContext";
 import authService from "../../services/authService";
-import AuthTooltip from "./AuthTooltip";
-import OtpSixBoxInput from "./OtpSixBoxInput";
 import OtpVerificationStep from "./OtpVerificationStep";
 
 export const AuthModal = () => {
@@ -22,9 +20,7 @@ export const AuthModal = () => {
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [loginErrors, setLoginErrors] = useState({});
   const [isLoginSubmitting, setIsLoginSubmitting] = useState(false);
-  const [loginApiError, setLoginApiError] = useState("");
 
   // Register form state
   const [regStep, setRegStep] = useState(1);
@@ -38,45 +34,28 @@ export const AuthModal = () => {
 
   // OTP state for register
   const [regOtp, setRegOtp] = useState("");
-  const [regOtpError, setRegOtpError] = useState("");
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isResendingOtp, setIsResendingOtp] = useState(false);
-
-  const [regErrors, setRegErrors] = useState({});
   const [isRegSubmitting, setIsRegSubmitting] = useState(false);
-  const [regSuccessMsg, setRegSuccessMsg] = useState("");
-  const [regApiError, setRegApiError] = useState("");
 
   // Forgot Password state: 1: Email, 2: OTP, 3: New Password
   const [forgotStep, setForgotStep] = useState(1);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotOtp, setForgotOtp] = useState("");
-  const [forgotOtpError, setForgotOtpError] = useState("");
   const [isForgotVerifying, setIsForgotVerifying] = useState(false);
   const [forgotNewPassword, setForgotNewPassword] = useState("");
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
   const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
   const [showForgotConfirmPassword, setShowForgotConfirmPassword] =
     useState(false);
-  const [forgotErrors, setForgotErrors] = useState({});
   const [isForgotSubmitting, setIsForgotSubmitting] = useState(false);
   const [isForgotResending, setIsForgotResending] = useState(false);
-  const [forgotApiError, setForgotApiError] = useState("");
-  const [forgotSuccessMsg, setForgotSuccessMsg] = useState("");
 
-  // Clear errors and messages when switching tabs or closing modal
+  // Reset steps on tab switch or open
   useEffect(() => {
-    setLoginErrors({});
-    setRegErrors({});
-    setForgotErrors({});
-    setLoginApiError("");
-    setRegApiError("");
-    setForgotApiError("");
-    setRegSuccessMsg("");
-    setForgotSuccessMsg("");
-    setRegOtpError("");
     setRegStep(1);
     setForgotStep(1);
+    setRegOtp("");
     setForgotOtp("");
     setForgotNewPassword("");
     setForgotConfirmPassword("");
@@ -90,86 +69,95 @@ export const AuthModal = () => {
   };
 
   const validateLoginForm = () => {
-    const errors = {};
     if (!loginEmail.trim()) {
-      errors.email = "Email is required.";
-    } else if (!validateEmail(loginEmail)) {
-      errors.email = "Please enter a valid email address.";
+      showToast("Email address is required.", "error");
+      return false;
     }
-
+    if (!validateEmail(loginEmail)) {
+      showToast("Please enter a valid email address.", "error");
+      return false;
+    }
     if (!loginPassword) {
-      errors.password = "Password is required.";
+      showToast("Password is required.", "error");
+      return false;
     }
-
-    setLoginErrors(errors);
-    return Object.keys(errors).length === 0;
+    return true;
   };
 
   const validateRegisterForm = () => {
-    const errors = {};
     if (!regFullName.trim()) {
-      errors.fullName = "Full name is required.";
-    } else if (regFullName.trim().length < 2) {
-      errors.fullName = "Full name must be at least 2 characters.";
+      showToast("Full name is required.", "error");
+      return false;
     }
-
+    if (regFullName.trim().length < 2) {
+      showToast("Full name must be at least 2 characters.", "error");
+      return false;
+    }
     if (!regEmail.trim()) {
-      errors.email = "Email is required.";
-    } else if (!validateEmail(regEmail)) {
-      errors.email = "Please enter a valid email address.";
+      showToast("Email address is required.", "error");
+      return false;
     }
-
-    if (!regPassword) {
-      errors.password = "Password must be at least 8 characters.";
-    } else if (regPassword.length < 8) {
-      errors.password = "Password must be at least 8 characters.";
+    if (!validateEmail(regEmail)) {
+      showToast("Please enter a valid email address.", "error");
+      return false;
     }
-
+    if (!regPassword || regPassword.length < 8) {
+      showToast("Password must be at least 8 characters.", "error");
+      return false;
+    }
     if (!regConfirmPassword) {
-      errors.confirmPassword = "Confirm password is required.";
-    } else if (regPassword !== regConfirmPassword) {
-      errors.confirmPassword = "Passwords do not match.";
+      showToast("Confirm password is required.", "error");
+      return false;
     }
-
+    if (regPassword !== regConfirmPassword) {
+      showToast("Passwords do not match.", "error");
+      return false;
+    }
     if (!agreeTerms) {
-      errors.terms = "Please agree to the Terms of Service and Privacy Policy.";
+      showToast(
+        "Please agree to the Terms of Service and Privacy Policy.",
+        "warning",
+      );
+      return false;
     }
-
-    setRegErrors(errors);
-    return Object.keys(errors).length === 0;
+    return true;
   };
 
   const validateForgotEmail = () => {
-    const errs = {};
     if (!forgotEmail.trim()) {
-      errs.email = "Email address is required.";
-    } else if (!validateEmail(forgotEmail.trim())) {
-      errs.email = "Please enter a valid email address.";
+      showToast("Email address is required.", "error");
+      return false;
     }
-    setForgotErrors(errs);
-    return Object.keys(errs).length === 0;
+    if (!validateEmail(forgotEmail.trim())) {
+      showToast("Please enter a valid email address.", "error");
+      return false;
+    }
+    return true;
   };
 
   const validateForgotReset = () => {
-    const errs = {};
     if (!forgotNewPassword) {
-      errs.newPassword = "New password is required.";
-    } else if (forgotNewPassword.length < 8) {
-      errs.newPassword = "Password must be at least 8 characters.";
+      showToast("New password is required.", "error");
+      return false;
+    }
+    if (forgotNewPassword.length < 8) {
+      showToast("Password must be at least 8 characters.", "error");
+      return false;
     }
     if (!forgotConfirmPassword) {
-      errs.confirmPassword = "Confirm password is required.";
-    } else if (forgotNewPassword !== forgotConfirmPassword) {
-      errs.confirmPassword = "Passwords do not match.";
+      showToast("Confirm password is required.", "error");
+      return false;
     }
-    setForgotErrors(errs);
-    return Object.keys(errs).length === 0;
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      showToast("Passwords do not match.", "error");
+      return false;
+    }
+    return true;
   };
 
   // Submit handlers
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    setLoginApiError("");
     if (!validateLoginForm()) return;
 
     setIsLoginSubmitting(true);
@@ -188,7 +176,6 @@ export const AuthModal = () => {
       setIsLoginSubmitting(false);
       const msg =
         err.message || "Login failed. Please verify your credentials.";
-      setLoginApiError(msg);
       showToast(msg, "error");
     }
   };
@@ -212,7 +199,6 @@ export const AuthModal = () => {
         err?.response?.data?.message ||
         err.message ||
         "Failed to send OTP. Please check your email.";
-      setRegApiError(msg);
       showToast(msg, "error");
     }
   };
@@ -230,7 +216,6 @@ export const AuthModal = () => {
         err?.response?.data?.message ||
         err.message ||
         "Failed to resend OTP. Please wait before retrying.";
-      setRegOtpError(msg);
       showToast(msg, "error");
     }
   };
@@ -238,14 +223,11 @@ export const AuthModal = () => {
   // Register Step 2: Verify & Register
   const handleRegisterVerifyAndComplete = async () => {
     if (!regOtp || regOtp.length < 6) {
-      setRegOtpError("Please enter the 6-digit OTP code.");
       showToast("Please enter all 6 digits of the OTP code.", "warning");
       return;
     }
 
     setIsVerifyingOtp(true);
-    setRegOtpError("");
-    setRegApiError("");
 
     try {
       await authService.verifyAndRegister({
@@ -271,7 +253,6 @@ export const AuthModal = () => {
         err?.response?.data?.message ||
         err.message ||
         "Invalid or expired OTP code.";
-      setRegOtpError(msg);
       showToast(msg, "error");
     }
   };
@@ -279,8 +260,6 @@ export const AuthModal = () => {
   // Forgot Password Step 1: Send OTP
   const handleForgotSendOtp = async (e) => {
     e?.preventDefault();
-    setForgotApiError("");
-    setForgotSuccessMsg("");
     if (!validateForgotEmail()) return;
 
     setIsForgotSubmitting(true);
@@ -298,7 +277,6 @@ export const AuthModal = () => {
         err?.response?.data?.message ||
         err.message ||
         "No account found with this email.";
-      setForgotApiError(msg);
       showToast(msg, "error");
     }
   };
@@ -306,7 +284,6 @@ export const AuthModal = () => {
   // Forgot Password Resend OTP
   const handleForgotResendOtp = async () => {
     setIsForgotResending(true);
-    setForgotApiError("");
     try {
       await authService.sendForgotPasswordOtp({ email: forgotEmail.trim() });
       setIsForgotResending(false);
@@ -320,7 +297,6 @@ export const AuthModal = () => {
         err?.response?.data?.message ||
         err.message ||
         "Failed to resend OTP. Please wait before retrying.";
-      setForgotApiError(msg);
       showToast(msg, "error");
     }
   };
@@ -328,14 +304,11 @@ export const AuthModal = () => {
   // Forgot Password Step 2: Verify OTP
   const handleForgotVerifyOtp = async () => {
     if (!forgotOtp || forgotOtp.length < 6) {
-      setForgotOtpError("Please enter all 6 digits of the OTP code.");
       showToast("Please enter all 6 digits of the OTP code.", "warning");
       return;
     }
 
     setIsForgotVerifying(true);
-    setForgotOtpError("");
-    setForgotApiError("");
 
     try {
       await authService.verifyForgotPasswordOtp({
@@ -354,7 +327,6 @@ export const AuthModal = () => {
         err?.response?.data?.message ||
         err.message ||
         "Invalid or expired OTP code.";
-      setForgotOtpError(msg);
       showToast(msg, "error");
     }
   };
@@ -362,7 +334,6 @@ export const AuthModal = () => {
   // Forgot Password Step 3: Reset password
   const handleForgotResetPassword = async (e) => {
     e.preventDefault();
-    setForgotApiError("");
     if (!validateForgotReset()) return;
 
     setIsForgotSubmitting(true);
@@ -389,7 +360,6 @@ export const AuthModal = () => {
         err?.response?.data?.message ||
         err.message ||
         "Failed to reset password. Please check your OTP code.";
-      setForgotApiError(msg);
       showToast(msg, "error");
     }
   };
@@ -461,38 +431,6 @@ export const AuthModal = () => {
               </p>
             </div>
 
-            {/* Global API Feedback */}
-            {loginApiError && authModalTab === "login" && (
-              <div className="alert alert-danger py-2 px-3 br-10 mb-3 text-center fs-14">
-                <i className="fa-solid fa-circle-exclamation me-2"></i>
-                {loginApiError}
-              </div>
-            )}
-            {regApiError && authModalTab === "register" && (
-              <div className="alert alert-danger py-2 px-3 br-10 mb-3 text-center fs-14">
-                <i className="fa-solid fa-circle-exclamation me-2"></i>
-                {regApiError}
-              </div>
-            )}
-            {regSuccessMsg && authModalTab === "register" && (
-              <div className="alert alert-success py-2 px-3 br-10 mb-3 text-center fs-14">
-                <i className="fa-solid fa-circle-check me-2"></i>
-                {regSuccessMsg}
-              </div>
-            )}
-            {forgotApiError && authModalTab === "forgot" && (
-              <div className="alert alert-danger py-2 px-3 br-10 mb-3 text-center fs-14">
-                <i className="fa-solid fa-circle-exclamation me-2"></i>
-                {forgotApiError}
-              </div>
-            )}
-            {forgotSuccessMsg && authModalTab === "forgot" && (
-              <div className="alert alert-success py-2 px-3 br-10 mb-3 text-center fs-14">
-                <i className="fa-solid fa-circle-check me-2"></i>
-                {forgotSuccessMsg}
-              </div>
-            )}
-
             {/* 1. LOGIN FORM */}
             {authModalTab === "login" && (
               <form onSubmit={handleLoginSubmit} noValidate>
@@ -509,17 +447,10 @@ export const AuthModal = () => {
                       type="email"
                       id="login-email"
                       name="email"
-                      className={`form-control form-control-2 ${
-                        loginErrors.email ? "is-invalid-field" : ""
-                      }`}
+                      className="form-control form-control-2"
                       placeholder="Enter your email"
                       value={loginEmail}
-                      onChange={(e) => {
-                        setLoginEmail(e.target.value);
-                        if (loginErrors.email) {
-                          setLoginErrors((prev) => ({ ...prev, email: "" }));
-                        }
-                      }}
+                      onChange={(e) => setLoginEmail(e.target.value)}
                       disabled={isLoginSubmitting}
                       autoComplete="username"
                     />
@@ -536,7 +467,6 @@ export const AuthModal = () => {
                       />
                     </svg>
                   </div>
-                  <AuthTooltip message={loginErrors.email} position="top" />
                 </div>
 
                 {/* Password Field */}
@@ -561,17 +491,10 @@ export const AuthModal = () => {
                       type={showLoginPassword ? "text" : "password"}
                       id="login-password"
                       name="password"
-                      className={`form-control form-control-2 pe-5 ${
-                        loginErrors.password ? "is-invalid-field" : ""
-                      }`}
+                      className="form-control form-control-2 pe-5"
                       placeholder="Enter your password"
                       value={loginPassword}
-                      onChange={(e) => {
-                        setLoginPassword(e.target.value);
-                        if (loginErrors.password) {
-                          setLoginErrors((prev) => ({ ...prev, password: "" }));
-                        }
-                      }}
+                      onChange={(e) => setLoginPassword(e.target.value)}
                       disabled={isLoginSubmitting}
                       autoComplete="current-password"
                     />
@@ -605,7 +528,6 @@ export const AuthModal = () => {
                       ></i>
                     </button>
                   </div>
-                  <AuthTooltip message={loginErrors.password} position="top" />
                 </div>
 
                 {/* Submit CTA */}
@@ -660,20 +582,10 @@ export const AuthModal = () => {
                           type="text"
                           id="reg-name"
                           name="fullName"
-                          className={`form-control form-control-2 ${
-                            regErrors.fullName ? "is-invalid-field" : ""
-                          }`}
+                          className="form-control form-control-2"
                           placeholder="Enter your full name"
                           value={regFullName}
-                          onChange={(e) => {
-                            setRegFullName(e.target.value);
-                            if (regErrors.fullName) {
-                              setRegErrors((prev) => ({
-                                ...prev,
-                                fullName: "",
-                              }));
-                            }
-                          }}
+                          onChange={(e) => setRegFullName(e.target.value)}
                           disabled={isRegSubmitting}
                           autoComplete="name"
                         />
@@ -693,10 +605,6 @@ export const AuthModal = () => {
                           <circle cx="12" cy="7" r="4" />
                         </svg>
                       </div>
-                      <AuthTooltip
-                        message={regErrors.fullName}
-                        position="top"
-                      />
                     </div>
 
                     {/* Email Field */}
@@ -712,17 +620,10 @@ export const AuthModal = () => {
                           type="email"
                           id="reg-email"
                           name="email"
-                          className={`form-control form-control-2 ${
-                            regErrors.email ? "is-invalid-field" : ""
-                          }`}
+                          className="form-control form-control-2"
                           placeholder="Enter your email"
                           value={regEmail}
-                          onChange={(e) => {
-                            setRegEmail(e.target.value);
-                            if (regErrors.email) {
-                              setRegErrors((prev) => ({ ...prev, email: "" }));
-                            }
-                          }}
+                          onChange={(e) => setRegEmail(e.target.value)}
                           disabled={isRegSubmitting}
                           autoComplete="username"
                         />
@@ -740,7 +641,6 @@ export const AuthModal = () => {
                           />
                         </svg>
                       </div>
-                      <AuthTooltip message={regErrors.email} position="top" />
                     </div>
 
                     {/* Password Field */}
@@ -756,20 +656,10 @@ export const AuthModal = () => {
                           type={showRegPassword ? "text" : "password"}
                           id="reg-password"
                           name="password"
-                          className={`form-control form-control-2 pe-5 ${
-                            regErrors.password ? "is-invalid-field" : ""
-                          }`}
+                          className="form-control form-control-2 pe-5"
                           placeholder="Minimum 8 characters"
                           value={regPassword}
-                          onChange={(e) => {
-                            setRegPassword(e.target.value);
-                            if (regErrors.password) {
-                              setRegErrors((prev) => ({
-                                ...prev,
-                                password: "",
-                              }));
-                            }
-                          }}
+                          onChange={(e) => setRegPassword(e.target.value)}
                           disabled={isRegSubmitting}
                           autoComplete="new-password"
                         />
@@ -801,10 +691,6 @@ export const AuthModal = () => {
                           ></i>
                         </button>
                       </div>
-                      <AuthTooltip
-                        message={regErrors.password}
-                        position="top"
-                      />
                     </div>
 
                     {/* Confirm Password Field */}
@@ -820,20 +706,12 @@ export const AuthModal = () => {
                           type={showRegConfirmPassword ? "text" : "password"}
                           id="reg-confirm-password"
                           name="confirmPassword"
-                          className={`form-control form-control-2 pe-5 ${
-                            regErrors.confirmPassword ? "is-invalid-field" : ""
-                          }`}
+                          className="form-control form-control-2 pe-5"
                           placeholder="Repeat your password"
                           value={regConfirmPassword}
-                          onChange={(e) => {
-                            setRegConfirmPassword(e.target.value);
-                            if (regErrors.confirmPassword) {
-                              setRegErrors((prev) => ({
-                                ...prev,
-                                confirmPassword: "",
-                              }));
-                            }
-                          }}
+                          onChange={(e) =>
+                            setRegConfirmPassword(e.target.value)
+                          }
                           disabled={isRegSubmitting}
                           autoComplete="new-password"
                         />
@@ -867,10 +745,6 @@ export const AuthModal = () => {
                           ></i>
                         </button>
                       </div>
-                      <AuthTooltip
-                        message={regErrors.confirmPassword}
-                        position="top"
-                      />
                     </div>
 
                     {/* Terms */}
@@ -880,12 +754,7 @@ export const AuthModal = () => {
                           type="checkbox"
                           id="reg-terms"
                           checked={agreeTerms}
-                          onChange={(e) => {
-                            setAgreeTerms(e.target.checked);
-                            if (regErrors.terms) {
-                              setRegErrors((prev) => ({ ...prev, terms: "" }));
-                            }
-                          }}
+                          onChange={(e) => setAgreeTerms(e.target.checked)}
                         />
                         <label
                           htmlFor="reg-terms"
@@ -911,10 +780,6 @@ export const AuthModal = () => {
                           .
                         </label>
                       </div>
-                      <AuthTooltip
-                        message={regErrors.terms}
-                        position="bottom"
-                      />
                     </div>
 
                     {/* Submit CTA */}
@@ -955,8 +820,6 @@ export const AuthModal = () => {
                     email={regEmail}
                     otp={regOtp}
                     setOtp={setRegOtp}
-                    otpError={regOtpError}
-                    setOtpError={setRegOtpError}
                     onVerify={handleRegisterVerifyAndComplete}
                     onResend={handleRegisterResendOtp}
                     onBack={() => setRegStep(1)}
@@ -986,20 +849,10 @@ export const AuthModal = () => {
                           type="email"
                           id="forgot-email"
                           name="email"
-                          className={`form-control form-control-2 ${
-                            forgotErrors.email ? "is-invalid-field" : ""
-                          }`}
+                          className="form-control form-control-2"
                           placeholder="Enter your registered email"
                           value={forgotEmail}
-                          onChange={(e) => {
-                            setForgotEmail(e.target.value);
-                            if (forgotErrors.email) {
-                              setForgotErrors((prev) => ({
-                                ...prev,
-                                email: "",
-                              }));
-                            }
-                          }}
+                          onChange={(e) => setForgotEmail(e.target.value)}
                           disabled={isForgotSubmitting}
                           autoComplete="email"
                         />
@@ -1017,10 +870,6 @@ export const AuthModal = () => {
                           />
                         </svg>
                       </div>
-                      <AuthTooltip
-                        message={forgotErrors.email}
-                        position="top"
-                      />
                     </div>
 
                     {/* Submit CTA */}
@@ -1054,75 +903,20 @@ export const AuthModal = () => {
                     </div>
                   </form>
                 ) : forgotStep === 2 ? (
-                  <div>
-                    {/* Notice bar */}
-                    <div className="p-3 bg-light rounded-3 mb-3 fs-13 text-muted text-center border">
-                      Code sent to <strong>{forgotEmail}</strong>.{" "}
-                      <button
-                        type="button"
-                        className="color-primary border-0 bg-transparent p-0 fs-13 text-decoration-underline ms-1"
-                        onClick={() => setForgotStep(1)}
-                      >
-                        Change email
-                      </button>
-                    </div>
-
-                    {/* 6-digit OTP code */}
-                    <div className="auth-field-wrapper mb-3 position-relative">
-                      <div className="d-flex justify-content-between align-items-center mb-1">
-                        <label className="form-label fw-600 medium-black mb-0">
-                          Enter 6-Digit OTP Code
-                        </label>
-                        <button
-                          type="button"
-                          className="color-primary border-0 bg-transparent p-0 fs-12 text-decoration-underline"
-                          onClick={handleForgotResendOtp}
-                          disabled={isForgotResending}
-                        >
-                          {isForgotResending ? "Resending..." : "Resend Code"}
-                        </button>
-                      </div>
-                      <OtpSixBoxInput
-                        value={forgotOtp}
-                        onChange={(val) => {
-                          setForgotOtp(val);
-                          setForgotOtpError("");
-                        }}
-                        disabled={isForgotVerifying}
-                        autoFocus={true}
-                      />
-                      <AuthTooltip message={forgotOtpError} position="top" />
-                    </div>
-
-                    {/* Submit CTA */}
-                    <div className="d-flex flex-column gap-2 mt-4">
-                      <button
-                        type="button"
-                        className="auth-btn-solid"
-                        onClick={handleForgotVerifyOtp}
-                        disabled={isForgotVerifying || forgotOtp.length < 6}
-                      >
-                        {isForgotVerifying ? (
-                          <span>
-                            <i className="fa-solid fa-spinner fa-spin me-2"></i>
-                            Verifying Code...
-                          </span>
-                        ) : (
-                          "Next: Set New Password"
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        className="btn btn-light w-100 py-2 rounded-pill fw-600 fs-14 border"
-                        onClick={() => setForgotStep(1)}
-                        disabled={isForgotVerifying}
-                      >
-                        <i className="fa-solid fa-arrow-left me-1"></i> Change
-                        Email
-                      </button>
-                    </div>
-                  </div>
+                  /* Step 2: OtpVerificationStep with 5' (300s) expiry & 60s resend timer */
+                  <OtpVerificationStep
+                    email={forgotEmail}
+                    otp={forgotOtp}
+                    setOtp={setForgotOtp}
+                    onVerify={handleForgotVerifyOtp}
+                    onResend={handleForgotResendOtp}
+                    onBack={() => setForgotStep(1)}
+                    isVerifying={isForgotVerifying}
+                    isResending={isForgotResending}
+                    title="Reset Password Verification"
+                    subtitle="We sent a reset verification code to"
+                    submitButtonText="Next: Set New Password"
+                  />
                 ) : (
                   <form onSubmit={handleForgotResetPassword} noValidate>
                     {/* Notice bar */}
@@ -1144,20 +938,10 @@ export const AuthModal = () => {
                           type={showForgotNewPassword ? "text" : "password"}
                           id="forgot-new-pass"
                           name="newPassword"
-                          className={`form-control form-control-2 pe-5 ${
-                            forgotErrors.newPassword ? "is-invalid-field" : ""
-                          }`}
+                          className="form-control form-control-2 pe-5"
                           placeholder="Minimum 8 characters"
                           value={forgotNewPassword}
-                          onChange={(e) => {
-                            setForgotNewPassword(e.target.value);
-                            if (forgotErrors.newPassword) {
-                              setForgotErrors((prev) => ({
-                                ...prev,
-                                newPassword: "",
-                              }));
-                            }
-                          }}
+                          onChange={(e) => setForgotNewPassword(e.target.value)}
                           disabled={isForgotSubmitting}
                           autoComplete="new-password"
                         />
@@ -1191,10 +975,6 @@ export const AuthModal = () => {
                           ></i>
                         </button>
                       </div>
-                      <AuthTooltip
-                        message={forgotErrors.newPassword}
-                        position="top"
-                      />
                     </div>
 
                     {/* Confirm New Password */}
@@ -1210,22 +990,12 @@ export const AuthModal = () => {
                           type={showForgotConfirmPassword ? "text" : "password"}
                           id="forgot-confirm-pass"
                           name="confirmPassword"
-                          className={`form-control form-control-2 pe-5 ${
-                            forgotErrors.confirmPassword
-                              ? "is-invalid-field"
-                              : ""
-                          }`}
+                          className="form-control form-control-2 pe-5"
                           placeholder="Re-enter new password"
                           value={forgotConfirmPassword}
-                          onChange={(e) => {
-                            setForgotConfirmPassword(e.target.value);
-                            if (forgotErrors.confirmPassword) {
-                              setForgotErrors((prev) => ({
-                                ...prev,
-                                confirmPassword: "",
-                              }));
-                            }
-                          }}
+                          onChange={(e) =>
+                            setForgotConfirmPassword(e.target.value)
+                          }
                           disabled={isForgotSubmitting}
                           autoComplete="new-password"
                         />
@@ -1259,10 +1029,6 @@ export const AuthModal = () => {
                           ></i>
                         </button>
                       </div>
-                      <AuthTooltip
-                        message={forgotErrors.confirmPassword}
-                        position="top"
-                      />
                     </div>
 
                     {/* Submit CTA */}
