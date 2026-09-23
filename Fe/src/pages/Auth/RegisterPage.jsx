@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import AuthTooltip from "../../components/auth/AuthTooltip";
 import OtpVerificationStep from "../../components/auth/OtpVerificationStep";
 import TitleBanner from "../../components/shared/TitleBanner";
+import { useToast } from "../../providers/ToastContext";
 import authService from "../../services/authService";
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   // Step 1: info form, Step 2: OTP verification
   const [step, setStep] = useState(1);
@@ -20,54 +21,53 @@ export const RegisterPage = () => {
 
   // OTP field
   const [otpCode, setOtpCode] = useState("");
-  const [otpError, setOtpError] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [apiError, setApiError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
 
   const validateStep1 = () => {
-    const errs = {};
     if (!fullName.trim()) {
-      errs.fullName = "Full name is required.";
-    } else if (fullName.trim().length < 2) {
-      errs.fullName = "Full name must be at least 2 characters.";
+      showToast("Full name is required.", "error");
+      return false;
     }
-
+    if (fullName.trim().length < 2) {
+      showToast("Full name must be at least 2 characters.", "error");
+      return false;
+    }
     if (!email.trim()) {
-      errs.email = "Email is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      errs.email = "Please enter a valid email address.";
+      showToast("Email address is required.", "error");
+      return false;
     }
-
-    if (!password) {
-      errs.password = "Password is required (minimum 8 characters).";
-    } else if (password.length < 8) {
-      errs.password = "Password must be at least 8 characters.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      showToast("Please enter a valid email address.", "error");
+      return false;
     }
-
+    if (!password || password.length < 8) {
+      showToast("Password must be at least 8 characters.", "error");
+      return false;
+    }
     if (!confirmPassword) {
-      errs.confirmPassword = "Confirm password is required.";
-    } else if (password !== confirmPassword) {
-      errs.confirmPassword = "Passwords do not match.";
+      showToast("Confirm password is required.", "error");
+      return false;
     }
-
+    if (password !== confirmPassword) {
+      showToast("Passwords do not match.", "error");
+      return false;
+    }
     if (!agreeTerms) {
-      errs.terms = "Please agree to the Terms of Service and Privacy Policy.";
+      showToast(
+        "Please agree to the Terms of Service and Privacy Policy.",
+        "warning",
+      );
+      return false;
     }
-
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    return true;
   };
 
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    setApiError("");
-    setSuccessMsg("");
     if (!validateStep1()) return;
 
     setIsSubmitting(true);
@@ -75,41 +75,42 @@ export const RegisterPage = () => {
       await authService.sendRegisterOtp({ email: email.trim() });
       setIsSubmitting(false);
       setStep(2);
+      showToast("Verification code has been sent to your email.", "success");
     } catch (err) {
       setIsSubmitting(false);
-      setApiError(
+      showToast(
         err?.response?.data?.message ||
           err.message ||
           "Failed to send OTP. Please check your email.",
+        "error",
       );
     }
   };
 
   const handleResendOtp = async () => {
-    setApiError("");
     setIsResending(true);
     try {
       await authService.sendRegisterOtp({ email: email.trim() });
       setIsResending(false);
+      showToast("A new verification code has been resent.", "success");
     } catch (err) {
       setIsResending(false);
-      setOtpError(
+      showToast(
         err?.response?.data?.message ||
           err.message ||
           "Failed to resend OTP. Please wait before retrying.",
+        "error",
       );
     }
   };
 
   const handleVerifyAndRegister = async () => {
     if (!otpCode || otpCode.length < 6) {
-      setOtpError("Please enter the 6-digit OTP code.");
+      showToast("Please enter all 6 digits of the OTP code.", "warning");
       return;
     }
 
     setIsSubmitting(true);
-    setOtpError("");
-    setApiError("");
 
     try {
       await authService.verifyAndRegister({
@@ -120,19 +121,21 @@ export const RegisterPage = () => {
       });
 
       setIsSubmitting(false);
-      setSuccessMsg(
-        "Registration successful! Redirecting to Sign In in 2 seconds...",
+      showToast(
+        "Account registered successfully! Redirecting to Sign In...",
+        "success",
       );
       setTimeout(() => {
         navigate("/login");
-      }, 2000);
+      }, 1500);
     } catch (err) {
       setIsSubmitting(false);
-      const msg =
+      showToast(
         err?.response?.data?.message ||
-        err.message ||
-        "Invalid or expired OTP code.";
-      setOtpError(msg);
+          err.message ||
+          "Invalid or expired OTP code.",
+        "error",
+      );
     }
   };
 
@@ -155,19 +158,6 @@ export const RegisterPage = () => {
                     />
                   </Link>
                 </div>
-
-                {apiError && (
-                  <div className="alert alert-danger py-2 px-3 br-10 mb-3 text-center fs-14">
-                    <i className="fa-solid fa-circle-exclamation me-2"></i>
-                    {apiError}
-                  </div>
-                )}
-                {successMsg && (
-                  <div className="alert alert-success py-2 px-3 br-10 mb-3 text-center fs-14">
-                    <i className="fa-solid fa-circle-check me-2"></i>
-                    {successMsg}
-                  </div>
-                )}
 
                 {step === 1 ? (
                   <>
@@ -194,20 +184,10 @@ export const RegisterPage = () => {
                             type="text"
                             id="page-reg-name"
                             name="fullName"
-                            className={`form-control form-control-2 ${
-                              errors.fullName ? "is-invalid-field" : ""
-                            }`}
+                            className="form-control form-control-2"
                             placeholder="e.g. Nguyen Van A"
                             value={fullName}
-                            onChange={(e) => {
-                              setFullName(e.target.value);
-                              if (errors.fullName) {
-                                setErrors((prev) => ({
-                                  ...prev,
-                                  fullName: "",
-                                }));
-                              }
-                            }}
+                            onChange={(e) => setFullName(e.target.value)}
                             disabled={isSubmitting}
                             autoComplete="name"
                           />
@@ -226,7 +206,6 @@ export const RegisterPage = () => {
                             <circle cx="12" cy="7" r="4" />
                           </svg>
                         </div>
-                        <AuthTooltip message={errors.fullName} position="top" />
                       </div>
 
                       {/* Email */}
@@ -242,17 +221,10 @@ export const RegisterPage = () => {
                             type="email"
                             id="page-reg-email"
                             name="email"
-                            className={`form-control form-control-2 ${
-                              errors.email ? "is-invalid-field" : ""
-                            }`}
+                            className="form-control form-control-2"
                             placeholder="name@example.com"
                             value={email}
-                            onChange={(e) => {
-                              setEmail(e.target.value);
-                              if (errors.email) {
-                                setErrors((prev) => ({ ...prev, email: "" }));
-                              }
-                            }}
+                            onChange={(e) => setEmail(e.target.value)}
                             disabled={isSubmitting}
                             autoComplete="username"
                           />
@@ -269,7 +241,6 @@ export const RegisterPage = () => {
                             />
                           </svg>
                         </div>
-                        <AuthTooltip message={errors.email} position="top" />
                       </div>
 
                       {/* Password */}
@@ -285,20 +256,10 @@ export const RegisterPage = () => {
                             type={showPassword ? "text" : "password"}
                             id="page-reg-password"
                             name="password"
-                            className={`form-control form-control-2 pe-5 ${
-                              errors.password ? "is-invalid-field" : ""
-                            }`}
+                            className="form-control form-control-2 pe-5"
                             placeholder="At least 8 characters"
                             value={password}
-                            onChange={(e) => {
-                              setPassword(e.target.value);
-                              if (errors.password) {
-                                setErrors((prev) => ({
-                                  ...prev,
-                                  password: "",
-                                }));
-                              }
-                            }}
+                            onChange={(e) => setPassword(e.target.value)}
                             disabled={isSubmitting}
                             autoComplete="new-password"
                           />
@@ -332,7 +293,6 @@ export const RegisterPage = () => {
                             ></i>
                           </button>
                         </div>
-                        <AuthTooltip message={errors.password} position="top" />
                       </div>
 
                       {/* Confirm Password */}
@@ -348,20 +308,10 @@ export const RegisterPage = () => {
                             type={showConfirmPassword ? "text" : "password"}
                             id="page-reg-confirm-password"
                             name="confirmPassword"
-                            className={`form-control form-control-2 pe-5 ${
-                              errors.confirmPassword ? "is-invalid-field" : ""
-                            }`}
+                            className="form-control form-control-2 pe-5"
                             placeholder="Repeat password"
                             value={confirmPassword}
-                            onChange={(e) => {
-                              setConfirmPassword(e.target.value);
-                              if (errors.confirmPassword) {
-                                setErrors((prev) => ({
-                                  ...prev,
-                                  confirmPassword: "",
-                                }));
-                              }
-                            }}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
                             disabled={isSubmitting}
                             autoComplete="new-password"
                           />
@@ -399,10 +349,6 @@ export const RegisterPage = () => {
                             ></i>
                           </button>
                         </div>
-                        <AuthTooltip
-                          message={errors.confirmPassword}
-                          position="top"
-                        />
                       </div>
 
                       {/* Terms */}
@@ -412,12 +358,7 @@ export const RegisterPage = () => {
                             type="checkbox"
                             id="page-reg-terms"
                             checked={agreeTerms}
-                            onChange={(e) => {
-                              setAgreeTerms(e.target.checked);
-                              if (errors.terms) {
-                                setErrors((prev) => ({ ...prev, terms: "" }));
-                              }
-                            }}
+                            onChange={(e) => setAgreeTerms(e.target.checked)}
                           />
                           <label
                             htmlFor="page-reg-terms"
@@ -443,7 +384,6 @@ export const RegisterPage = () => {
                             .
                           </label>
                         </div>
-                        <AuthTooltip message={errors.terms} position="bottom" />
                       </div>
 
                       {/* Primary CTA */}
@@ -484,8 +424,6 @@ export const RegisterPage = () => {
                     email={email}
                     otp={otpCode}
                     setOtp={setOtpCode}
-                    otpError={otpError}
-                    setOtpError={setOtpError}
                     onVerify={handleVerifyAndRegister}
                     onResend={handleResendOtp}
                     onBack={() => setStep(1)}

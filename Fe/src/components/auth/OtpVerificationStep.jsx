@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import AuthTooltip from "./AuthTooltip";
+import { useToast } from "../../providers/ToastContext";
 import OtpSixBoxInput from "./OtpSixBoxInput";
 
 export const OtpVerificationStep = ({
@@ -13,8 +13,12 @@ export const OtpVerificationStep = ({
   onBack,
   isVerifying = false,
   isResending = false,
+  title = "Verify Your Email",
+  subtitle = "We sent a 6-digit verification code to",
   submitButtonText = "Verify & Complete",
 }) => {
+  const { showToast } = useToast();
+
   // Expiry countdown: 5 minutes (300 seconds)
   const [expiryTimer, setExpiryTimer] = useState(300);
   // Resend cooldown: 60 seconds
@@ -64,7 +68,7 @@ export const OtpVerificationStep = ({
   const handleVerifySubmit = (e) => {
     e?.preventDefault();
     if (otp.length < 6) {
-      if (setOtpError) setOtpError("Please enter all 6 digits of the OTP code");
+      showToast("Please enter all 6 digits of the OTP code.", "warning");
       return;
     }
     onVerify();
@@ -84,10 +88,8 @@ export const OtpVerificationStep = ({
         >
           <i className="fa-solid fa-shield-halved fa-2xl"></i>
         </div>
-        <h4 className="fw-700 medium-black mb-1">Verify Your Email</h4>
-        <p className="dark-gray fs-14 mb-2">
-          We sent a 6-digit verification code to
-        </p>
+        <h4 className="fw-700 medium-black mb-1">{title}</h4>
+        <p className="dark-gray fs-14 mb-2">{subtitle}</p>
         <div className="badge bg-light text-dark px-3 py-2 fs-14 rounded-pill border">
           <i className="fa-regular fa-envelope me-1 color-primary"></i>
           <strong>{email}</strong>
@@ -104,7 +106,6 @@ export const OtpVerificationStep = ({
           disabled={isVerifying}
           autoFocus={true}
         />
-        <AuthTooltip message={otpError} position="top" />
       </div>
 
       <div className="d-flex justify-content-between align-items-center mb-4 fs-13 text-muted">

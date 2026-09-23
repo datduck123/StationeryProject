@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import AuthTooltip from "../../components/auth/AuthTooltip";
 import OtpVerificationStep from "../../components/auth/OtpVerificationStep";
 import TitleBanner from "../../components/shared/TitleBanner";
 import { useToast } from "../../providers/ToastContext";
@@ -21,46 +20,44 @@ export const ForgotPasswordPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [errors, setErrors] = useState({});
-  const [otpError, setOtpError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [apiError, setApiError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
 
   const validateEmailStep = () => {
-    const errs = {};
     if (!email.trim()) {
-      errs.email = "Email address is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      errs.email = "Please enter a valid email address.";
+      showToast("Email address is required.", "error");
+      return false;
     }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      showToast("Please enter a valid email address.", "error");
+      return false;
+    }
+    return true;
   };
 
   const validatePasswordStep = () => {
-    const errs = {};
     if (!newPassword) {
-      errs.newPassword = "New password is required.";
-    } else if (newPassword.length < 8) {
-      errs.newPassword = "Password must be at least 8 characters.";
+      showToast("New password is required.", "error");
+      return false;
     }
-
+    if (newPassword.length < 8) {
+      showToast("Password must be at least 8 characters.", "error");
+      return false;
+    }
     if (!confirmNewPassword) {
-      errs.confirmNewPassword = "Confirm password is required.";
-    } else if (newPassword !== confirmNewPassword) {
-      errs.confirmNewPassword = "Passwords do not match.";
+      showToast("Confirm password is required.", "error");
+      return false;
     }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    if (newPassword !== confirmNewPassword) {
+      showToast("Passwords do not match.", "error");
+      return false;
+    }
+    return true;
   };
 
   // Step 1: Send OTP to email
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    setApiError("");
-    setSuccessMsg("");
     if (!validateEmailStep()) return;
 
     setIsSubmitting(true);
@@ -71,12 +68,12 @@ export const ForgotPasswordPage = () => {
       showToast("Verification code has been sent to your email.", "success");
     } catch (err) {
       setIsSubmitting(false);
-      const msg =
+      showToast(
         err?.response?.data?.message ||
-        err.message ||
-        "Failed to send reset code. Please check your email.";
-      setApiError(msg);
-      showToast(msg, "error");
+          err.message ||
+          "Failed to send reset code. Please check your email.",
+        "error",
+      );
     }
   };
 
@@ -89,24 +86,22 @@ export const ForgotPasswordPage = () => {
       showToast("A new verification code has been resent.", "success");
     } catch (err) {
       setIsResending(false);
-      const msg =
+      showToast(
         err?.response?.data?.message ||
-        err.message ||
-        "Failed to resend OTP. Please wait before retrying.";
-      setOtpError(msg);
-      showToast(msg, "error");
+          err.message ||
+          "Failed to resend OTP. Please wait before retrying.",
+        "error",
+      );
     }
   };
 
   // Step 2 -> Step 3: Validate OTP entered
   const handleOtpValidated = async () => {
     if (!otpCode || otpCode.length < 6) {
-      setOtpError("Please enter the 6-digit OTP code.");
       showToast("Please enter all 6 digits of the OTP code.", "warning");
       return;
     }
     setIsSubmitting(true);
-    setOtpError("");
     try {
       await authService.verifyForgotPasswordOtp({
         email: email.trim(),
@@ -120,20 +115,18 @@ export const ForgotPasswordPage = () => {
       );
     } catch (err) {
       setIsSubmitting(false);
-      const msg =
+      showToast(
         err?.response?.data?.message ||
-        err.message ||
-        "Invalid or expired OTP code.";
-      setOtpError(msg);
-      showToast(msg, "error");
+          err.message ||
+          "Invalid or expired OTP code.",
+        "error",
+      );
     }
   };
 
   // Step 3: Submit reset password
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    setApiError("");
-    setSuccessMsg("");
     if (!validatePasswordStep()) return;
 
     setIsSubmitting(true);
@@ -154,12 +147,12 @@ export const ForgotPasswordPage = () => {
       }, 2000);
     } catch (err) {
       setIsSubmitting(false);
-      const msg =
+      showToast(
         err?.response?.data?.message ||
-        err.message ||
-        "Failed to reset password. Please check your OTP code.";
-      setApiError(msg);
-      showToast(msg, "error");
+          err.message ||
+          "Failed to reset password. Please check your OTP code.",
+        "error",
+      );
     }
   };
 
@@ -182,19 +175,6 @@ export const ForgotPasswordPage = () => {
                     />
                   </Link>
                 </div>
-
-                {apiError && (
-                  <div className="alert alert-danger py-2 px-3 br-10 mb-3 text-center fs-14">
-                    <i className="fa-solid fa-circle-exclamation me-2"></i>
-                    {apiError}
-                  </div>
-                )}
-                {successMsg && (
-                  <div className="alert alert-success py-2 px-3 br-10 mb-3 text-center fs-14">
-                    <i className="fa-solid fa-circle-check me-2"></i>
-                    {successMsg}
-                  </div>
-                )}
 
                 {/* Step 1: Request OTP */}
                 {step === 1 && (
@@ -221,17 +201,10 @@ export const ForgotPasswordPage = () => {
                           <input
                             type="email"
                             id="forgot-email"
-                            className={`form-control form-control-2 ${
-                              errors.email ? "is-invalid-field" : ""
-                            }`}
+                            className="form-control form-control-2"
                             placeholder="name@example.com"
                             value={email}
-                            onChange={(e) => {
-                              setEmail(e.target.value);
-                              if (errors.email) {
-                                setErrors((prev) => ({ ...prev, email: "" }));
-                              }
-                            }}
+                            onChange={(e) => setEmail(e.target.value)}
                             disabled={isSubmitting}
                             autoComplete="username"
                           />
@@ -248,7 +221,6 @@ export const ForgotPasswordPage = () => {
                             />
                           </svg>
                         </div>
-                        <AuthTooltip message={errors.email} position="top" />
                       </div>
 
                       <button
@@ -282,11 +254,11 @@ export const ForgotPasswordPage = () => {
                 {/* Step 2: Verify OTP */}
                 {step === 2 && (
                   <OtpVerificationStep
+                    title="Reset Password Verification"
+                    subtitle="Enter the 6-digit code sent to your email to continue"
                     email={email}
                     otp={otpCode}
                     setOtp={setOtpCode}
-                    otpError={otpError}
-                    setOtpError={setOtpError}
                     onVerify={handleOtpValidated}
                     onResend={handleResendOtp}
                     onBack={() => setStep(1)}
@@ -321,20 +293,10 @@ export const ForgotPasswordPage = () => {
                           <input
                             type={showPassword ? "text" : "password"}
                             id="reset-new-pw"
-                            className={`form-control form-control-2 pe-5 ${
-                              errors.newPassword ? "is-invalid-field" : ""
-                            }`}
+                            className="form-control form-control-2 pe-5"
                             placeholder="At least 8 characters"
                             value={newPassword}
-                            onChange={(e) => {
-                              setNewPassword(e.target.value);
-                              if (errors.newPassword) {
-                                setErrors((prev) => ({
-                                  ...prev,
-                                  newPassword: "",
-                                }));
-                              }
-                            }}
+                            onChange={(e) => setNewPassword(e.target.value)}
                             disabled={isSubmitting}
                             autoComplete="new-password"
                           />
@@ -365,10 +327,6 @@ export const ForgotPasswordPage = () => {
                             ></i>
                           </button>
                         </div>
-                        <AuthTooltip
-                          message={errors.newPassword}
-                          position="top"
-                        />
                       </div>
 
                       <div className="auth-field-wrapper mb-4 position-relative">
@@ -382,22 +340,12 @@ export const ForgotPasswordPage = () => {
                           <input
                             type={showConfirmPassword ? "text" : "password"}
                             id="reset-confirm-pw"
-                            className={`form-control form-control-2 pe-5 ${
-                              errors.confirmNewPassword
-                                ? "is-invalid-field"
-                                : ""
-                            }`}
+                            className="form-control form-control-2 pe-5"
                             placeholder="Repeat new password"
                             value={confirmNewPassword}
-                            onChange={(e) => {
-                              setConfirmNewPassword(e.target.value);
-                              if (errors.confirmNewPassword) {
-                                setErrors((prev) => ({
-                                  ...prev,
-                                  confirmNewPassword: "",
-                                }));
-                              }
-                            }}
+                            onChange={(e) =>
+                              setConfirmNewPassword(e.target.value)
+                            }
                             disabled={isSubmitting}
                             autoComplete="new-password"
                           />
@@ -430,10 +378,6 @@ export const ForgotPasswordPage = () => {
                             ></i>
                           </button>
                         </div>
-                        <AuthTooltip
-                          message={errors.confirmNewPassword}
-                          position="top"
-                        />
                       </div>
 
                       <button

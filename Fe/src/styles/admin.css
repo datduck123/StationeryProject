@@ -251,6 +251,73 @@
   font-size: 13px;
 }
 
+/* User Management Toolbar & Search Box */
+.admin-search-box {
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 38px;
+  width: 260px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.admin-search-box:focus-within {
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 2px rgba(233, 97, 63, 0.15);
+}
+
+.admin-search-box input {
+  border: none !important;
+  background: transparent !important;
+  outline: none !important;
+  width: 100% !important;
+  font-size: 13px !important;
+  color: #1e2229 !important;
+  padding: 0 8px !important;
+  height: 100% !important;
+  line-height: normal !important;
+}
+
+.admin-search-box input::placeholder {
+  color: #a0aec0;
+}
+
+.admin-search-box button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  color: #a0aec0;
+}
+
+.admin-search-box button:hover {
+  color: #4a5568;
+}
+
+.admin-select-sm {
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+  font-size: 13px;
+  background-color: #ffffff;
+  color: #1e2229;
+  padding: 0 12px;
+  outline: none;
+  cursor: pointer;
+}
+
+.admin-select-sm:focus {
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 2px rgba(233, 97, 63, 0.15);
+}
+
 .admin-topbar-actions {
   display: flex;
   align-items: center;

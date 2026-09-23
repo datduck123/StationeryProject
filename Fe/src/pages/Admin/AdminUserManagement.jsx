@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from "react";
-import AuthTooltip from "../../components/auth/AuthTooltip";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastContext";
@@ -16,7 +15,7 @@ export const AdminUserManagement = () => {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [page, setPage] = useState(0);
-  const [size, setSize] = useState(10);
+  const [size] = useState(10);
   const [sortBy, setSortBy] = useState("userId");
   const [sortDir, setSortDir] = useState("desc");
 
@@ -40,7 +39,6 @@ export const AdminUserManagement = () => {
     address: "",
     role: "CUSTOMER",
   });
-  const [addErrors, setAddErrors] = useState({});
   const [isAdding, setIsAdding] = useState(false);
 
   // 3. Edit User Modal
@@ -54,7 +52,6 @@ export const AdminUserManagement = () => {
     role: "CUSTOMER",
     status: "ACTIVE",
   });
-  const [editErrors, setEditErrors] = useState({});
   const [isEditing, setIsEditing] = useState(false);
 
   // 4. Lock/Unlock Confirm Dialog
@@ -114,23 +111,26 @@ export const AdminUserManagement = () => {
 
   // --- ADD USER LOGIC ---
   const validateAddForm = () => {
-    const errs = {};
     if (!addForm.fullName.trim()) {
-      errs.fullName = "Full name is required.";
+      showToast("Full name is required.", "error");
+      return false;
     }
     if (!addForm.email.trim()) {
-      errs.email = "Email is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addForm.email.trim())) {
-      errs.email = "Please enter a valid email address.";
+      showToast("Email address is required.", "error");
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addForm.email.trim())) {
+      showToast("Please enter a valid email address.", "error");
+      return false;
     }
     if (
       addForm.phone.trim() &&
       !/^(\+84|0)[0-9]{9,10}$/.test(addForm.phone.trim())
     ) {
-      errs.phone = "Invalid phone number (10 digits).";
+      showToast("Invalid phone number (10 digits).", "error");
+      return false;
     }
-    setAddErrors(errs);
-    return Object.keys(errs).length === 0;
+    return true;
   };
 
   const handleCreateUser = async (e) => {
@@ -163,7 +163,6 @@ export const AdminUserManagement = () => {
     } catch (err) {
       const msg =
         err?.response?.data?.message || err.message || "Failed to create user.";
-      setAddErrors((prev) => ({ ...prev, email: msg }));
       showToast(msg, "error");
     } finally {
       setIsAdding(false);
@@ -184,23 +183,22 @@ export const AdminUserManagement = () => {
           : "CUSTOMER",
       status: targetUser.status || "ACTIVE",
     });
-    setEditErrors({});
     setIsEditModalOpen(true);
   };
 
   const validateEditForm = () => {
-    const errs = {};
     if (!editForm.fullName.trim()) {
-      errs.fullName = "Full name is required.";
+      showToast("Full name is required.", "error");
+      return false;
     }
     if (
       editForm.phone.trim() &&
       !/^(\+84|0)[0-9]{9,10}$/.test(editForm.phone.trim())
     ) {
-      errs.phone = "Invalid phone number (10 digits).";
+      showToast("Invalid phone number (10 digits).", "error");
+      return false;
     }
-    setEditErrors(errs);
-    return Object.keys(errs).length === 0;
+    return true;
   };
 
   const handleUpdateUser = async (e) => {
@@ -224,7 +222,6 @@ export const AdminUserManagement = () => {
     } catch (err) {
       const msg =
         err?.response?.data?.message || err.message || "Failed to update user.";
-      setEditErrors((prev) => ({ ...prev, fullName: msg }));
       showToast(msg, "error");
     } finally {
       setIsEditing(false);
@@ -300,7 +297,6 @@ export const AdminUserManagement = () => {
               address: "",
               role: "CUSTOMER",
             });
-            setAddErrors({});
             setIsAddModalOpen(true);
           }}
         >
@@ -308,86 +304,77 @@ export const AdminUserManagement = () => {
         </button>
       </div>
 
-      {/* TOOLBAR CARD (Clean horizontal layout, live auto-search, no duplicate Add User) */}
+      {/* TOOLBAR CARD (Clean horizontal layout, uniform search, filters, and sort) */}
       <div className="admin-card mb-4">
         <div className="d-flex flex-wrap align-items-center gap-3">
           {/* Live Auto Search */}
-          <div className="flex-grow-1" style={{ minWidth: "260px" }}>
-            <div className="input-group">
-              <span className="input-group-text bg-light border-end-0">
-                <i className="fa-solid fa-magnifying-glass text-muted"></i>
-              </span>
-              <input
-                type="text"
-                className="form-control border-start-0 ps-0"
-                placeholder="Search by name or email (auto search)..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-              />
-              {searchInput && (
-                <button
-                  type="button"
-                  className="btn btn-light border-start-0 border"
-                  onClick={() => setSearchInput("")}
-                  title="Clear search"
-                >
-                  <i className="fa-solid fa-xmark text-muted"></i>
-                </button>
-              )}
-            </div>
+          <div className="admin-search-box">
+            <i className="fa-solid fa-magnifying-glass text-muted fs-13"></i>
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => setSearchInput("")}
+                title="Clear search"
+              >
+                <i className="fa-solid fa-xmark fs-13"></i>
+              </button>
+            )}
           </div>
 
           {/* Status Filter */}
-          <div style={{ width: "150px" }}>
-            <select
-              className="form-select form-select-sm"
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(0);
-              }}
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-              <option value="BLOCKED">Blocked</option>
-            </select>
-          </div>
+          <select
+            className="admin-select-sm"
+            style={{ width: "140px" }}
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(0);
+            }}
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+            <option value="BLOCKED">Blocked</option>
+          </select>
 
           {/* Role Filter */}
-          <div style={{ width: "150px" }}>
-            <select
-              className="form-select form-select-sm"
-              value={roleFilter}
-              onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(0);
-              }}
-            >
-              <option value="ALL">All Roles</option>
-              <option value="ADMIN">Admin</option>
-              <option value="CUSTOMER">Customer</option>
-            </select>
-          </div>
+          <select
+            className="admin-select-sm"
+            style={{ width: "140px" }}
+            value={roleFilter}
+            onChange={(e) => {
+              setRoleFilter(e.target.value);
+              setPage(0);
+            }}
+          >
+            <option value="ALL">All Roles</option>
+            <option value="ADMIN">Admin</option>
+            <option value="CUSTOMER">Customer</option>
+          </select>
 
           {/* Sort dropdown */}
-          <div style={{ width: "160px" }}>
-            <select
-              className="form-select form-select-sm"
-              value={`${sortBy}-${sortDir}`}
-              onChange={(e) => {
-                const [sb, sd] = e.target.value.split("-");
-                setSortBy(sb);
-                setSortDir(sd);
-                setPage(0);
-              }}
-            >
-              <option value="userId-desc">Newest First</option>
-              <option value="userId-asc">Oldest First</option>
-              <option value="fullName-asc">Name (A-Z)</option>
-              <option value="fullName-desc">Name (Z-A)</option>
-            </select>
-          </div>
+          <select
+            className="admin-select-sm"
+            style={{ width: "160px" }}
+            value={`${sortBy}-${sortDir}`}
+            onChange={(e) => {
+              const [sb, sd] = e.target.value.split("-");
+              setSortBy(sb);
+              setSortDir(sd);
+              setPage(0);
+            }}
+          >
+            <option value="userId-desc">Newest First</option>
+            <option value="userId-asc">Oldest First</option>
+            <option value="fullName-asc">Name (A-Z)</option>
+            <option value="fullName-desc">Name (Z-A)</option>
+          </select>
         </div>
       </div>
 
@@ -547,36 +534,16 @@ export const AdminUserManagement = () => {
           </table>
         </div>
 
-        {/* PAGINATION BAR (< 1 2 3 > without ...) */}
-        <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top gap-2">
-          <div className="d-flex align-items-center gap-3">
-            <span className="text-muted fs-13">
-              Showing{" "}
-              <strong>
-                {totalElements === 0 ? 0 : page * size + 1} to{" "}
-                {Math.min((page + 1) * size, totalElements)}
-              </strong>{" "}
-              of <strong>{totalElements}</strong> users
-            </span>
-
-            <div className="d-flex align-items-center gap-1">
-              <label className="text-muted fs-13 mb-0">Show:</label>
-              <select
-                className="form-select form-select-sm"
-                style={{ width: "75px" }}
-                value={size}
-                onChange={(e) => {
-                  setSize(Number(e.target.value));
-                  setPage(0);
-                }}
-              >
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
-              </select>
-            </div>
-          </div>
+        {/* PAGINATION BAR (< 1 2 3 > default 10 records without show selector) */}
+        <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 gap-2">
+          <span className="text-muted fs-13">
+            Showing{" "}
+            <strong>
+              {totalElements === 0 ? 0 : page * size + 1} to{" "}
+              {Math.min((page + 1) * size, totalElements)}
+            </strong>{" "}
+            of <strong>{totalElements}</strong> users
+          </span>
 
           {totalPages > 1 && (
             <div className="btn-group btn-group-sm">
@@ -781,17 +748,12 @@ export const AdminUserManagement = () => {
                   <div className="input-block">
                     <input
                       type="text"
-                      className={`form-control form-control-2 ${
-                        addErrors.fullName ? "is-invalid-field" : ""
-                      }`}
+                      className="form-control form-control-2"
                       placeholder="e.g. Le Thi Lan"
                       value={addForm.fullName}
-                      onChange={(e) => {
-                        setAddForm((p) => ({ ...p, fullName: e.target.value }));
-                        if (addErrors.fullName) {
-                          setAddErrors((p) => ({ ...p, fullName: "" }));
-                        }
-                      }}
+                      onChange={(e) =>
+                        setAddForm((p) => ({ ...p, fullName: e.target.value }))
+                      }
                       disabled={isAdding}
                     />
                     <svg
@@ -809,7 +771,6 @@ export const AdminUserManagement = () => {
                       <circle cx="12" cy="7" r="4" />
                     </svg>
                   </div>
-                  <AuthTooltip message={addErrors.fullName} position="top" />
                 </div>
 
                 {/* Email Address */}
@@ -820,17 +781,12 @@ export const AdminUserManagement = () => {
                   <div className="input-block">
                     <input
                       type="email"
-                      className={`form-control form-control-2 ${
-                        addErrors.email ? "is-invalid-field" : ""
-                      }`}
+                      className="form-control form-control-2"
                       placeholder="user@example.com"
                       value={addForm.email}
-                      onChange={(e) => {
-                        setAddForm((p) => ({ ...p, email: e.target.value }));
-                        if (addErrors.email) {
-                          setAddErrors((p) => ({ ...p, email: "" }));
-                        }
-                      }}
+                      onChange={(e) =>
+                        setAddForm((p) => ({ ...p, email: e.target.value }))
+                      }
                       disabled={isAdding}
                     />
                     <svg
@@ -848,7 +804,6 @@ export const AdminUserManagement = () => {
                       <polyline points="22,6 12,13 2,6" />
                     </svg>
                   </div>
-                  <AuthTooltip message={addErrors.email} position="top" />
                 </div>
 
                 {/* Phone & Role */}
@@ -861,20 +816,15 @@ export const AdminUserManagement = () => {
                       <div className="input-block">
                         <input
                           type="tel"
-                          className={`form-control form-control-2 ${
-                            addErrors.phone ? "is-invalid-field" : ""
-                          }`}
+                          className="form-control form-control-2"
                           placeholder="0912345678"
                           value={addForm.phone}
-                          onChange={(e) => {
+                          onChange={(e) =>
                             setAddForm((p) => ({
                               ...p,
                               phone: e.target.value,
-                            }));
-                            if (addErrors.phone) {
-                              setAddErrors((p) => ({ ...p, phone: "" }));
-                            }
-                          }}
+                            }))
+                          }
                           disabled={isAdding}
                         />
                         <svg
@@ -891,7 +841,6 @@ export const AdminUserManagement = () => {
                           <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                         </svg>
                       </div>
-                      <AuthTooltip message={addErrors.phone} position="top" />
                     </div>
                   </div>
 
@@ -1033,19 +982,14 @@ export const AdminUserManagement = () => {
                   <div className="input-block">
                     <input
                       type="text"
-                      className={`form-control form-control-2 ${
-                        editErrors.fullName ? "is-invalid-field" : ""
-                      }`}
+                      className="form-control form-control-2"
                       value={editForm.fullName}
-                      onChange={(e) => {
+                      onChange={(e) =>
                         setEditForm((p) => ({
                           ...p,
                           fullName: e.target.value,
-                        }));
-                        if (editErrors.fullName) {
-                          setEditErrors((p) => ({ ...p, fullName: "" }));
-                        }
-                      }}
+                        }))
+                      }
                       disabled={isEditing}
                     />
                     <svg
@@ -1063,7 +1007,6 @@ export const AdminUserManagement = () => {
                       <circle cx="12" cy="7" r="4" />
                     </svg>
                   </div>
-                  <AuthTooltip message={editErrors.fullName} position="top" />
                 </div>
 
                 {/* Phone */}
@@ -1072,19 +1015,14 @@ export const AdminUserManagement = () => {
                   <div className="input-block">
                     <input
                       type="tel"
-                      className={`form-control form-control-2 ${
-                        editErrors.phone ? "is-invalid-field" : ""
-                      }`}
+                      className="form-control form-control-2"
                       value={editForm.phone}
-                      onChange={(e) => {
+                      onChange={(e) =>
                         setEditForm((p) => ({
                           ...p,
                           phone: e.target.value,
-                        }));
-                        if (editErrors.phone) {
-                          setEditErrors((p) => ({ ...p, phone: "" }));
-                        }
-                      }}
+                        }))
+                      }
                       disabled={isEditing}
                     />
                     <svg
@@ -1101,7 +1039,6 @@ export const AdminUserManagement = () => {
                       <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
                     </svg>
                   </div>
-                  <AuthTooltip message={editErrors.phone} position="top" />
                 </div>
 
                 {/* Role & Status (Can edit ACTIVE / INACTIVE / BLOCKED) */}

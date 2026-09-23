@@ -1,43 +1,44 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import AuthTooltip from "../../components/auth/AuthTooltip";
 import TitleBanner from "../../components/shared/TitleBanner";
 import { useAuth } from "../../providers/AuthContext";
+import { useToast } from "../../providers/ToastContext";
 
 export const LoginPage = () => {
   const { login, openAuthModal } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [apiError, setApiError] = useState("");
 
   const validate = () => {
-    const errs = {};
     if (!email.trim()) {
-      errs.email = "Email is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      errs.email = "Please enter a valid email address.";
+      showToast("Email is required.", "error");
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      showToast("Please enter a valid email address.", "error");
+      return false;
     }
     if (!password) {
-      errs.password = "Password is required.";
+      showToast("Password is required.", "error");
+      return false;
     }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setApiError("");
     if (!validate()) return;
 
     setIsSubmitting(true);
     try {
       const res = await login(email, password);
       setIsSubmitting(false);
+      showToast("Welcome back!", "success");
       if (res.isAdmin) {
         navigate("/admin/users");
       } else {
@@ -45,7 +46,7 @@ export const LoginPage = () => {
       }
     } catch (err) {
       setIsSubmitting(false);
-      setApiError(err.message || "Invalid email or password.");
+      showToast(err.message || "Invalid email or password.", "error");
     }
   };
 
@@ -77,13 +78,6 @@ export const LoginPage = () => {
                   </p>
                 </div>
 
-                {apiError && (
-                  <div className="alert alert-danger py-2 px-3 br-10 mb-3 text-center fs-14">
-                    <i className="fa-solid fa-circle-exclamation me-2"></i>
-                    {apiError}
-                  </div>
-                )}
-
                 <form onSubmit={handleSubmit} noValidate>
                   {/* Email */}
                   <div className="auth-field-wrapper mb-3 position-relative">
@@ -98,17 +92,10 @@ export const LoginPage = () => {
                         type="email"
                         id="page-email"
                         name="email"
-                        className={`form-control form-control-2 ${
-                          errors.email ? "is-invalid-field" : ""
-                        }`}
+                        className="form-control form-control-2"
                         placeholder="Enter your email"
                         value={email}
-                        onChange={(e) => {
-                          setEmail(e.target.value);
-                          if (errors.email) {
-                            setErrors((prev) => ({ ...prev, email: "" }));
-                          }
-                        }}
+                        onChange={(e) => setEmail(e.target.value)}
                         disabled={isSubmitting}
                         autoComplete="username"
                       />
@@ -125,7 +112,6 @@ export const LoginPage = () => {
                         />
                       </svg>
                     </div>
-                    <AuthTooltip message={errors.email} position="top" />
                   </div>
 
                   {/* Password */}
@@ -150,17 +136,10 @@ export const LoginPage = () => {
                         type={showPassword ? "text" : "password"}
                         id="page-password"
                         name="password"
-                        className={`form-control form-control-2 pe-5 ${
-                          errors.password ? "is-invalid-field" : ""
-                        }`}
+                        className="form-control form-control-2 pe-5"
                         placeholder="Enter your password"
                         value={password}
-                        onChange={(e) => {
-                          setPassword(e.target.value);
-                          if (errors.password) {
-                            setErrors((prev) => ({ ...prev, password: "" }));
-                          }
-                        }}
+                        onChange={(e) => setPassword(e.target.value)}
                         disabled={isSubmitting}
                         autoComplete="current-password"
                       />
@@ -194,7 +173,6 @@ export const LoginPage = () => {
                         ></i>
                       </button>
                     </div>
-                    <AuthTooltip message={errors.password} position="top" />
                   </div>
 
                   {/* Primary CTA */}

@@ -1,23 +1,21 @@
 import { useEffect, useState } from "react";
-import AuthTooltip from "../../components/auth/AuthTooltip";
 import TitleBanner from "../../components/shared/TitleBanner";
 import { useAuth } from "../../providers/AuthContext";
+import { useToast } from "../../providers/ToastContext";
 import userService from "../../services/userService";
 
 export const ProfilePage = () => {
   const { user, setUser } = useAuth();
+  const { showToast } = useToast();
 
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
 
   // Edit Profile modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFullName, setEditFullName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editAddress, setEditAddress] = useState("");
-  const [editErrors, setEditErrors] = useState({});
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Change Password modal state
@@ -28,12 +26,10 @@ export const ProfilePage = () => {
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [showConfirmPw, setShowConfirmPw] = useState(false);
-  const [pwErrors, setPwErrors] = useState({});
   const [isChangingPw, setIsChangingPw] = useState(false);
 
   const fetchProfile = async () => {
     setLoading(true);
-    setError("");
     try {
       const data = await userService.getProfile();
       setProfile(data);
@@ -41,10 +37,11 @@ export const ProfilePage = () => {
       setEditPhone(data.phone || "");
       setEditAddress(data.address || "");
     } catch (err) {
-      setError(
+      showToast(
         err?.response?.data?.message ||
           err.message ||
           "Failed to load user profile.",
+        "error",
       );
     } finally {
       setLoading(false);
@@ -57,19 +54,19 @@ export const ProfilePage = () => {
 
   // Validation for Edit Profile
   const validateEditForm = () => {
-    const errs = {};
     if (!editFullName.trim()) {
-      errs.fullName = "Full name is required.";
-    } else if (editFullName.trim().length < 2) {
-      errs.fullName = "Full name must be at least 2 characters.";
+      showToast("Full name is required.", "error");
+      return false;
     }
-
+    if (editFullName.trim().length < 2) {
+      showToast("Full name must be at least 2 characters.", "error");
+      return false;
+    }
     if (editPhone.trim() && !/^(\+84|0)[0-9]{9,10}$/.test(editPhone.trim())) {
-      errs.phone = "Please enter a valid phone number (10 digits).";
+      showToast("Please enter a valid phone number (10 digits).", "error");
+      return false;
     }
-
-    setEditErrors(errs);
-    return Object.keys(errs).length === 0;
+    return true;
   };
 
   const handleSaveProfile = async (e) => {
@@ -77,9 +74,6 @@ export const ProfilePage = () => {
     if (!validateEditForm()) return;
 
     setIsSavingProfile(true);
-    setError("");
-    setSuccessMsg("");
-
     try {
       const updated = await userService.updateProfile({
         fullName: editFullName.trim(),
@@ -88,7 +82,6 @@ export const ProfilePage = () => {
       });
 
       setProfile(updated);
-      // Also update name in AuthContext
       if (user) {
         const updatedUser = { ...user, fullName: updated.fullName };
         setUser(updatedUser);
@@ -99,13 +92,13 @@ export const ProfilePage = () => {
       }
 
       setIsEditModalOpen(false);
-      setSuccessMsg("Profile updated successfully!");
-      setTimeout(() => setSuccessMsg(""), 4000);
+      showToast("Profile updated successfully!", "success");
     } catch (err) {
-      setError(
+      showToast(
         err?.response?.data?.message ||
           err.message ||
           "Failed to update profile.",
+        "error",
       );
     } finally {
       setIsSavingProfile(false);
@@ -114,25 +107,27 @@ export const ProfilePage = () => {
 
   // Validation for Change Password
   const validatePwForm = () => {
-    const errs = {};
     if (!currentPassword) {
-      errs.currentPassword = "Current password is required.";
+      showToast("Current password is required.", "error");
+      return false;
     }
-
     if (!newPassword) {
-      errs.newPassword = "New password is required.";
-    } else if (newPassword.length < 8) {
-      errs.newPassword = "Password must be at least 8 characters.";
+      showToast("New password is required.", "error");
+      return false;
     }
-
+    if (newPassword.length < 8) {
+      showToast("Password must be at least 8 characters.", "error");
+      return false;
+    }
     if (!confirmPassword) {
-      errs.confirmPassword = "Confirm password is required.";
-    } else if (newPassword !== confirmPassword) {
-      errs.confirmPassword = "Passwords do not match.";
+      showToast("Confirm password is required.", "error");
+      return false;
     }
-
-    setPwErrors(errs);
-    return Object.keys(errs).length === 0;
+    if (newPassword !== confirmPassword) {
+      showToast("Passwords do not match.", "error");
+      return false;
+    }
+    return true;
   };
 
   const handleChangePassword = async (e) => {
@@ -140,9 +135,6 @@ export const ProfilePage = () => {
     if (!validatePwForm()) return;
 
     setIsChangingPw(true);
-    setError("");
-    setSuccessMsg("");
-
     try {
       await userService.changePassword({
         currentPassword,
@@ -153,14 +145,14 @@ export const ProfilePage = () => {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setSuccessMsg("Password changed successfully!");
-      setTimeout(() => setSuccessMsg(""), 4000);
+      showToast("Password changed successfully!", "success");
     } catch (err) {
-      const msg =
+      showToast(
         err?.response?.data?.message ||
-        err.message ||
-        "Failed to change password. Please check your current password.";
-      setPwErrors((prev) => ({ ...prev, currentPassword: msg }));
+          err.message ||
+          "Failed to change password. Please check your current password.",
+        "error",
+      );
     } finally {
       setIsChangingPw(false);
     }
@@ -174,20 +166,6 @@ export const ProfilePage = () => {
         <div className="container-2">
           <div className="row justify-content-center">
             <div className="col-lg-8 col-md-10 col-12">
-              {/* Success / Error Alerts */}
-              {successMsg && (
-                <div className="alert alert-success py-3 px-4 br-10 mb-4 shadow-sm">
-                  <i className="fa-solid fa-circle-check me-2"></i>
-                  {successMsg}
-                </div>
-              )}
-              {error && (
-                <div className="alert alert-danger py-3 px-4 br-10 mb-4 shadow-sm">
-                  <i className="fa-solid fa-circle-exclamation me-2"></i>
-                  {error}
-                </div>
-              )}
-
               {loading ? (
                 <div className="text-center py-5 bg-white br-20 border shadow-sm">
                   <div
@@ -342,7 +320,6 @@ export const ProfilePage = () => {
                           setEditFullName(profile.fullName || "");
                           setEditPhone(profile.phone || "");
                           setEditAddress(profile.address || "");
-                          setEditErrors({});
                           setIsEditModalOpen(true);
                         }}
                       >
@@ -363,7 +340,6 @@ export const ProfilePage = () => {
                           setCurrentPassword("");
                           setNewPassword("");
                           setConfirmPassword("");
-                          setPwErrors({});
                           setIsPwModalOpen(true);
                         }}
                       >
@@ -415,20 +391,12 @@ export const ProfilePage = () => {
                   <div className="input-block">
                     <input
                       type="text"
-                      className={`form-control form-control-2 ${
-                        editErrors.fullName ? "is-invalid-field" : ""
-                      }`}
+                      className="form-control form-control-2"
                       value={editFullName}
-                      onChange={(e) => {
-                        setEditFullName(e.target.value);
-                        if (editErrors.fullName) {
-                          setEditErrors((prev) => ({ ...prev, fullName: "" }));
-                        }
-                      }}
+                      onChange={(e) => setEditFullName(e.target.value)}
                       disabled={isSavingProfile}
                     />
                   </div>
-                  <AuthTooltip message={editErrors.fullName} position="top" />
                 </div>
 
                 <div className="auth-field-wrapper mb-3 position-relative">
@@ -436,21 +404,13 @@ export const ProfilePage = () => {
                   <div className="input-block">
                     <input
                       type="tel"
-                      className={`form-control form-control-2 ${
-                        editErrors.phone ? "is-invalid-field" : ""
-                      }`}
+                      className="form-control form-control-2"
                       placeholder="0912345678"
                       value={editPhone}
-                      onChange={(e) => {
-                        setEditPhone(e.target.value);
-                        if (editErrors.phone) {
-                          setEditErrors((prev) => ({ ...prev, phone: "" }));
-                        }
-                      }}
+                      onChange={(e) => setEditPhone(e.target.value)}
                       disabled={isSavingProfile}
                     />
                   </div>
-                  <AuthTooltip message={editErrors.phone} position="top" />
                 </div>
 
                 <div className="auth-field-wrapper mb-4 position-relative">
@@ -534,20 +494,10 @@ export const ProfilePage = () => {
                   <div className="input-block">
                     <input
                       type={showCurrentPw ? "text" : "password"}
-                      className={`form-control form-control-2 pe-5 ${
-                        pwErrors.currentPassword ? "is-invalid-field" : ""
-                      }`}
+                      className="form-control form-control-2 pe-5"
                       placeholder="Enter current password"
                       value={currentPassword}
-                      onChange={(e) => {
-                        setCurrentPassword(e.target.value);
-                        if (pwErrors.currentPassword) {
-                          setPwErrors((prev) => ({
-                            ...prev,
-                            currentPassword: "",
-                          }));
-                        }
-                      }}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
                       disabled={isChangingPw}
                     />
                     <button
@@ -565,10 +515,6 @@ export const ProfilePage = () => {
                       ></i>
                     </button>
                   </div>
-                  <AuthTooltip
-                    message={pwErrors.currentPassword}
-                    position="top"
-                  />
                 </div>
 
                 <div className="auth-field-wrapper mb-3 position-relative">
@@ -578,17 +524,10 @@ export const ProfilePage = () => {
                   <div className="input-block">
                     <input
                       type={showNewPw ? "text" : "password"}
-                      className={`form-control form-control-2 pe-5 ${
-                        pwErrors.newPassword ? "is-invalid-field" : ""
-                      }`}
+                      className="form-control form-control-2 pe-5"
                       placeholder="At least 8 characters"
                       value={newPassword}
-                      onChange={(e) => {
-                        setNewPassword(e.target.value);
-                        if (pwErrors.newPassword) {
-                          setPwErrors((prev) => ({ ...prev, newPassword: "" }));
-                        }
-                      }}
+                      onChange={(e) => setNewPassword(e.target.value)}
                       disabled={isChangingPw}
                     />
                     <button
@@ -606,7 +545,6 @@ export const ProfilePage = () => {
                       ></i>
                     </button>
                   </div>
-                  <AuthTooltip message={pwErrors.newPassword} position="top" />
                 </div>
 
                 <div className="auth-field-wrapper mb-4 position-relative">
@@ -616,20 +554,10 @@ export const ProfilePage = () => {
                   <div className="input-block">
                     <input
                       type={showConfirmPw ? "text" : "password"}
-                      className={`form-control form-control-2 pe-5 ${
-                        pwErrors.confirmPassword ? "is-invalid-field" : ""
-                      }`}
+                      className="form-control form-control-2 pe-5"
                       placeholder="Repeat new password"
                       value={confirmPassword}
-                      onChange={(e) => {
-                        setConfirmPassword(e.target.value);
-                        if (pwErrors.confirmPassword) {
-                          setPwErrors((prev) => ({
-                            ...prev,
-                            confirmPassword: "",
-                          }));
-                        }
-                      }}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
                       disabled={isChangingPw}
                     />
                     <button
@@ -647,10 +575,6 @@ export const ProfilePage = () => {
                       ></i>
                     </button>
                   </div>
-                  <AuthTooltip
-                    message={pwErrors.confirmPassword}
-                    position="top"
-                  />
                 </div>
 
                 <div className="d-flex justify-content-end gap-2">

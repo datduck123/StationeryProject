@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import AdminProfileModal from "../components/admin/AdminProfileModal";
 import AuthModal from "../components/auth/AuthModal";
 import { useAuth } from "../providers/AuthContext";
 import "../styles/admin.css";
@@ -15,6 +16,8 @@ export const AdminLayout = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   // Topbar profile dropdown state
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  // Admin Profile Modal state (stays within the dashboard)
+  const [isAdminProfileOpen, setIsAdminProfileOpen] = useState(false);
 
   const profileRef = useRef(null);
 
@@ -178,39 +181,24 @@ export const AdminLayout = () => {
               </Link>
             </li>
             <li className="admin-nav-item">
-              <Link to="/profile" className="admin-nav-link" title="My Profile">
+              <button
+                type="button"
+                className="admin-nav-link"
+                title="My Profile"
+                onClick={() => setIsAdminProfileOpen(true)}
+              >
                 <i className="fa-regular fa-user"></i>
                 <span>My Profile</span>
-              </Link>
+              </button>
             </li>
           </ul>
         </div>
 
-        {/* Sidebar Footer (Admin Profile & Single Sign Out Button) */}
+        {/* Sidebar Footer (Only 1 single Sign Out button on the sidebar left bottom) */}
         <div className="admin-sidebar-footer">
-          <div className="admin-user-card">
-            <div className="admin-avatar">
-              {getInitials(user?.fullName || "AD")}
-            </div>
-            <div className="admin-user-info">
-              <div
-                className="admin-user-name"
-                title={user?.fullName || "Admin"}
-              >
-                {user?.fullName || "Administrator"}
-              </div>
-              <div className="admin-user-role">
-                <span className="badge bg-danger-subtle text-danger fs-11">
-                  {user?.role || "ADMIN"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Only 1 single Sign Out button on the sidebar left bottom */}
           <button
             type="button"
-            className="admin-btn-outline w-100 mt-2 py-2 d-flex align-items-center justify-content-center gap-2 border rounded-3 bg-white text-muted"
+            className="admin-btn-outline w-100 py-2 d-flex align-items-center justify-content-center gap-2 border rounded-3 bg-white text-muted"
             onClick={logout}
             style={{
               fontSize: "13px",
@@ -303,13 +291,16 @@ export const AdminLayout = () => {
                       {user?.email || "admin@stationery.com"}
                     </div>
                   </div>
-                  <Link
-                    to="/profile"
-                    className="dropdown-item px-3 py-2 fs-13 d-flex align-items-center gap-2 text-decoration-none text-dark"
-                    onClick={() => setProfileDropdownOpen(false)}
+                  <button
+                    type="button"
+                    className="dropdown-item px-3 py-2 fs-13 d-flex align-items-center gap-2 border-0 bg-transparent text-dark w-100 text-start"
+                    onClick={() => {
+                      setProfileDropdownOpen(false);
+                      setIsAdminProfileOpen(true);
+                    }}
                   >
                     <i className="fa-regular fa-user text-muted"></i> My Profile
-                  </Link>
+                  </button>
                   <Link
                     to="/"
                     className="dropdown-item px-3 py-2 fs-13 d-flex align-items-center gap-2 text-decoration-none text-dark"
@@ -330,6 +321,10 @@ export const AdminLayout = () => {
         </main>
       </div>
       <AuthModal />
+      <AdminProfileModal
+        isOpen={isAdminProfileOpen}
+        onClose={() => setIsAdminProfileOpen(false)}
+      />
     </div>
   );
 };
