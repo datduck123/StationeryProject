@@ -1,39 +1,15 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import ConfirmDialog from "../components/ui/ConfirmDialog";
+import authService from "../services/authService";
 
 const AuthContext = createContext();
 
-const STORAGE_KEY = "stationery_clinic_auth_user";
-const REGISTERED_USERS_KEY = "stationery_clinic_registered_users";
-
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? JSON.parse(stored) : null;
-    } catch {
-      return null;
-    }
-  });
-
+  const [user, setUser] = useState(() => authService.getCurrentUser());
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState("login"); // 'login' | 'register'
-
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [user]);
-
-  const openAuthModal = (tab = "login") => {
-    setAuthModalTab(tab);
-    setIsAuthModalOpen(true);
-  };
-
-  const closeAuthModal = () => {
-    setIsAuthModalOpen(false);
-  };
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Lock body scroll when auth modal is open
   useEffect(() => {
@@ -47,175 +23,93 @@ export const AuthProvider = ({ children }) => {
     };
   }, [isAuthModalOpen]);
 
+  const openAuthModal = (tab = "login") => {
+    setAuthModalTab(tab);
+    setIsAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setIsAuthModalOpen(false);
+  };
+
   /**
-   * Login handler
-   * Supports:
-   * 1. admin01@gmail.com / Karamba7075##. -> Role: ADMIN
-   * 2. Backend API call to /api/auth/login if backend is running
-   * 3. Fallback to registered users stored in localStorage
+   * Login handler using backend API
    */
   const login = async (email, password) => {
-    const trimmedEmail = email.trim().toLowerCase();
-
-    // Check specific admin credentials first
-    if (trimmedEmail === "admin01@gmail.com" && password === "Karamba7075##.") {
-      const adminUser = {
-        email: "admin01@gmail.com",
-        fullName: "Clinic Administrator",
-        role: "ADMIN",
-        token: "admin-jwt-token-" + Date.now(),
-      };
-      setUser(adminUser);
-      return { success: true, user: adminUser, isAdmin: true };
-    }
-
-    // Try backend API if available
     try {
-      const response = await fetch("http://localhost:8080/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email: trimmedEmail, password }),
+      const loggedUser = await authService.login({
+        email: email.trim().toLowerCase(),
+        password,
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        const loggedUser = {
-          email: data.email || trimmedEmail,
-          fullName: data.fullName || trimmedEmail.split("@")[0],
-          role: data.role?.replace("ROLE_", "") || "USER",
-          token: data.token,
-        };
-        setUser(loggedUser);
-        return {
-          success: true,
-          user: loggedUser,
-          isAdmin: loggedUser.role === "ADMIN",
-        };
-      }
-    } catch {
-      // Backend not running or network issue, fallback to localStorage
-    }
-
-    // Check local registered users
-    try {
-      const registered = JSON.parse(
-        localStorage.getItem(REGISTERED_USERS_KEY) || "[]",
-      );
-      const matched = registered.find(
-        (u) =>
-          u.email.toLowerCase() === trimmedEmail && u.password === password,
-      );
-
-      if (matched) {
-        const patientUser = {
-          email: matched.email,
-          fullName: matched.fullName,
-          role: matched.role || "PATIENT",
-          token: "patient-jwt-" + Date.now(),
-        };
-        setUser(patientUser);
-        return { success: true, user: patientUser, isAdmin: false };
-      }
-    } catch {
-      // ignore
-    }
-
-    // General patient demo account fallback
-    if (trimmedEmail === "patient@clinic.com" && password === "Patient123@") {
-      const demoUser = {
-        email: "patient@clinic.com",
-        fullName: "Sarah Jenkins",
-        role: "PATIENT",
-        token: "demo-jwt-" + Date.now(),
+      setUser(loggedUser);
+      const isUserAdmin =
+        loggedUser.role === "ROLE_ADMIN" || loggedUser.role === "ADMIN";
+      return {
+        success: true,
+        user: loggedUser,
+        isAdmin: isUserAdmin,
       };
-      setUser(demoUser);
-      return { success: true, user: demoUser, isAdmin: false };
-    }
+    } catch (error) {
+      const status = error?.response?.status;
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Invalid email or password. Please try again.";
 
-    throw new Error("Invalid email or password. Please try again.");
+      if (status === 403 || message.toLowerCase().includes("blocked")) {
+        throw new Error(
+          "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên (Account is blocked. Please contact administrator).",
+        );
+      }
+      throw new Error(message);
+    }
   };
 
   /**
-   * Register handler
-   * Public registration is strictly for PATIENT / USER role
+   * Direct verify and register
    */
-  const register = async ({ fullName, email, password }) => {
-    const trimmedEmail = email.trim().toLowerCase();
-
-    // Check if email already exists locally
-    const registered = JSON.parse(
-      localStorage.getItem(REGISTERED_USERS_KEY) || "[]",
-    );
-    if (
-      trimmedEmail === "admin01@gmail.com" ||
-      registered.some((u) => u.email.toLowerCase() === trimmedEmail)
-    ) {
-      throw new Error("This email is already registered.");
-    }
-
-    // Try backend API registration if available
+  const register = async (registerPayload) => {
     try {
-      const response = await fetch("http://localhost:8080/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fullName: fullName.trim(),
-          email: trimmedEmail,
-          password,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const newUser = {
-          email: data.email || trimmedEmail,
-          fullName: fullName.trim(),
-          role: "PATIENT",
-          token: data.token || "patient-jwt-" + Date.now(),
-        };
-        return { success: true, user: newUser };
-      }
-    } catch {
-      // Backend not running, proceed with client persistence
+      const result = await authService.verifyAndRegister(registerPayload);
+      return { success: true, result };
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Registration failed. Please try again.";
+      throw new Error(message);
     }
-
-    // Store in localStorage
-    const newRegisteredUser = {
-      fullName: fullName.trim(),
-      email: trimmedEmail,
-      password,
-      role: "PATIENT",
-      createdAt: new Date().toISOString(),
-    };
-
-    registered.push(newRegisteredUser);
-    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(registered));
-
-    const patientUser = {
-      email: trimmedEmail,
-      fullName: fullName.trim(),
-      role: "PATIENT",
-      token: "patient-jwt-" + Date.now(),
-    };
-
-    return { success: true, user: patientUser };
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
+  /**
+   * Direct logout action
+   */
+  const directLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await authService.logout();
+    } finally {
+      setUser(null);
+      setIsLoggingOut(false);
+      setShowLogoutConfirm(false);
+      window.location.href = "/";
+    }
   };
 
-  const isAdmin = user?.role === "ADMIN";
+  /**
+   * Request logout (opens confirmation dialog)
+   */
+  const requestLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const isAdmin = user?.role === "ROLE_ADMIN" || user?.role === "ADMIN";
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        setUser,
         isAdmin,
         isAuthModalOpen,
         authModalTab,
@@ -224,10 +118,24 @@ export const AuthProvider = ({ children }) => {
         setAuthModalTab,
         login,
         register,
-        logout,
+        logout: requestLogout,
+        directLogout,
       }}
     >
       {children}
+
+      {/* Global Logout Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        title="Đăng xuất"
+        message="Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?"
+        confirmText="Đăng xuất"
+        cancelText="Hủy"
+        confirmVariant="danger"
+        isLoading={isLoggingOut}
+        onConfirm={directLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </AuthContext.Provider>
   );
 };

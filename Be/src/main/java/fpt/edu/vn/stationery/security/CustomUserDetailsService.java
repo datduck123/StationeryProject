@@ -1,6 +1,8 @@
 package fpt.edu.vn.stationery.security;
 
+import fpt.edu.vn.stationery.constant.UserStatus;
 import fpt.edu.vn.stationery.entity.User;
+import fpt.edu.vn.stationery.exception.AccountLockedException;
 import fpt.edu.vn.stationery.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -17,11 +19,18 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+
+        if (user.getStatus() == UserStatus.BLOCKED) {
+            throw new AccountLockedException("Tài khoản của bạn đã bị khóa");
+        }
+
+        String role = (user.getIsAdmin() != null && user.getIsAdmin() == 1) ? "ROLE_ADMIN" : "ROLE_CUSTOMER";
+
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),
-                user.getPassword(),
-                List.of(new SimpleGrantedAuthority(user.getRole()))
+                user.getPasswordHash(),
+                List.of(new SimpleGrantedAuthority(role))
         );
     }
 }

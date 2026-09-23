@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../providers/AuthContext";
+import authService from "../../services/authService";
 import AuthTooltip from "./AuthTooltip";
+import OtpVerificationStep from "./OtpVerificationStep";
 
 export const AuthModal = () => {
   const {
@@ -11,9 +12,7 @@ export const AuthModal = () => {
     authModalTab,
     setAuthModalTab,
     login,
-    register,
   } = useAuth();
-  const { t } = useTranslation();
   const navigate = useNavigate();
 
   // Login form state
@@ -25,6 +24,7 @@ export const AuthModal = () => {
   const [loginApiError, setLoginApiError] = useState("");
 
   // Register form state
+  const [regStep, setRegStep] = useState(1);
   const [regFullName, setRegFullName] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regPassword, setRegPassword] = useState("");
@@ -32,6 +32,13 @@ export const AuthModal = () => {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [showRegConfirmPassword, setShowRegConfirmPassword] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
+
+  // OTP state for register
+  const [regOtp, setRegOtp] = useState("");
+  const [regOtpError, setRegOtpError] = useState("");
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isResendingOtp, setIsResendingOtp] = useState(false);
+
   const [regErrors, setRegErrors] = useState({});
   const [isRegSubmitting, setIsRegSubmitting] = useState(false);
   const [regSuccessMsg, setRegSuccessMsg] = useState("");
@@ -44,11 +51,12 @@ export const AuthModal = () => {
     setLoginApiError("");
     setRegApiError("");
     setRegSuccessMsg("");
+    setRegOtpError("");
+    setRegStep(1);
   }, [authModalTab, isAuthModalOpen]);
 
   if (!isAuthModalOpen) return null;
 
-  // Validation functions
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(String(email).toLowerCase());
@@ -76,8 +84,6 @@ export const AuthModal = () => {
       errors.fullName = "Full name is required.";
     } else if (regFullName.trim().length < 2) {
       errors.fullName = "Full name must be at least 2 characters.";
-    } else if (regFullName.trim().length > 100) {
-      errors.fullName = "Full name must be under 100 characters.";
     }
 
     if (!regEmail.trim()) {
@@ -119,7 +125,9 @@ export const AuthModal = () => {
       closeAuthModal();
 
       if (result.isAdmin) {
-        navigate("/admin");
+        navigate("/admin/users");
+      } else {
+        navigate("/");
       }
     } catch (err) {
       setIsLoginSubmitting(false);
@@ -129,7 +137,8 @@ export const AuthModal = () => {
     }
   };
 
-  const handleRegisterSubmit = async (e) => {
+  // Step 1: Send OTP
+  const handleRegisterSendOtp = async (e) => {
     e.preventDefault();
     setRegApiError("");
     setRegSuccessMsg("");
@@ -137,25 +146,70 @@ export const AuthModal = () => {
 
     setIsRegSubmitting(true);
     try {
-      await register({
-        fullName: regFullName,
-        email: regEmail,
-        password: regPassword,
-      });
+      await authService.sendRegisterOtp({ email: regEmail.trim() });
       setIsRegSubmitting(false);
-      setRegSuccessMsg("Account created successfully! Please sign in.");
-      // Pre-fill login email and switch to login tab after a short delay
-      setLoginEmail(regEmail);
-      setRegFullName("");
-      setRegPassword("");
-      setRegConfirmPassword("");
-      setAgreeTerms(false);
-      setTimeout(() => {
-        setAuthModalTab("login");
-      }, 1200);
+      setRegStep(2);
     } catch (err) {
       setIsRegSubmitting(false);
-      setRegApiError(err.message || "Registration failed. Please try again.");
+      setRegApiError(
+        err?.response?.data?.message ||
+          err.message ||
+          "Failed to send OTP. Please check your email.",
+      );
+    }
+  };
+
+  // Resend OTP
+  const handleRegisterResendOtp = async () => {
+    setIsResendingOtp(true);
+    try {
+      await authService.sendRegisterOtp({ email: regEmail.trim() });
+      setIsResendingOtp(false);
+    } catch (err) {
+      setIsResendingOtp(false);
+      setRegOtpError(
+        err?.response?.data?.message ||
+          err.message ||
+          "Failed to resend OTP. Please wait before retrying.",
+      );
+    }
+  };
+
+  // Step 2: Verify & Register
+  const handleRegisterVerifyAndComplete = async () => {
+    if (!regOtp || regOtp.length < 6) {
+      setRegOtpError("Please enter the 6-digit OTP code.");
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    setRegOtpError("");
+    setRegApiError("");
+
+    try {
+      await authService.verifyAndRegister({
+        fullName: regFullName.trim(),
+        email: regEmail.trim(),
+        password: regPassword,
+        otpCode: regOtp,
+      });
+
+      setIsVerifyingOtp(false);
+      setRegSuccessMsg(
+        "Account registered successfully! Switching to sign in...",
+      );
+      setLoginEmail(regEmail);
+      setTimeout(() => {
+        setAuthModalTab("login");
+        setRegStep(1);
+      }, 1500);
+    } catch (err) {
+      setIsVerifyingOtp(false);
+      const msg =
+        err?.response?.data?.message ||
+        err.message ||
+        "Invalid or expired OTP code.";
+      setRegOtpError(msg);
     }
   };
 
@@ -277,7 +331,6 @@ export const AuthModal = () => {
                       />
                     </svg>
                   </div>
-                  {/* Tooltip Error */}
                   <AuthTooltip message={loginErrors.email} position="top" />
                 </div>
 
@@ -290,18 +343,13 @@ export const AuthModal = () => {
                     >
                       Password
                     </label>
-                    <a
-                      href="#forgot-password"
+                    <Link
+                      to="/forgot-password"
                       className="color-primary fs-13 fw-500 text-decoration-underline"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        alert(
-                          "Please contact clinic support to reset your password.",
-                        );
-                      }}
+                      onClick={closeAuthModal}
                     >
                       Forgot password?
-                    </a>
+                    </Link>
                   </div>
                   <div className="input-block">
                     <input
@@ -334,7 +382,6 @@ export const AuthModal = () => {
                         fill="#141516"
                       />
                     </svg>
-                    {/* Show/Hide password toggle */}
                     <button
                       type="button"
                       className="auth-password-toggle"
@@ -353,7 +400,6 @@ export const AuthModal = () => {
                       ></i>
                     </button>
                   </div>
-                  {/* Tooltip Error */}
                   <AuthTooltip message={loginErrors.password} position="top" />
                 </div>
 
@@ -391,305 +437,276 @@ export const AuthModal = () => {
 
             {/* REGISTER FORM */}
             {authModalTab === "register" && (
-              <form onSubmit={handleRegisterSubmit} noValidate>
-                {/* Full Name Field */}
-                <div className="auth-field-wrapper mb-3 position-relative">
-                  <label
-                    htmlFor="reg-name"
-                    className="form-label fw-600 medium-black mb-1"
-                  >
-                    Full Name
-                  </label>
-                  <div className="input-block">
-                    <input
-                      type="text"
-                      id="reg-name"
-                      name="fullName"
-                      className={`form-control form-control-2 ${
-                        regErrors.fullName ? "is-invalid-field" : ""
-                      }`}
-                      placeholder="Enter your full name"
-                      value={regFullName}
-                      onChange={(e) => {
-                        setRegFullName(e.target.value);
-                        if (regErrors.fullName) {
-                          setRegErrors((prev) => ({ ...prev, fullName: "" }));
-                        }
-                      }}
-                      disabled={isRegSubmitting}
-                      autoComplete="name"
-                    />
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="19"
-                      height="18"
-                      viewBox="0 0 19 18"
-                      fill="none"
-                    >
-                      <path
-                        d="M9.71387 0C7.09687 0 4.96777 2.1291 4.96777 4.74609C4.96777 7.36309 7.09687 9.49219 9.71387 9.49219C12.3309 9.49219 14.46 7.36309 14.46 4.74609C14.46 2.1291 12.3309 0 9.71387 0ZM9.71387 8.4375C7.67843 8.4375 6.02246 6.78154 6.02246 4.74609C6.02246 2.71065 7.67843 1.05469 9.71387 1.05469C11.7493 1.05469 13.4053 2.71065 13.4053 4.74609C13.4053 6.78154 11.7493 8.4375 9.71387 8.4375Z"
-                        fill="#1E1F20"
+              <>
+                {regStep === 1 ? (
+                  <form onSubmit={handleRegisterSendOtp} noValidate>
+                    {/* Full Name Field */}
+                    <div className="auth-field-wrapper mb-3 position-relative">
+                      <label
+                        htmlFor="reg-name"
+                        className="form-label fw-600 medium-black mb-1"
+                      >
+                        Full Name *
+                      </label>
+                      <div className="input-block">
+                        <input
+                          type="text"
+                          id="reg-name"
+                          name="fullName"
+                          className={`form-control form-control-2 ${
+                            regErrors.fullName ? "is-invalid-field" : ""
+                          }`}
+                          placeholder="Enter your full name"
+                          value={regFullName}
+                          onChange={(e) => {
+                            setRegFullName(e.target.value);
+                            if (regErrors.fullName) {
+                              setRegErrors((prev) => ({
+                                ...prev,
+                                fullName: "",
+                              }));
+                            }
+                          }}
+                          disabled={isRegSubmitting}
+                          autoComplete="name"
+                        />
+                      </div>
+                      <AuthTooltip
+                        message={regErrors.fullName}
+                        position="top"
                       />
-                      <path
-                        d="M15.6189 12.5928C14.3195 11.2734 12.597 10.5469 10.7686 10.5469H8.65918C6.83077 10.5469 5.10819 11.2734 3.80881 12.5928C2.5158 13.9057 1.80371 15.6387 1.80371 17.4727C1.80371 17.7639 2.03982 18 2.33105 18H17.0967C17.3879 18 17.624 17.7639 17.624 17.4727C17.624 15.6387 16.9119 13.9057 15.6189 12.5928ZM2.8816 16.9453C3.1458 13.954 5.63613 11.6016 8.65918 11.6016H10.7686C13.7916 11.6016 16.2819 13.954 16.5461 16.9453H2.8816Z"
-                        fill="#1E1F20"
-                      />
-                    </svg>
-                  </div>
-                  {/* Tooltip Error */}
-                  <AuthTooltip message={regErrors.fullName} position="top" />
-                </div>
+                    </div>
 
-                {/* Email Field */}
-                <div className="auth-field-wrapper mb-3 position-relative">
-                  <label
-                    htmlFor="reg-email"
-                    className="form-label fw-600 medium-black mb-1"
-                  >
-                    Email Address
-                  </label>
-                  <div className="input-block">
-                    <input
-                      type="email"
-                      id="reg-email"
-                      name="email"
-                      className={`form-control form-control-2 ${
-                        regErrors.email ? "is-invalid-field" : ""
-                      }`}
-                      placeholder="Enter your email"
-                      value={regEmail}
-                      onChange={(e) => {
-                        setRegEmail(e.target.value);
-                        if (regErrors.email) {
-                          setRegErrors((prev) => ({ ...prev, email: "" }));
-                        }
-                      }}
-                      disabled={isRegSubmitting}
-                      autoComplete="username"
-                    />
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                    >
-                      <path
-                        d="M18.2422 2.96875H1.75781C0.786602 2.96875 0 3.76023 0 4.72656V15.2734C0 16.2455 0.792383 17.0312 1.75781 17.0312H18.2422C19.2053 17.0312 20 16.2488 20 15.2734V4.72656C20 3.76195 19.2165 2.96875 18.2422 2.96875ZM17.996 4.14062C17.6369 4.49785 11.4564 10.6458 11.243 10.8581C10.9109 11.1901 10.4695 11.3729 10 11.3729C9.53047 11.3729 9.08906 11.1901 8.75594 10.857C8.61242 10.7142 2.50012 4.63414 2.00398 4.14062H17.996ZM1.17188 15.0349V4.96582L6.23586 10.0031L1.17188 15.0349ZM2.00473 15.8594L7.06672 10.8296L7.9284 11.6867C8.48176 12.2401 9.21746 12.5448 10 12.5448C10.7825 12.5448 11.5182 12.2401 12.0705 11.6878L12.9333 10.8296L17.9953 15.8594H2.00473ZM18.8281 15.0349L13.7641 10.0031L18.8281 4.96582V15.0349Z"
-                        fill="#141516"
-                      />
-                    </svg>
-                  </div>
-                  {/* Tooltip Error */}
-                  <AuthTooltip message={regErrors.email} position="top" />
-                </div>
+                    {/* Email Field */}
+                    <div className="auth-field-wrapper mb-3 position-relative">
+                      <label
+                        htmlFor="reg-email"
+                        className="form-label fw-600 medium-black mb-1"
+                      >
+                        Email Address *
+                      </label>
+                      <div className="input-block">
+                        <input
+                          type="email"
+                          id="reg-email"
+                          name="email"
+                          className={`form-control form-control-2 ${
+                            regErrors.email ? "is-invalid-field" : ""
+                          }`}
+                          placeholder="Enter your email"
+                          value={regEmail}
+                          onChange={(e) => {
+                            setRegEmail(e.target.value);
+                            if (regErrors.email) {
+                              setRegErrors((prev) => ({ ...prev, email: "" }));
+                            }
+                          }}
+                          disabled={isRegSubmitting}
+                          autoComplete="username"
+                        />
+                      </div>
+                      <AuthTooltip message={regErrors.email} position="top" />
+                    </div>
 
-                {/* Password Field */}
-                <div className="auth-field-wrapper mb-3 position-relative">
-                  <label
-                    htmlFor="reg-password"
-                    className="form-label fw-600 medium-black mb-1"
-                  >
-                    Password
-                  </label>
-                  <div className="input-block">
-                    <input
-                      type={showRegPassword ? "text" : "password"}
-                      id="reg-password"
-                      name="password"
-                      className={`form-control form-control-2 pe-5 ${
-                        regErrors.password ? "is-invalid-field" : ""
-                      }`}
-                      placeholder="Minimum 8 characters"
-                      value={regPassword}
-                      onChange={(e) => {
-                        setRegPassword(e.target.value);
-                        if (regErrors.password) {
-                          setRegErrors((prev) => ({ ...prev, password: "" }));
-                        }
-                      }}
-                      disabled={isRegSubmitting}
-                      autoComplete="new-password"
-                    />
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                    >
-                      <path
-                        d="M10 2C6.134 2 3 5.134 3 9V11H2C1.448 11 1 11.448 1 12V18C1 18.552 1.448 19 2 19H18C18.552 19 19 18.552 19 18V12C19 11.448 18.552 11 18 11H17V9C17 5.134 13.866 2 10 2ZM5 9C5 6.239 7.239 4 10 4C12.761 4 15 6.239 15 9V11H5V9Z"
-                        fill="#141516"
+                    {/* Password Field */}
+                    <div className="auth-field-wrapper mb-3 position-relative">
+                      <label
+                        htmlFor="reg-password"
+                        className="form-label fw-600 medium-black mb-1"
+                      >
+                        Password *
+                      </label>
+                      <div className="input-block">
+                        <input
+                          type={showRegPassword ? "text" : "password"}
+                          id="reg-password"
+                          name="password"
+                          className={`form-control form-control-2 pe-5 ${
+                            regErrors.password ? "is-invalid-field" : ""
+                          }`}
+                          placeholder="Minimum 8 characters"
+                          value={regPassword}
+                          onChange={(e) => {
+                            setRegPassword(e.target.value);
+                            if (regErrors.password) {
+                              setRegErrors((prev) => ({
+                                ...prev,
+                                password: "",
+                              }));
+                            }
+                          }}
+                          disabled={isRegSubmitting}
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          className="auth-password-toggle"
+                          onClick={() => setShowRegPassword((prev) => !prev)}
+                          tabIndex="-1"
+                        >
+                          <i
+                            className={
+                              showRegPassword
+                                ? "fa-regular fa-eye-slash"
+                                : "fa-regular fa-eye"
+                            }
+                          ></i>
+                        </button>
+                      </div>
+                      <AuthTooltip
+                        message={regErrors.password}
+                        position="top"
                       />
-                    </svg>
-                    <button
-                      type="button"
-                      className="auth-password-toggle"
-                      onClick={() => setShowRegPassword((prev) => !prev)}
-                      aria-label={
-                        showRegPassword ? "Hide password" : "Show password"
-                      }
-                      tabIndex="-1"
-                    >
-                      <i
-                        className={
-                          showRegPassword
-                            ? "fa-regular fa-eye-slash"
-                            : "fa-regular fa-eye"
-                        }
-                      ></i>
-                    </button>
-                  </div>
-                  {/* Tooltip Error */}
-                  <AuthTooltip message={regErrors.password} position="top" />
-                </div>
+                    </div>
 
-                {/* Confirm Password Field */}
-                <div className="auth-field-wrapper mb-3 position-relative">
-                  <label
-                    htmlFor="reg-confirm-password"
-                    className="form-label fw-600 medium-black mb-1"
-                  >
-                    Confirm Password
-                  </label>
-                  <div className="input-block">
-                    <input
-                      type={showRegConfirmPassword ? "text" : "password"}
-                      id="reg-confirm-password"
-                      name="confirmPassword"
-                      className={`form-control form-control-2 pe-5 ${
-                        regErrors.confirmPassword ? "is-invalid-field" : ""
-                      }`}
-                      placeholder="Repeat your password"
-                      value={regConfirmPassword}
-                      onChange={(e) => {
-                        setRegConfirmPassword(e.target.value);
-                        if (regErrors.confirmPassword) {
-                          setRegErrors((prev) => ({
-                            ...prev,
-                            confirmPassword: "",
-                          }));
-                        }
-                      }}
-                      disabled={isRegSubmitting}
-                      autoComplete="new-password"
-                    />
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                    >
-                      <path
-                        d="M10 2C6.134 2 3 5.134 3 9V11H2C1.448 11 1 11.448 1 12V18C1 18.552 1.448 19 2 19H18C18.552 19 19 18.552 19 18V12C19 11.448 18.552 11 18 11H17V9C17 5.134 13.866 2 10 2ZM5 9C5 6.239 7.239 4 10 4C12.761 4 15 6.239 15 9V11H5V9Z"
-                        fill="#141516"
+                    {/* Confirm Password Field */}
+                    <div className="auth-field-wrapper mb-3 position-relative">
+                      <label
+                        htmlFor="reg-confirm-password"
+                        className="form-label fw-600 medium-black mb-1"
+                      >
+                        Confirm Password *
+                      </label>
+                      <div className="input-block">
+                        <input
+                          type={showRegConfirmPassword ? "text" : "password"}
+                          id="reg-confirm-password"
+                          name="confirmPassword"
+                          className={`form-control form-control-2 pe-5 ${
+                            regErrors.confirmPassword ? "is-invalid-field" : ""
+                          }`}
+                          placeholder="Repeat your password"
+                          value={regConfirmPassword}
+                          onChange={(e) => {
+                            setRegConfirmPassword(e.target.value);
+                            if (regErrors.confirmPassword) {
+                              setRegErrors((prev) => ({
+                                ...prev,
+                                confirmPassword: "",
+                              }));
+                            }
+                          }}
+                          disabled={isRegSubmitting}
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          className="auth-password-toggle"
+                          onClick={() =>
+                            setShowRegConfirmPassword((prev) => !prev)
+                          }
+                          tabIndex="-1"
+                        >
+                          <i
+                            className={
+                              showRegConfirmPassword
+                                ? "fa-regular fa-eye-slash"
+                                : "fa-regular fa-eye"
+                            }
+                          ></i>
+                        </button>
+                      </div>
+                      <AuthTooltip
+                        message={regErrors.confirmPassword}
+                        position="top"
                       />
-                    </svg>
-                    <button
-                      type="button"
-                      className="auth-password-toggle"
-                      onClick={() => setShowRegConfirmPassword((prev) => !prev)}
-                      aria-label={
-                        showRegConfirmPassword
-                          ? "Hide password"
-                          : "Show password"
-                      }
-                      tabIndex="-1"
-                    >
-                      <i
-                        className={
-                          showRegConfirmPassword
-                            ? "fa-regular fa-eye-slash"
-                            : "fa-regular fa-eye"
-                        }
-                      ></i>
-                    </button>
-                  </div>
-                  {/* Tooltip Error */}
-                  <AuthTooltip
-                    message={regErrors.confirmPassword}
-                    position="top"
+                    </div>
+
+                    {/* Terms */}
+                    <div className="auth-field-wrapper mb-3 position-relative">
+                      <div className="cus-checkBox d-flex align-items-center">
+                        <input
+                          type="checkbox"
+                          id="reg-terms"
+                          checked={agreeTerms}
+                          onChange={(e) => {
+                            setAgreeTerms(e.target.checked);
+                            if (regErrors.terms) {
+                              setRegErrors((prev) => ({ ...prev, terms: "" }));
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="reg-terms"
+                          className="light-gray fs-13 ms-2"
+                          style={{ cursor: "pointer", userSelect: "none" }}
+                        >
+                          I agree to the{" "}
+                          <a
+                            href="#terms"
+                            className="color-primary text-decoration-underline"
+                            onClick={(e) => e.preventDefault()}
+                          >
+                            Terms
+                          </a>{" "}
+                          and{" "}
+                          <a
+                            href="#privacy"
+                            className="color-primary text-decoration-underline"
+                            onClick={(e) => e.preventDefault()}
+                          >
+                            Privacy Policy
+                          </a>
+                          .
+                        </label>
+                      </div>
+                      <AuthTooltip
+                        message={regErrors.terms}
+                        position="bottom"
+                      />
+                    </div>
+
+                    {/* Submit CTA */}
+                    <div className="mt-4">
+                      <button
+                        type="submit"
+                        className="cus-btn w-100 text-center border-0"
+                        disabled={isRegSubmitting}
+                      >
+                        <span className="btn-text">
+                          {isRegSubmitting
+                            ? "Sending OTP..."
+                            : "Continue (Send OTP)"}
+                        </span>
+                        <span>
+                          {isRegSubmitting
+                            ? "Sending OTP..."
+                            : "Continue (Send OTP)"}
+                        </span>
+                      </button>
+                    </div>
+
+                    {/* Switch to Login */}
+                    <div className="text-center mt-3 pt-2">
+                      <p className="fs-14 dark-gray mb-0">
+                        Already have an account?{" "}
+                        <button
+                          type="button"
+                          className="color-primary fw-600 border-0 bg-transparent p-0 text-decoration-underline"
+                          onClick={() => setAuthModalTab("login")}
+                        >
+                          Sign In
+                        </button>
+                      </p>
+                    </div>
+                  </form>
+                ) : (
+                  /* Step 2: OtpVerificationStep */
+                  <OtpVerificationStep
+                    email={regEmail}
+                    otp={regOtp}
+                    setOtp={setRegOtp}
+                    otpError={regOtpError}
+                    setOtpError={setRegOtpError}
+                    onVerify={handleRegisterVerifyAndComplete}
+                    onResend={handleRegisterResendOtp}
+                    onBack={() => setRegStep(1)}
+                    isVerifying={isVerifyingOtp}
+                    isResending={isResendingOtp}
+                    submitButtonText="Verify & Register"
                   />
-                </div>
-
-                {/* Terms and Conditions Checkbox */}
-                <div className="auth-field-wrapper mb-3 position-relative">
-                  <div className="cus-checkBox d-flex align-items-center">
-                    <input
-                      type="checkbox"
-                      id="reg-terms"
-                      checked={agreeTerms}
-                      onChange={(e) => {
-                        setAgreeTerms(e.target.checked);
-                        if (regErrors.terms) {
-                          setRegErrors((prev) => ({ ...prev, terms: "" }));
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor="reg-terms"
-                      className="light-gray fs-13 ms-2"
-                      style={{ cursor: "pointer", userSelect: "none" }}
-                    >
-                      I agree to the{" "}
-                      <a
-                        href="#terms"
-                        className="color-primary text-decoration-underline"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        Terms of Service
-                      </a>{" "}
-                      and{" "}
-                      <a
-                        href="#privacy"
-                        className="color-primary text-decoration-underline"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        Privacy Policy
-                      </a>
-                      .
-                    </label>
-                  </div>
-                  {/* Tooltip Error */}
-                  <AuthTooltip message={regErrors.terms} position="bottom" />
-                </div>
-
-                {/* Submit CTA */}
-                <div className="mt-4">
-                  <button
-                    type="submit"
-                    className="cus-btn w-100 text-center border-0"
-                    disabled={isRegSubmitting}
-                  >
-                    <span className="btn-text">
-                      {isRegSubmitting
-                        ? "Creating account..."
-                        : "Create Account"}
-                    </span>
-                    <span>
-                      {isRegSubmitting
-                        ? "Creating account..."
-                        : "Create Account"}
-                    </span>
-                  </button>
-                </div>
-
-                {/* Switch to Login */}
-                <div className="text-center mt-3 pt-2">
-                  <p className="fs-14 dark-gray mb-0">
-                    Already have an account?{" "}
-                    <button
-                      type="button"
-                      className="color-primary fw-600 border-0 bg-transparent p-0 text-decoration-underline"
-                      onClick={() => setAuthModalTab("login")}
-                    >
-                      Sign In
-                    </button>
-                  </p>
-                </div>
-              </form>
+                )}
+              </>
             )}
           </div>
         </div>
