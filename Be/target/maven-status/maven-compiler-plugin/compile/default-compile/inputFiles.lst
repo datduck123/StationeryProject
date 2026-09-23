@@ -16,6 +16,7 @@ C:\Users\DELL\Documents\2.React-Spring-Boot\Project-mau-temple\stationery-projec
 C:\Users\DELL\Documents\2.React-Spring-Boot\Project-mau-temple\stationery-project\Be\src\main\java\fpt\edu\vn\stationery\controller\AdminController.java
 C:\Users\DELL\Documents\2.React-Spring-Boot\Project-mau-temple\stationery-project\Be\src\main\java\fpt\edu\vn\stationery\entity\User.java
 C:\Users\DELL\Documents\2.React-Spring-Boot\Project-mau-temple\stationery-project\Be\src\main\java\fpt\edu\vn\stationery\dto\request\SendOtpRequestDTO.java
+C:\Users\DELL\Documents\2.React-Spring-Boot\Project-mau-temple\stationery-project\Be\src\main\java\fpt\edu\vn\stationery\dto\request\VerifyOtpRequestDTO.java
 C:\Users\DELL\Documents\2.React-Spring-Boot\Project-mau-temple\stationery-project\Be\src\main\java\fpt\edu\vn\stationery\exception\TooManyRequestsException.java
 C:\Users\DELL\Documents\2.React-Spring-Boot\Project-mau-temple\stationery-project\Be\src\main\java\fpt\edu\vn\stationery\filter\JwtAuthenticationFilter.java
 C:\Users\DELL\Documents\2.React-Spring-Boot\Project-mau-temple\stationery-project\Be\src\main\java\fpt\edu\vn\stationery\dto\request\CreateUserByAdminRequestDTO.java

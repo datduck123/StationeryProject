@@ -1,42 +1,45 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import AuthModal from "../components/auth/AuthModal";
 import { useAuth } from "../providers/AuthContext";
 import "../styles/admin.css";
 
 export const AdminLayout = () => {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Mobile sidebar open state
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false);
+  // Desktop sidebar collapsed state (compact mode with icons only)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  // Topbar profile dropdown state
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
+  const profileRef = useRef(null);
 
   // Close mobile sidebar on route change
   useEffect(() => {
-    setSidebarOpen(false);
+    setSidebarMobileOpen(false);
+    setProfileDropdownOpen(false);
   }, [location.pathname]);
+
+  // Click outside to close profile dropdown
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const isActive = (path) => {
     if (path === "/admin") {
       return location.pathname === "/admin" || location.pathname === "/admin/";
     }
     return location.pathname.startsWith(path);
-  };
-
-  // Determine current page title for breadcrumbs
-  const getPageTitle = () => {
-    if (location.pathname === "/admin" || location.pathname === "/admin/") {
-      return "Overview Dashboard";
-    }
-    if (location.pathname.startsWith("/admin/users")) {
-      return "User Management";
-    }
-    if (location.pathname.startsWith("/admin/categories")) {
-      return "Category Management";
-    }
-    if (location.pathname.startsWith("/admin/brands")) {
-      return "Brand Management";
-    }
-    return "Admin Portal";
   };
 
   const getInitials = (name) => {
@@ -46,53 +49,56 @@ export const AdminLayout = () => {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
+  const handleToggleSidebar = () => {
+    if (window.innerWidth < 992) {
+      setSidebarMobileOpen((prev) => !prev);
+    } else {
+      setIsSidebarCollapsed((prev) => !prev);
+    }
+  };
+
   return (
     <div className="admin-layout">
       {/* Mobile backdrop */}
-      {sidebarOpen && (
+      {sidebarMobileOpen && (
         <div
           className="admin-sidebar-backdrop d-lg-none"
-          onClick={() => setSidebarOpen(false)}
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            zIndex: 1040,
-          }}
+          onClick={() => setSidebarMobileOpen(false)}
         ></div>
       )}
 
       {/* ADMIN SIDEBAR */}
-      <aside className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
-        {/* Header / Logo */}
+      <aside
+        className={`admin-sidebar ${sidebarMobileOpen ? "open" : ""} ${
+          isSidebarCollapsed ? "collapsed" : ""
+        }`}
+      >
+        {/* Header / Shrunk Logo (No Station Admin Portal text) */}
         <div className="admin-sidebar-header">
-          <Link to="/" className="admin-logo-link">
+          <Link
+            to="/"
+            className="admin-logo-link"
+            style={{
+              justifyContent: isSidebarCollapsed ? "center" : "flex-start",
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
             <img
               src="/assets/media/logo.png"
-              alt="Stationery Tales"
-              className="admin-logo-img"
+              alt="Logo"
+              style={{ maxHeight: "36px", width: "auto" }}
               onError={(e) => {
                 e.target.style.display = "none";
               }}
             />
-            <div>
-              <div
-                className="fw-700 fs-15 medium-black"
-                style={{ lineHeight: 1.2 }}
-              >
-                Stationery Admin
-              </div>
-              <span className="admin-badge-portal">PORTAL CMS</span>
-            </div>
           </Link>
           <button
             type="button"
             className="btn-close d-lg-none"
             aria-label="Close"
-            onClick={() => setSidebarOpen(false)}
+            onClick={() => setSidebarMobileOpen(false)}
           ></button>
         </div>
 
@@ -105,6 +111,7 @@ export const AdminLayout = () => {
               <Link
                 to="/admin"
                 className={`admin-nav-link ${isActive("/admin") ? "active" : ""}`}
+                title="Overview Dashboard"
               >
                 <i className="fa-solid fa-chart-pie"></i>
                 <span>Overview Dashboard</span>
@@ -116,6 +123,7 @@ export const AdminLayout = () => {
               <Link
                 to="/admin/users"
                 className={`admin-nav-link ${isActive("/admin/users") ? "active" : ""}`}
+                title="User Management"
               >
                 <i className="fa-solid fa-users-gear"></i>
                 <span>User Management</span>
@@ -129,6 +137,7 @@ export const AdminLayout = () => {
                 className={`admin-nav-link ${
                   isActive("/admin/categories") ? "active" : ""
                 }`}
+                title="Category Management"
               >
                 <i className="fa-solid fa-layer-group"></i>
                 <span>Category Management</span>
@@ -142,6 +151,7 @@ export const AdminLayout = () => {
                 className={`admin-nav-link ${
                   isActive("/admin/brands") ? "active" : ""
                 }`}
+                title="Brand Management"
               >
                 <i className="fa-solid fa-certificate"></i>
                 <span>Brand Management</span>
@@ -152,19 +162,23 @@ export const AdminLayout = () => {
           <div className="admin-nav-group-title mt-3">QUICK LINKS</div>
           <ul className="admin-nav-list">
             <li className="admin-nav-item">
-              <Link to="/shop" className="admin-nav-link">
+              <Link
+                to="/shop"
+                className="admin-nav-link"
+                title="Product Catalog"
+              >
                 <i className="fa-solid fa-boxes-stacked"></i>
                 <span>Product Catalog</span>
               </Link>
             </li>
             <li className="admin-nav-item">
-              <Link to="/" className="admin-nav-link">
+              <Link to="/" className="admin-nav-link" title="Main Website">
                 <i className="fa-solid fa-store"></i>
                 <span>Main Website</span>
               </Link>
             </li>
             <li className="admin-nav-item">
-              <Link to="/profile" className="admin-nav-link">
+              <Link to="/profile" className="admin-nav-link" title="My Profile">
                 <i className="fa-regular fa-user"></i>
                 <span>My Profile</span>
               </Link>
@@ -172,7 +186,7 @@ export const AdminLayout = () => {
           </ul>
         </div>
 
-        {/* Sidebar Footer (Admin Profile & Logout) */}
+        {/* Sidebar Footer (Admin Profile & Single Sign Out Button) */}
         <div className="admin-sidebar-footer">
           <div className="admin-user-card">
             <div className="admin-avatar">
@@ -187,11 +201,13 @@ export const AdminLayout = () => {
               </div>
               <div className="admin-user-role">
                 <span className="badge bg-danger-subtle text-danger fs-11">
-                  ADMIN
+                  {user?.role || "ADMIN"}
                 </span>
               </div>
             </div>
           </div>
+
+          {/* Only 1 single Sign Out button on the sidebar left bottom */}
           <button
             type="button"
             className="admin-btn-outline w-100 mt-2 py-2 d-flex align-items-center justify-content-center gap-2 border rounded-3 bg-white text-muted"
@@ -201,6 +217,7 @@ export const AdminLayout = () => {
               cursor: "pointer",
               transition: "all 0.2s",
             }}
+            title="Sign Out"
           >
             <i className="fa-solid fa-arrow-right-from-bracket text-danger"></i>
             <span>Sign Out</span>
@@ -209,57 +226,101 @@ export const AdminLayout = () => {
       </aside>
 
       {/* MAIN ADMIN AREA */}
-      <div className="admin-main">
+      <div
+        className={`admin-main ${
+          isSidebarCollapsed ? "sidebar-collapsed" : ""
+        }`}
+      >
         {/* Topbar Header */}
         <header className="admin-topbar">
+          {/* Left: Hamburger toggle button + Admin Panel */}
           <div className="d-flex align-items-center gap-3">
-            {/* Hamburger for mobile */}
             <button
               type="button"
-              className="admin-action-btn d-lg-none"
-              onClick={() => setSidebarOpen((prev) => !prev)}
+              className="admin-action-btn"
+              onClick={handleToggleSidebar}
               aria-label="Toggle Sidebar"
+              title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               <i className="fa-solid fa-bars"></i>
             </button>
 
-            {/* Breadcrumb / Title */}
-            <div>
-              <div className="fs-12 text-muted text-uppercase fw-600 letter-spacing-1">
-                Admin Panel
-              </div>
-              <h5 className="mb-0 fw-700 medium-black fs-18">
-                {getPageTitle()}
-              </h5>
-            </div>
+            <h5 className="mb-0 fw-700 medium-black fs-18">Admin Panel</h5>
           </div>
 
-          {/* Topbar Actions */}
-          <div className="admin-topbar-actions">
-            <Link
-              to="/"
-              className="admin-action-btn text-decoration-none"
-              title="Go to storefront"
-            >
-              <i className="fa-solid fa-store"></i>
-            </Link>
-
-            <Link
-              to="/profile"
-              className="admin-action-btn text-decoration-none"
-              title="My Profile"
-            >
-              <i className="fa-regular fa-user"></i>
-            </Link>
-
+          {/* Right: Only Bell icon + Username with role underneath & Profile dropdown */}
+          <div className="d-flex align-items-center gap-3">
+            {/* Notification Bell */}
             <button
               type="button"
-              className="admin-btn-primary ms-2 d-none d-sm-inline-flex"
-              onClick={logout}
+              className="admin-action-btn position-relative"
+              title="Notifications"
             >
-              <i className="fa-solid fa-arrow-right-from-bracket me-1"></i> Sign
-              Out
+              <i className="fa-regular fa-bell"></i>
+              <span
+                className="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"
+                style={{ width: "8px", height: "8px" }}
+              ></span>
             </button>
+
+            {/* User Profile trigger with dropdown */}
+            <div className="position-relative" ref={profileRef}>
+              <button
+                type="button"
+                className="d-flex align-items-center gap-2 border-0 bg-transparent p-1 rounded-3"
+                style={{ cursor: "pointer", textAlign: "left" }}
+                onClick={() => setProfileDropdownOpen((prev) => !prev)}
+                aria-expanded={profileDropdownOpen}
+              >
+                <div
+                  className="admin-avatar"
+                  style={{ width: "36px", height: "36px", fontSize: "13px" }}
+                >
+                  {getInitials(user?.fullName || "AD")}
+                </div>
+                <div className="d-flex flex-column" style={{ lineHeight: 1.2 }}>
+                  <span className="fw-600 fs-13 medium-black">
+                    {user?.fullName || "Administrator"}
+                  </span>
+                  <span className="fs-11 fw-500 text-muted">
+                    {user?.role || "ADMIN"}
+                  </span>
+                </div>
+                <i className="fa-solid fa-chevron-down fs-11 text-muted ms-1"></i>
+              </button>
+
+              {/* Profile Dropdown Menu */}
+              {profileDropdownOpen && (
+                <div
+                  className="admin-profile-dropdown shadow-lg rounded-3 border bg-white position-absolute end-0 mt-2 py-2"
+                  style={{ width: "210px", zIndex: 1100 }}
+                >
+                  <div className="px-3 py-2 border-bottom mb-1">
+                    <div className="fw-600 fs-13 text-truncate">
+                      {user?.fullName || "Administrator"}
+                    </div>
+                    <div className="fs-12 text-muted text-truncate">
+                      {user?.email || "admin@stationery.com"}
+                    </div>
+                  </div>
+                  <Link
+                    to="/profile"
+                    className="dropdown-item px-3 py-2 fs-13 d-flex align-items-center gap-2 text-decoration-none text-dark"
+                    onClick={() => setProfileDropdownOpen(false)}
+                  >
+                    <i className="fa-regular fa-user text-muted"></i> My Profile
+                  </Link>
+                  <Link
+                    to="/"
+                    className="dropdown-item px-3 py-2 fs-13 d-flex align-items-center gap-2 text-decoration-none text-dark"
+                    onClick={() => setProfileDropdownOpen(false)}
+                  >
+                    <i className="fa-solid fa-store text-muted"></i> Main
+                    Website
+                  </Link>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 

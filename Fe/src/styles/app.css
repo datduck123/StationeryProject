@@ -6761,3 +6761,41 @@ footer .payment-cards .card-block img {
 .br-10 {
   border-radius: 10px;
 }
+
+/* Flat Auth Buttons (No hover animation) */
+.auth-btn-solid {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px 24px;
+  background-color: #e9613f;
+  color: #ffffff !important;
+  border: 1px solid #e9613f;
+  border-radius: 84px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+  text-decoration: none;
+  text-align: center;
+  user-select: none;
+  box-shadow: 0 2px 4px rgba(233, 97, 63, 0.2);
+}
+
+.auth-btn-solid:hover:not(:disabled) {
+  background-color: #d6502f;
+  border-color: #d6502f;
+  color: #ffffff !important;
+}
+
+.auth-btn-solid:disabled {
+  background-color: #fca58f !important;
+  border-color: #fca58f !important;
+  color: #ffffff !important;
+  cursor: not-allowed;
+  opacity: 0.75;
+  box-shadow: none;
+}

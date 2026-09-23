@@ -132,6 +132,19 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public void verifyForgotPasswordOtp(String email, String otpCode) {
+        String cleanEmail = email.trim().toLowerCase();
+        User user = userRepository.findByEmail(cleanEmail)
+                .orElseThrow(() -> new ResourceNotFoundException("Email does not exist in the system."));
+
+        if (user.getStatus() == UserStatus.BLOCKED) {
+            throw new AccountLockedException("Your account has been locked. Please contact support for assistance.");
+        }
+
+        otpService.verifyOtp(cleanEmail, AppConstants.TYPE_FORGOT_PASSWORD, otpCode);
+    }
+
+    @Override
     @Transactional
     public void resetPassword(ResetPasswordRequestDTO request) {
         String email = request.getEmail().trim().toLowerCase();

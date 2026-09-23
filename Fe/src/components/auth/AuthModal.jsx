@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../providers/AuthContext";
+import { useToast } from "../../providers/ToastContext";
 import authService from "../../services/authService";
 import AuthTooltip from "./AuthTooltip";
+import OtpSixBoxInput from "./OtpSixBoxInput";
 import OtpVerificationStep from "./OtpVerificationStep";
 
 export const AuthModal = () => {
@@ -13,6 +15,7 @@ export const AuthModal = () => {
     setAuthModalTab,
     login,
   } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   // Login form state
@@ -44,10 +47,12 @@ export const AuthModal = () => {
   const [regSuccessMsg, setRegSuccessMsg] = useState("");
   const [regApiError, setRegApiError] = useState("");
 
-  // Forgot Password state
-  const [forgotStep, setForgotStep] = useState(1); // 1: Email, 2: OTP + New Password
+  // Forgot Password state: 1: Email, 2: OTP, 3: New Password
+  const [forgotStep, setForgotStep] = useState(1);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotOtp, setForgotOtp] = useState("");
+  const [forgotOtpError, setForgotOtpError] = useState("");
+  const [isForgotVerifying, setIsForgotVerifying] = useState(false);
   const [forgotNewPassword, setForgotNewPassword] = useState("");
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
   const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
@@ -147,9 +152,6 @@ export const AuthModal = () => {
 
   const validateForgotReset = () => {
     const errs = {};
-    if (!forgotOtp.trim() || forgotOtp.trim().length < 6) {
-      errs.otp = "Please enter the 6-digit OTP code.";
-    }
     if (!forgotNewPassword) {
       errs.newPassword = "New password is required.";
     } else if (forgotNewPassword.length < 8) {
@@ -174,6 +176,7 @@ export const AuthModal = () => {
     try {
       const result = await login(loginEmail, loginPassword);
       setIsLoginSubmitting(false);
+      showToast("Welcome back!", "success");
       closeAuthModal();
 
       if (result.isAdmin) {
@@ -183,9 +186,10 @@ export const AuthModal = () => {
       }
     } catch (err) {
       setIsLoginSubmitting(false);
-      setLoginApiError(
-        err.message || "Login failed. Please verify your credentials.",
-      );
+      const msg =
+        err.message || "Login failed. Please verify your credentials.";
+      setLoginApiError(msg);
+      showToast(msg, "error");
     }
   };
 
@@ -201,13 +205,15 @@ export const AuthModal = () => {
       await authService.sendRegisterOtp({ email: regEmail.trim() });
       setIsRegSubmitting(false);
       setRegStep(2);
+      showToast("Verification code has been sent to your email.", "success");
     } catch (err) {
       setIsRegSubmitting(false);
-      setRegApiError(
+      const msg =
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to send OTP. Please check your email.",
-      );
+        err.message ||
+        "Failed to send OTP. Please check your email.";
+      setRegApiError(msg);
+      showToast(msg, "error");
     }
   };
 
@@ -217,13 +223,15 @@ export const AuthModal = () => {
     try {
       await authService.sendRegisterOtp({ email: regEmail.trim() });
       setIsResendingOtp(false);
+      showToast("A new verification code has been resent.", "success");
     } catch (err) {
       setIsResendingOtp(false);
-      setRegOtpError(
+      const msg =
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to resend OTP. Please wait before retrying.",
-      );
+        err.message ||
+        "Failed to resend OTP. Please wait before retrying.";
+      setRegOtpError(msg);
+      showToast(msg, "error");
     }
   };
 
@@ -231,6 +239,7 @@ export const AuthModal = () => {
   const handleRegisterVerifyAndComplete = async () => {
     if (!regOtp || regOtp.length < 6) {
       setRegOtpError("Please enter the 6-digit OTP code.");
+      showToast("Please enter all 6 digits of the OTP code.", "warning");
       return;
     }
 
@@ -247,14 +256,15 @@ export const AuthModal = () => {
       });
 
       setIsVerifyingOtp(false);
-      setRegSuccessMsg(
+      showToast(
         "Account registered successfully! Switching to sign in...",
+        "success",
       );
       setLoginEmail(regEmail);
       setTimeout(() => {
         setAuthModalTab("login");
         setRegStep(1);
-      }, 1500);
+      }, 1200);
     } catch (err) {
       setIsVerifyingOtp(false);
       const msg =
@@ -262,6 +272,7 @@ export const AuthModal = () => {
         err.message ||
         "Invalid or expired OTP code.";
       setRegOtpError(msg);
+      showToast(msg, "error");
     }
   };
 
@@ -277,14 +288,18 @@ export const AuthModal = () => {
       await authService.sendForgotPasswordOtp({ email: forgotEmail.trim() });
       setIsForgotSubmitting(false);
       setForgotStep(2);
-      setForgotSuccessMsg("Reset code sent! Please check your email inbox.");
+      showToast(
+        "Reset verification code sent! Please check your email.",
+        "success",
+      );
     } catch (err) {
       setIsForgotSubmitting(false);
-      setForgotApiError(
+      const msg =
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to send reset code. Please check your email.",
-      );
+        err.message ||
+        "No account found with this email.";
+      setForgotApiError(msg);
+      showToast(msg, "error");
     }
   };
 
@@ -295,18 +310,56 @@ export const AuthModal = () => {
     try {
       await authService.sendForgotPasswordOtp({ email: forgotEmail.trim() });
       setIsForgotResending(false);
-      setForgotSuccessMsg("A new reset code has been resent to your email.");
+      showToast(
+        "A new verification code has been resent to your email.",
+        "success",
+      );
     } catch (err) {
       setIsForgotResending(false);
-      setForgotApiError(
+      const msg =
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to resend OTP. Please wait before retrying.",
-      );
+        err.message ||
+        "Failed to resend OTP. Please wait before retrying.";
+      setForgotApiError(msg);
+      showToast(msg, "error");
     }
   };
 
-  // Forgot Password Step 2: Reset password
+  // Forgot Password Step 2: Verify OTP
+  const handleForgotVerifyOtp = async () => {
+    if (!forgotOtp || forgotOtp.length < 6) {
+      setForgotOtpError("Please enter all 6 digits of the OTP code.");
+      showToast("Please enter all 6 digits of the OTP code.", "warning");
+      return;
+    }
+
+    setIsForgotVerifying(true);
+    setForgotOtpError("");
+    setForgotApiError("");
+
+    try {
+      await authService.verifyForgotPasswordOtp({
+        email: forgotEmail.trim(),
+        otpCode: forgotOtp.trim(),
+      });
+      setIsForgotVerifying(false);
+      showToast(
+        "Code verified successfully! Now set your new password.",
+        "success",
+      );
+      setForgotStep(3);
+    } catch (err) {
+      setIsForgotVerifying(false);
+      const msg =
+        err?.response?.data?.message ||
+        err.message ||
+        "Invalid or expired OTP code.";
+      setForgotOtpError(msg);
+      showToast(msg, "error");
+    }
+  };
+
+  // Forgot Password Step 3: Reset password
   const handleForgotResetPassword = async (e) => {
     e.preventDefault();
     setForgotApiError("");
@@ -321,21 +374,23 @@ export const AuthModal = () => {
       });
 
       setIsForgotSubmitting(false);
-      setForgotSuccessMsg(
+      showToast(
         "Password reset successfully! Redirecting to Sign In...",
+        "success",
       );
       setLoginEmail(forgotEmail.trim());
       setTimeout(() => {
         setAuthModalTab("login");
         setForgotStep(1);
-      }, 1500);
+      }, 1200);
     } catch (err) {
       setIsForgotSubmitting(false);
-      setForgotApiError(
+      const msg =
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to reset password. Please check your OTP code.",
-      );
+        err.message ||
+        "Failed to reset password. Please check your OTP code.";
+      setForgotApiError(msg);
+      showToast(msg, "error");
     }
   };
 
@@ -387,7 +442,11 @@ export const AuthModal = () => {
                   ? "Welcome Back"
                   : authModalTab === "register"
                     ? "Create Your Account"
-                    : "Reset Password"}
+                    : forgotStep === 1
+                      ? "Forgot Password"
+                      : forgotStep === 2
+                        ? "Verify Reset Code"
+                        : "Set New Password"}
               </h3>
               <p className="dark-gray subtitle" style={{ fontSize: "14px" }}>
                 {authModalTab === "login"
@@ -396,7 +455,9 @@ export const AuthModal = () => {
                     ? "Join us to explore premium stationery and tools."
                     : forgotStep === 1
                       ? "Enter your email address to receive a verification code."
-                      : "Enter your OTP code and create a new password."}
+                      : forgotStep === 2
+                        ? "Enter the 6-digit OTP code sent to your email."
+                        : "Create a new strong password for your account."}
               </p>
             </div>
 
@@ -551,15 +612,17 @@ export const AuthModal = () => {
                 <div className="mt-4">
                   <button
                     type="submit"
-                    className="cus-btn w-100 text-center border-0"
+                    className="auth-btn-solid"
                     disabled={isLoginSubmitting}
                   >
-                    <span className="btn-text">
-                      {isLoginSubmitting ? "Signing in..." : "Sign In"}
-                    </span>
-                    <span>
-                      {isLoginSubmitting ? "Signing in..." : "Sign In"}
-                    </span>
+                    {isLoginSubmitting ? (
+                      <span>
+                        <i className="fa-solid fa-spinner fa-spin me-2"></i>
+                        Signing in...
+                      </span>
+                    ) : (
+                      "Sign In"
+                    )}
                   </button>
                 </div>
 
@@ -858,19 +921,17 @@ export const AuthModal = () => {
                     <div className="mt-4">
                       <button
                         type="submit"
-                        className="cus-btn w-100 text-center border-0"
+                        className="auth-btn-solid"
                         disabled={isRegSubmitting}
                       >
-                        <span className="btn-text">
-                          {isRegSubmitting
-                            ? "Sending OTP..."
-                            : "Continue (Send OTP)"}
-                        </span>
-                        <span>
-                          {isRegSubmitting
-                            ? "Sending OTP..."
-                            : "Continue (Send OTP)"}
-                        </span>
+                        {isRegSubmitting ? (
+                          <span>
+                            <i className="fa-solid fa-spinner fa-spin me-2"></i>
+                            Sending OTP...
+                          </span>
+                        ) : (
+                          "Continue (Send OTP)"
+                        )}
                       </button>
                     </div>
 
@@ -966,19 +1027,17 @@ export const AuthModal = () => {
                     <div className="mt-4">
                       <button
                         type="submit"
-                        className="cus-btn w-100 text-center border-0"
+                        className="auth-btn-solid"
                         disabled={isForgotSubmitting}
                       >
-                        <span className="btn-text">
-                          {isForgotSubmitting
-                            ? "Sending Reset Code..."
-                            : "Send Reset Code"}
-                        </span>
-                        <span>
-                          {isForgotSubmitting
-                            ? "Sending Reset Code..."
-                            : "Send Reset Code"}
-                        </span>
+                        {isForgotSubmitting ? (
+                          <span>
+                            <i className="fa-solid fa-spinner fa-spin me-2"></i>
+                            Sending Reset Code...
+                          </span>
+                        ) : (
+                          "Send Reset Code"
+                        )}
                       </button>
                     </div>
 
@@ -994,8 +1053,8 @@ export const AuthModal = () => {
                       </button>
                     </div>
                   </form>
-                ) : (
-                  <form onSubmit={handleForgotResetPassword} noValidate>
+                ) : forgotStep === 2 ? (
+                  <div>
                     {/* Notice bar */}
                     <div className="p-3 bg-light rounded-3 mb-3 fs-13 text-muted text-center border">
                       Code sent to <strong>{forgotEmail}</strong>.{" "}
@@ -1008,14 +1067,11 @@ export const AuthModal = () => {
                       </button>
                     </div>
 
-                    {/* OTP Code */}
+                    {/* 6-digit OTP code */}
                     <div className="auth-field-wrapper mb-3 position-relative">
                       <div className="d-flex justify-content-between align-items-center mb-1">
-                        <label
-                          htmlFor="forgot-otp"
-                          className="form-label fw-600 medium-black mb-0"
-                        >
-                          6-Digit OTP Code *
+                        <label className="form-label fw-600 medium-black mb-0">
+                          Enter 6-Digit OTP Code
                         </label>
                         <button
                           type="button"
@@ -1026,48 +1082,53 @@ export const AuthModal = () => {
                           {isForgotResending ? "Resending..." : "Resend Code"}
                         </button>
                       </div>
-                      <div className="input-block">
-                        <input
-                          type="text"
-                          id="forgot-otp"
-                          name="otp"
-                          maxLength="6"
-                          className={`form-control form-control-2 text-center fw-700 ${
-                            forgotErrors.otp ? "is-invalid-field" : ""
-                          }`}
-                          style={{ letterSpacing: "4px", fontSize: "16px" }}
-                          placeholder="------"
-                          value={forgotOtp}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/[^0-9]/g, "");
-                            setForgotOtp(val);
-                            if (forgotErrors.otp) {
-                              setForgotErrors((prev) => ({
-                                ...prev,
-                                otp: "",
-                              }));
-                            }
-                          }}
-                          disabled={isForgotSubmitting}
-                          autoComplete="one-time-code"
-                        />
-                        {/* Key Icon */}
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="20"
-                          height="20"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="#141516"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M21 2l-2 2m-1.5 1.5L16 7m-1.5 1.5l-2 2M11 9l-7.5 7.5a2.121 2.121 0 0 0 3 3L14 12" />
-                          <circle cx="18" cy="6" r="3" />
-                        </svg>
-                      </div>
-                      <AuthTooltip message={forgotErrors.otp} position="top" />
+                      <OtpSixBoxInput
+                        value={forgotOtp}
+                        onChange={(val) => {
+                          setForgotOtp(val);
+                          setForgotOtpError("");
+                        }}
+                        disabled={isForgotVerifying}
+                        autoFocus={true}
+                      />
+                      <AuthTooltip message={forgotOtpError} position="top" />
+                    </div>
+
+                    {/* Submit CTA */}
+                    <div className="d-flex flex-column gap-2 mt-4">
+                      <button
+                        type="button"
+                        className="auth-btn-solid"
+                        onClick={handleForgotVerifyOtp}
+                        disabled={isForgotVerifying || forgotOtp.length < 6}
+                      >
+                        {isForgotVerifying ? (
+                          <span>
+                            <i className="fa-solid fa-spinner fa-spin me-2"></i>
+                            Verifying Code...
+                          </span>
+                        ) : (
+                          "Next: Set New Password"
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn btn-light w-100 py-2 rounded-pill fw-600 fs-14 border"
+                        onClick={() => setForgotStep(1)}
+                        disabled={isForgotVerifying}
+                      >
+                        <i className="fa-solid fa-arrow-left me-1"></i> Change
+                        Email
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleForgotResetPassword} noValidate>
+                    {/* Notice bar */}
+                    <div className="p-3 bg-light rounded-3 mb-3 fs-13 text-muted text-center border">
+                      Verified for <strong>{forgotEmail}</strong>. Create your
+                      new password below.
                     </div>
 
                     {/* New Password */}
@@ -1208,19 +1269,17 @@ export const AuthModal = () => {
                     <div className="mt-4">
                       <button
                         type="submit"
-                        className="cus-btn w-100 text-center border-0"
+                        className="auth-btn-solid"
                         disabled={isForgotSubmitting}
                       >
-                        <span className="btn-text">
-                          {isForgotSubmitting
-                            ? "Resetting Password..."
-                            : "Reset Password"}
-                        </span>
-                        <span>
-                          {isForgotSubmitting
-                            ? "Resetting Password..."
-                            : "Reset Password"}
-                        </span>
+                        {isForgotSubmitting ? (
+                          <span>
+                            <i className="fa-solid fa-spinner fa-spin me-2"></i>
+                            Resetting Password...
+                          </span>
+                        ) : (
+                          "Reset Password"
+                        )}
                       </button>
                     </div>
 

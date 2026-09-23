@@ -4,6 +4,7 @@ import fpt.edu.vn.stationery.dto.request.LoginRequest;
 import fpt.edu.vn.stationery.dto.request.RegisterWithOtpDTO;
 import fpt.edu.vn.stationery.dto.request.ResetPasswordRequestDTO;
 import fpt.edu.vn.stationery.dto.request.SendOtpRequestDTO;
+import fpt.edu.vn.stationery.dto.request.VerifyOtpRequestDTO;
 import fpt.edu.vn.stationery.dto.response.AuthResponse;
 import fpt.edu.vn.stationery.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,6 +57,13 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> sendForgotPasswordOtp(@Valid @RequestBody SendOtpRequestDTO request) {
         userService.sendForgotPasswordOtp(request);
         return ResponseEntity.ok(Map.of("message", "Password reset OTP sent successfully to " + request.getEmail()));
+    }
+
+    @Operation(summary = "Verify OTP for forgot password")
+    @PostMapping("/forgot-password/verify-otp")
+    public ResponseEntity<Map<String, String>> verifyForgotPasswordOtp(@Valid @RequestBody VerifyOtpRequestDTO request) {
+        userService.verifyForgotPasswordOtp(request.getEmail(), request.getOtpCode());
+        return ResponseEntity.ok(Map.of("message", "OTP code verified successfully. Please enter your new password."));
     }
 
     @Operation(summary = "Reset password using OTP")

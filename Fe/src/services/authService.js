@@ -59,6 +59,15 @@ export const authService = {
   },
 
   /**
+   * Verify OTP for forgot password
+   * @param {{ email: string, otpCode: string }} data
+   */
+  async verifyForgotPasswordOtp(data) {
+    const response = await api.post("/auth/forgot-password/verify-otp", data);
+    return response.data;
+  },
+
+  /**
    * Reset password with OTP
    * @param {{ email: string, otpCode: string, newPassword: string }} data
    */

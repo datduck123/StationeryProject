@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import AuthTooltip from "../../components/auth/AuthTooltip";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { useAuth } from "../../providers/AuthContext";
+import { useToast } from "../../providers/ToastContext";
 import adminUserService from "../../services/adminUserService";
 import "../../styles/admin.css";
 
 export const AdminUserManagement = () => {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { showToast } = useToast();
 
   // Filter & Pagination states
   const [keyword, setKeyword] = useState("");
@@ -25,8 +25,6 @@ export const AdminUserManagement = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [apiError, setApiError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
 
   // Modals state
   // 1. View Detail Modal
@@ -54,6 +52,7 @@ export const AdminUserManagement = () => {
     phone: "",
     address: "",
     role: "CUSTOMER",
+    status: "ACTIVE",
   });
   const [editErrors, setEditErrors] = useState({});
   const [isEditing, setIsEditing] = useState(false);
@@ -63,17 +62,25 @@ export const AdminUserManagement = () => {
   const [userToToggle, setUserToToggle] = useState(null);
   const [isTogglingStatus, setIsTogglingStatus] = useState(false);
 
+  // Live auto-search debounce
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setKeyword(searchInput.trim());
+      setPage(0);
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
+
   // Fetch users from API
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    setApiError("");
     try {
       const response = await adminUserService.getUsers({
         page,
         size,
         sortBy,
         sortDir,
-        keyword: keyword.trim() || undefined,
+        keyword: keyword || undefined,
         status: statusFilter,
         role: roleFilter,
       });
@@ -82,26 +89,28 @@ export const AdminUserManagement = () => {
       setTotalPages(response.totalPages || 0);
       setTotalElements(response.totalElements || 0);
     } catch (err) {
-      setApiError(
+      const msg =
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to load users list.",
-      );
+        err.message ||
+        "Failed to load users list.";
+      showToast(msg, "error");
     } finally {
       setLoading(false);
     }
-  }, [page, size, sortBy, sortDir, keyword, statusFilter, roleFilter]);
+  }, [
+    page,
+    size,
+    sortBy,
+    sortDir,
+    keyword,
+    statusFilter,
+    roleFilter,
+    showToast,
+  ]);
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
-
-  // Handle search submission
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    setPage(0);
-    setKeyword(searchInput);
-  };
 
   // --- ADD USER LOGIC ---
   const validateAddForm = () => {
@@ -129,7 +138,6 @@ export const AdminUserManagement = () => {
     if (!validateAddForm()) return;
 
     setIsAdding(true);
-    setApiError("");
     try {
       await adminUserService.createUser({
         fullName: addForm.fullName.trim(),
@@ -147,15 +155,16 @@ export const AdminUserManagement = () => {
         address: "",
         role: "CUSTOMER",
       });
-      setSuccessMsg(
+      showToast(
         "User created successfully! A secure password has been generated.",
+        "success",
       );
-      setTimeout(() => setSuccessMsg(""), 5000);
       fetchUsers();
     } catch (err) {
       const msg =
         err?.response?.data?.message || err.message || "Failed to create user.";
       setAddErrors((prev) => ({ ...prev, email: msg }));
+      showToast(msg, "error");
     } finally {
       setIsAdding(false);
     }
@@ -173,6 +182,7 @@ export const AdminUserManagement = () => {
         targetUser.role === "ROLE_ADMIN" || targetUser.role === "ADMIN"
           ? "ADMIN"
           : "CUSTOMER",
+      status: targetUser.status || "ACTIVE",
     });
     setEditErrors({});
     setIsEditModalOpen(true);
@@ -204,16 +214,18 @@ export const AdminUserManagement = () => {
         phone: editForm.phone.trim() || undefined,
         address: editForm.address.trim() || undefined,
         role: editForm.role,
+        isAdmin: editForm.role === "ADMIN" ? 1 : 0,
+        status: editForm.status,
       });
 
       setIsEditModalOpen(false);
-      setSuccessMsg("User updated successfully!");
-      setTimeout(() => setSuccessMsg(""), 4000);
+      showToast("User updated successfully!", "success");
       fetchUsers();
     } catch (err) {
       const msg =
         err?.response?.data?.message || err.message || "Failed to update user.";
       setEditErrors((prev) => ({ ...prev, fullName: msg }));
+      showToast(msg, "error");
     } finally {
       setIsEditing(false);
     }
@@ -221,12 +233,11 @@ export const AdminUserManagement = () => {
 
   // --- TOGGLE STATUS (LOCK / UNLOCK) LOGIC ---
   const handleOpenToggleStatus = (targetUser) => {
-    // Admin cannot lock own account
     if (
       user?.email === targetUser.email ||
       user?.userId === targetUser.userId
     ) {
-      alert("You cannot lock your own administrator account.");
+      showToast("You cannot lock your own administrator account.", "warning");
       return;
     }
     setUserToToggle(targetUser);
@@ -240,15 +251,14 @@ export const AdminUserManagement = () => {
       await adminUserService.toggleUserStatus(userToToggle.userId);
       setIsConfirmStatusOpen(false);
       setUserToToggle(null);
-      setSuccessMsg("User status updated successfully!");
-      setTimeout(() => setSuccessMsg(""), 4000);
+      showToast("User status updated successfully!", "success");
       fetchUsers();
     } catch (err) {
-      alert(
+      const msg =
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to toggle user status.",
-      );
+        err.message ||
+        "Failed to toggle user status.";
+      showToast(msg, "error");
       setIsConfirmStatusOpen(false);
     } finally {
       setIsTogglingStatus(false);
@@ -297,67 +307,40 @@ export const AdminUserManagement = () => {
           <i className="fa-solid fa-user-plus me-1"></i> Add New User
         </button>
       </div>
-      {/* Success / Error alerts */}
-      {successMsg && (
-        <div className="alert alert-success py-3 px-4 br-10 mb-4 shadow-sm">
-          <i className="fa-solid fa-circle-check me-2"></i>
-          {successMsg}
-        </div>
-      )}
-      {apiError && (
-        <div className="alert alert-danger py-3 px-4 br-10 mb-4 shadow-sm">
-          <i className="fa-solid fa-circle-exclamation me-2"></i>
-          {apiError}
-        </div>
-      )}
 
-      {/* TOOLBAR CARD */}
+      {/* TOOLBAR CARD (Clean horizontal layout, live auto-search, no duplicate Add User) */}
       <div className="admin-card mb-4">
-        <div className="row g-3 align-items-center justify-content-between">
-          {/* Search Form */}
-          <div className="col-xl-4 col-lg-5 col-md-6">
-            <form onSubmit={handleSearchSubmit} className="d-flex gap-2">
-              <div className="input-group">
-                <span className="input-group-text bg-light border-end-0">
-                  <i className="fa-solid fa-magnifying-glass text-muted"></i>
-                </span>
-                <input
-                  type="text"
-                  className="form-control border-start-0 ps-0"
-                  placeholder="Search by name or email..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                />
-              </div>
-              <button
-                type="submit"
-                className="btn btn-dark bg-color-primary border-0 px-3 fw-600"
-              >
-                Search
-              </button>
-              {keyword && (
+        <div className="d-flex flex-wrap align-items-center gap-3">
+          {/* Live Auto Search */}
+          <div className="flex-grow-1" style={{ minWidth: "260px" }}>
+            <div className="input-group">
+              <span className="input-group-text bg-light border-end-0">
+                <i className="fa-solid fa-magnifying-glass text-muted"></i>
+              </span>
+              <input
+                type="text"
+                className="form-control border-start-0 ps-0"
+                placeholder="Search by name or email (auto search)..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+              />
+              {searchInput && (
                 <button
                   type="button"
-                  className="btn btn-light border"
-                  onClick={() => {
-                    setSearchInput("");
-                    setKeyword("");
-                    setPage(0);
-                  }}
+                  className="btn btn-light border-start-0 border"
+                  onClick={() => setSearchInput("")}
                   title="Clear search"
                 >
-                  <i className="fa-solid fa-xmark"></i>
+                  <i className="fa-solid fa-xmark text-muted"></i>
                 </button>
               )}
-            </form>
+            </div>
           </div>
 
-          {/* Filters & Actions */}
-          <div className="col-xl-8 col-lg-7 col-md-6 d-flex flex-wrap align-items-center justify-content-md-end gap-2">
-            {/* Status Filter */}
+          {/* Status Filter */}
+          <div style={{ width: "150px" }}>
             <select
               className="form-select form-select-sm"
-              style={{ width: "135px" }}
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
@@ -366,13 +349,15 @@ export const AdminUserManagement = () => {
             >
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
               <option value="BLOCKED">Blocked</option>
             </select>
+          </div>
 
-            {/* Role Filter */}
+          {/* Role Filter */}
+          <div style={{ width: "150px" }}>
             <select
               className="form-select form-select-sm"
-              style={{ width: "135px" }}
               value={roleFilter}
               onChange={(e) => {
                 setRoleFilter(e.target.value);
@@ -383,11 +368,12 @@ export const AdminUserManagement = () => {
               <option value="ADMIN">Admin</option>
               <option value="CUSTOMER">Customer</option>
             </select>
+          </div>
 
-            {/* Sort dropdown */}
+          {/* Sort dropdown */}
+          <div style={{ width: "160px" }}>
             <select
               className="form-select form-select-sm"
-              style={{ width: "150px" }}
               value={`${sortBy}-${sortDir}`}
               onChange={(e) => {
                 const [sb, sd] = e.target.value.split("-");
@@ -401,26 +387,6 @@ export const AdminUserManagement = () => {
               <option value="fullName-asc">Name (A-Z)</option>
               <option value="fullName-desc">Name (Z-A)</option>
             </select>
-
-            {/* Add User Button */}
-            <button
-              type="button"
-              className="admin-btn-primary"
-              onClick={() => {
-                setAddForm({
-                  fullName: "",
-                  email: "",
-                  phone: "",
-                  address: "",
-                  role: "CUSTOMER",
-                });
-                setAddErrors({});
-                setIsAddModalOpen(true);
-              }}
-            >
-              <i className="fa-solid fa-user-plus"></i>
-              <span>Add New User</span>
-            </button>
           </div>
         </div>
       </div>
@@ -504,13 +470,15 @@ export const AdminUserManagement = () => {
                       </td>
                       <td>
                         <span
-                          className={`badge rounded-pill px-3 py-1 fs-12 ${
+                          className={`admin-badge ${
                             u.status === "ACTIVE"
-                              ? "bg-success text-white"
-                              : "bg-danger text-white"
+                              ? "user-status-active"
+                              : u.status === "INACTIVE"
+                                ? "bg-warning-subtle text-warning border border-warning"
+                                : "user-status-blocked"
                           }`}
                         >
-                          {u.status}
+                          {u.status || "ACTIVE"}
                         </span>
                       </td>
                       <td className="text-muted fs-13">
@@ -522,8 +490,8 @@ export const AdminUserManagement = () => {
                         {/* View Detail */}
                         <button
                           type="button"
-                          className="admin-action-icon-btn"
-                          title="View User Details"
+                          className="admin-action-icon-btn me-1"
+                          title="View Details"
                           onClick={() => handleOpenDetail(u)}
                         >
                           <i className="fa-regular fa-eye"></i>
@@ -532,7 +500,7 @@ export const AdminUserManagement = () => {
                         {/* Edit */}
                         <button
                           type="button"
-                          className="admin-action-icon-btn"
+                          className="admin-action-icon-btn me-1"
                           title="Edit User"
                           onClick={() => handleOpenEdit(u)}
                         >
@@ -579,7 +547,7 @@ export const AdminUserManagement = () => {
           </table>
         </div>
 
-        {/* PAGINATION BAR */}
+        {/* PAGINATION BAR (< 1 2 3 > without ...) */}
         <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top gap-2">
           <div className="d-flex align-items-center gap-3">
             <span className="text-muted fs-13">
@@ -617,47 +585,34 @@ export const AdminUserManagement = () => {
                 className="btn btn-light border"
                 disabled={page === 0}
                 onClick={() => setPage((p) => Math.max(p - 1, 0))}
+                title="Previous page"
               >
-                Previous
+                &lt;
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i)
-                .filter(
-                  (i) =>
-                    i === 0 || i === totalPages - 1 || Math.abs(i - page) <= 1,
-                )
-                .map((pageNum, idx, arr) => {
-                  const prev = arr[idx - 1];
-                  return (
-                    <React.Fragment key={pageNum}>
-                      {prev !== undefined && pageNum - prev > 1 && (
-                        <button
-                          type="button"
-                          className="btn btn-light border disabled"
-                        >
-                          ...
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className={`btn ${
-                          pageNum === page
-                            ? "btn-dark bg-color-primary border-0 fw-700"
-                            : "btn-light border"
-                        }`}
-                        onClick={() => setPage(pageNum)}
-                      >
-                        {pageNum + 1}
-                      </button>
-                    </React.Fragment>
-                  );
-                })}
+              {Array.from({ length: totalPages }, (_, i) => i).map(
+                (pageNum) => (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    className={`btn ${
+                      pageNum === page
+                        ? "btn-dark bg-color-primary border-0 fw-700"
+                        : "btn-light border"
+                    }`}
+                    onClick={() => setPage(pageNum)}
+                  >
+                    {pageNum + 1}
+                  </button>
+                ),
+              )}
               <button
                 type="button"
                 className="btn btn-light border"
                 disabled={page >= totalPages - 1}
                 onClick={() => setPage((p) => Math.min(p + 1, totalPages - 1))}
+                title="Next page"
               >
-                Next
+                &gt;
               </button>
             </div>
           )}
@@ -684,7 +639,7 @@ export const AdminUserManagement = () => {
               style={{ background: "#ffffff" }}
             >
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <h4 className="fw-700 mb-0">User Details</h4>
+                <h4 className="fw-700 mb-0">User Profile Details</h4>
                 <button
                   type="button"
                   className="btn-close"
@@ -692,35 +647,48 @@ export const AdminUserManagement = () => {
                 ></button>
               </div>
 
-              <div className="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
+              <div className="d-flex align-items-center gap-3 p-3 bg-light rounded-3 mb-3">
                 <div
                   className="rounded-circle d-flex align-items-center justify-content-center text-white fw-700"
                   style={{
-                    width: 56,
-                    height: 56,
-                    background: "#e9613f",
-                    fontSize: 22,
+                    width: 50,
+                    height: 50,
+                    background:
+                      selectedUser.role === "ROLE_ADMIN" ||
+                      selectedUser.role === "ADMIN"
+                        ? "#e9613f"
+                        : "#10b981",
+                    fontSize: 20,
                   }}
                 >
                   {selectedUser.fullName?.charAt(0) || "U"}
                 </div>
                 <div>
-                  <h5 className="fw-700 mb-0">{selectedUser.fullName}</h5>
-                  <span className="text-muted fs-13">{selectedUser.email}</span>
-                  <div className="mt-1">
-                    <span className="badge bg-secondary me-2">
-                      {selectedUser.role}
-                    </span>
-                    <span
-                      className={`badge ${
-                        selectedUser.status === "ACTIVE"
-                          ? "bg-success"
-                          : "bg-danger"
-                      }`}
-                    >
-                      {selectedUser.status}
-                    </span>
-                  </div>
+                  <h5 className="mb-0 fw-700">{selectedUser.fullName}</h5>
+                  <p className="text-muted fs-13 mb-0">{selectedUser.email}</p>
+                </div>
+                <div className="ms-auto d-flex flex-column align-items-end gap-1">
+                  <span
+                    className={`admin-badge ${
+                      selectedUser.role === "ROLE_ADMIN" ||
+                      selectedUser.role === "ADMIN"
+                        ? "user-role-admin"
+                        : "user-role-patient"
+                    }`}
+                  >
+                    {selectedUser.role}
+                  </span>
+                  <span
+                    className={`admin-badge ${
+                      selectedUser.status === "ACTIVE"
+                        ? "user-status-active"
+                        : selectedUser.status === "INACTIVE"
+                          ? "bg-warning-subtle text-warning border border-warning"
+                          : "user-status-blocked"
+                    }`}
+                  >
+                    {selectedUser.status}
+                  </span>
                 </div>
               </div>
 
@@ -769,7 +737,7 @@ export const AdminUserManagement = () => {
         </div>
       )}
 
-      {/* --- 2. ADD USER MODAL --- */}
+      {/* --- 2. ADD USER MODAL (With input icons) --- */}
       {isAddModalOpen && (
         <div
           className="modal fade show d-block"
@@ -807,6 +775,7 @@ export const AdminUserManagement = () => {
               </div>
 
               <form onSubmit={handleCreateUser} noValidate>
+                {/* Full Name */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">Full Name *</label>
                   <div className="input-block">
@@ -825,10 +794,25 @@ export const AdminUserManagement = () => {
                       }}
                       disabled={isAdding}
                     />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
                   </div>
                   <AuthTooltip message={addErrors.fullName} position="top" />
                 </div>
 
+                {/* Email Address */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">
                     Email Address *
@@ -849,10 +833,25 @@ export const AdminUserManagement = () => {
                       }}
                       disabled={isAdding}
                     />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <polyline points="22,6 12,13 2,6" />
+                    </svg>
                   </div>
                   <AuthTooltip message={addErrors.email} position="top" />
                 </div>
 
+                {/* Phone & Role */}
                 <div className="row">
                   <div className="col-sm-6 mb-3">
                     <div className="auth-field-wrapper position-relative">
@@ -878,6 +877,19 @@ export const AdminUserManagement = () => {
                           }}
                           disabled={isAdding}
                         />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#718096"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                        </svg>
                       </div>
                       <AuthTooltip message={addErrors.phone} position="top" />
                     </div>
@@ -899,6 +911,7 @@ export const AdminUserManagement = () => {
                   </div>
                 </div>
 
+                {/* Address */}
                 <div className="auth-field-wrapper mb-4 position-relative">
                   <label className="form-label fw-600 mb-1">Address</label>
                   <div className="input-block">
@@ -912,6 +925,20 @@ export const AdminUserManagement = () => {
                       }
                       disabled={isAdding}
                     />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
                   </div>
                 </div>
 
@@ -926,13 +953,10 @@ export const AdminUserManagement = () => {
                   </button>
                   <button
                     type="submit"
-                    className="cus-btn border-0"
+                    className="admin-btn-primary px-4"
                     disabled={isAdding}
                   >
-                    <span className="btn-text">
-                      {isAdding ? "Creating..." : "Create User"}
-                    </span>
-                    <span>{isAdding ? "Creating..." : "Create User"}</span>
+                    {isAdding ? "Creating..." : "Create User"}
                   </button>
                 </div>
               </form>
@@ -941,7 +965,7 @@ export const AdminUserManagement = () => {
         </div>
       )}
 
-      {/* --- 3. EDIT USER MODAL --- */}
+      {/* --- 3. EDIT USER MODAL (With input icons & Status edit: ACTIVE / INACTIVE / BLOCKED) --- */}
       {isEditModalOpen && (
         <div
           className="modal fade show d-block"
@@ -986,6 +1010,20 @@ export const AdminUserManagement = () => {
                       readOnly
                       disabled
                     />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <polyline points="22,6 12,13 2,6" />
+                    </svg>
                   </div>
                 </div>
 
@@ -1010,39 +1048,64 @@ export const AdminUserManagement = () => {
                       }}
                       disabled={isEditing}
                     />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
                   </div>
                   <AuthTooltip message={editErrors.fullName} position="top" />
                 </div>
 
-                <div className="row">
-                  <div className="col-sm-6 mb-3">
-                    <div className="auth-field-wrapper position-relative">
-                      <label className="form-label fw-600 mb-1">
-                        Phone Number
-                      </label>
-                      <div className="input-block">
-                        <input
-                          type="tel"
-                          className={`form-control form-control-2 ${
-                            editErrors.phone ? "is-invalid-field" : ""
-                          }`}
-                          value={editForm.phone}
-                          onChange={(e) => {
-                            setEditForm((p) => ({
-                              ...p,
-                              phone: e.target.value,
-                            }));
-                            if (editErrors.phone) {
-                              setEditErrors((p) => ({ ...p, phone: "" }));
-                            }
-                          }}
-                          disabled={isEditing}
-                        />
-                      </div>
-                      <AuthTooltip message={editErrors.phone} position="top" />
-                    </div>
+                {/* Phone */}
+                <div className="auth-field-wrapper mb-3 position-relative">
+                  <label className="form-label fw-600 mb-1">Phone Number</label>
+                  <div className="input-block">
+                    <input
+                      type="tel"
+                      className={`form-control form-control-2 ${
+                        editErrors.phone ? "is-invalid-field" : ""
+                      }`}
+                      value={editForm.phone}
+                      onChange={(e) => {
+                        setEditForm((p) => ({
+                          ...p,
+                          phone: e.target.value,
+                        }));
+                        if (editErrors.phone) {
+                          setEditErrors((p) => ({ ...p, phone: "" }));
+                        }
+                      }}
+                      disabled={isEditing}
+                    />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg>
                   </div>
+                  <AuthTooltip message={editErrors.phone} position="top" />
+                </div>
 
+                {/* Role & Status (Can edit ACTIVE / INACTIVE / BLOCKED) */}
+                <div className="row">
                   <div className="col-sm-6 mb-3">
                     <label className="form-label fw-600 mb-1">Role *</label>
                     <select
@@ -1057,8 +1120,29 @@ export const AdminUserManagement = () => {
                       <option value="ADMIN">Administrator</option>
                     </select>
                   </div>
+
+                  <div className="col-sm-6 mb-3">
+                    <label className="form-label fw-600 mb-1">
+                      Account Status *
+                    </label>
+                    <select
+                      className="form-select form-control-2"
+                      value={editForm.status}
+                      onChange={(e) =>
+                        setEditForm((p) => ({ ...p, status: e.target.value }))
+                      }
+                      disabled={isEditing}
+                    >
+                      <option value="ACTIVE">ACTIVE (Active Account)</option>
+                      <option value="INACTIVE">
+                        INACTIVE (Inactive / Idle)
+                      </option>
+                      <option value="BLOCKED">BLOCKED (Locked Account)</option>
+                    </select>
+                  </div>
                 </div>
 
+                {/* Address */}
                 <div className="auth-field-wrapper mb-4 position-relative">
                   <label className="form-label fw-600 mb-1">Address</label>
                   <div className="input-block">
@@ -1071,6 +1155,20 @@ export const AdminUserManagement = () => {
                       }
                       disabled={isEditing}
                     />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
                   </div>
                 </div>
 
@@ -1085,13 +1183,10 @@ export const AdminUserManagement = () => {
                   </button>
                   <button
                     type="submit"
-                    className="cus-btn border-0"
+                    className="admin-btn-primary px-4"
                     disabled={isEditing}
                   >
-                    <span className="btn-text">
-                      {isEditing ? "Updating..." : "Save Changes"}
-                    </span>
-                    <span>{isEditing ? "Updating..." : "Save Changes"}</span>
+                    {isEditing ? "Updating..." : "Save Changes"}
                   </button>
                 </div>
               </form>
