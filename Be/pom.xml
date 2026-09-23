@@ -45,6 +45,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- 4. Spring Mail Starter (HTML & CSS Email Support) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- 5. Validation (DTO validation) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

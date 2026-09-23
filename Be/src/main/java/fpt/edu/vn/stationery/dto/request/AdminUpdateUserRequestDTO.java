@@ -25,6 +25,6 @@ public class AdminUpdateUserRequestDTO {
 
     private Integer isAdmin;
 
-    private String status; // "ACTIVE" or "BLOCKED"
+    private String status; // "ACTIVE", "INACTIVE" or "BLOCKED"
 }
 
