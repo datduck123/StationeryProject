@@ -13,7 +13,7 @@ export const Cart = () => {
       title: "Hardcover Notebook",
       price: 85.0,
       quantity: 1,
-      image: "assets/media/products/nav-image-1.png",
+      image: "/assets/media/products/nav-image-1.png",
       boxId: "box1",
     },
     {
@@ -21,7 +21,7 @@ export const Cart = () => {
       title: "Classic Ballpoint Pens",
       price: 15.0,
       quantity: 1,
-      image: "assets/media/products/nav-image-2.png",
+      image: "/assets/media/products/nav-image-2.png",
       boxId: "box2",
     },
   ]);

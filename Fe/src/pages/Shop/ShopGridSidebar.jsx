@@ -29,63 +29,63 @@ export const ShopGridSidebar = () => {
     {
       id: 1,
       title: "Daily Planner Pro",
-      image: "assets/media/products/product-1.png",
+      image: "/assets/media/products/product-1.png",
       price: "$59.00",
       badge: "Sale",
     },
     {
       id: 2,
       title: "SmoothFlow Pens",
-      image: "assets/media/products/product-2.png",
+      image: "/assets/media/products/product-2.png",
       price: "$59.00",
       badge: "",
     },
     {
       id: 3,
       title: "Premium Bags",
-      image: "assets/media/products/product-3.png",
+      image: "/assets/media/products/product-3.png",
       price: "$59.00",
       badge: "-15%",
     },
     {
       id: 4,
       title: "Pencil Case Mockup",
-      image: "assets/media/products/product-4.png",
+      image: "/assets/media/products/product-4.png",
       price: "$59.00",
       badge: "Sale",
     },
     {
       id: 5,
       title: "Classic Ballpoint Pens",
-      image: "assets/media/products/product-5.png",
+      image: "/assets/media/products/product-5.png",
       price: "$59.00",
       badge: "Sale",
     },
     {
       id: 6,
       title: "Magnetic Paper Clips",
-      image: "assets/media/products/product-6.png",
+      image: "/assets/media/products/product-6.png",
       price: "$59.00",
       badge: "",
     },
     {
       id: 7,
       title: "Pen's Box",
-      image: "assets/media/products/product-7.png",
+      image: "/assets/media/products/product-7.png",
       price: "$59.00",
       badge: "Sale",
     },
     {
       id: 8,
       title: "Calculator",
-      image: "assets/media/products/product-8.png",
+      image: "/assets/media/products/product-8.png",
       price: "$59.00",
       badge: "",
     },
     {
       id: 9,
       title: "Watercolor Paper Pad",
-      image: "assets/media/products/product-9.png",
+      image: "/assets/media/products/product-9.png",
       price: "$59.00",
       badge: "Sale",
     },
@@ -316,7 +316,7 @@ export const ShopGridSidebar = () => {
         data-wow-delay="500ms"
       >
         <img
-          src="assets/media/images/sidebar-image.png"
+          src="/assets/media/images/sidebar-image.png"
           alt=""
           className="w-100 object-fit-cover br-12"
         />

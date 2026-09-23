@@ -35,7 +35,7 @@ export const MobileMenu = () => {
         </span>
         <div className="logo-box">
           <Link to="/" aria-label="logo image" onClick={closeMobileMenu}>
-            <img src="assets/media/logo.png" alt="" />
+            <img src="/assets/media/logo.png" alt="" />
           </Link>
         </div>
         <div className="mobile-nav__container">

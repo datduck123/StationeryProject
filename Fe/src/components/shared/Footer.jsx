@@ -16,7 +16,7 @@ export const Footer = () => {
           >
             <div className="footer-info-block">
               <Link to="/" className="mb-24">
-                <img src="assets/media/logo.png" alt="" />
+                <img src="/assets/media/logo.png" alt="" />
               </Link>
               <p className="mb-24">{t("footer.desc")}</p>
               <div className="mb-1">
@@ -235,19 +235,19 @@ export const Footer = () => {
 
           <div className="payment-cards d-flex align-items-center gap-16">
             <div className="card-block">
-              <img src="assets/media/icons/card-1.png" alt="" />
+              <img src="/assets/media/icons/card-1.png" alt="" />
             </div>
             <div className="card-block">
-              <img src="assets/media/icons/card-2.png" alt="" />
+              <img src="/assets/media/icons/card-2.png" alt="" />
             </div>
             <div className="card-block">
-              <img src="assets/media/icons/card-3.png" alt="" />
+              <img src="/assets/media/icons/card-3.png" alt="" />
             </div>
             <div className="card-block">
-              <img src="assets/media/icons/card-4.png" alt="" />
+              <img src="/assets/media/icons/card-4.png" alt="" />
             </div>
             <div className="card-block">
-              <img src="assets/media/icons/card-5.png" alt="" />
+              <img src="/assets/media/icons/card-5.png" alt="" />
             </div>
           </div>
         </div>

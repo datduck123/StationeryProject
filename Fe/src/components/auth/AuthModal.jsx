@@ -44,15 +44,37 @@ export const AuthModal = () => {
   const [regSuccessMsg, setRegSuccessMsg] = useState("");
   const [regApiError, setRegApiError] = useState("");
 
+  // Forgot Password state
+  const [forgotStep, setForgotStep] = useState(1); // 1: Email, 2: OTP + New Password
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotOtp, setForgotOtp] = useState("");
+  const [forgotNewPassword, setForgotNewPassword] = useState("");
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
+  const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
+  const [showForgotConfirmPassword, setShowForgotConfirmPassword] =
+    useState(false);
+  const [forgotErrors, setForgotErrors] = useState({});
+  const [isForgotSubmitting, setIsForgotSubmitting] = useState(false);
+  const [isForgotResending, setIsForgotResending] = useState(false);
+  const [forgotApiError, setForgotApiError] = useState("");
+  const [forgotSuccessMsg, setForgotSuccessMsg] = useState("");
+
   // Clear errors and messages when switching tabs or closing modal
   useEffect(() => {
     setLoginErrors({});
     setRegErrors({});
+    setForgotErrors({});
     setLoginApiError("");
     setRegApiError("");
+    setForgotApiError("");
     setRegSuccessMsg("");
+    setForgotSuccessMsg("");
     setRegOtpError("");
     setRegStep(1);
+    setForgotStep(1);
+    setForgotOtp("");
+    setForgotNewPassword("");
+    setForgotConfirmPassword("");
   }, [authModalTab, isAuthModalOpen]);
 
   if (!isAuthModalOpen) return null;
@@ -112,6 +134,36 @@ export const AuthModal = () => {
     return Object.keys(errors).length === 0;
   };
 
+  const validateForgotEmail = () => {
+    const errs = {};
+    if (!forgotEmail.trim()) {
+      errs.email = "Email address is required.";
+    } else if (!validateEmail(forgotEmail.trim())) {
+      errs.email = "Please enter a valid email address.";
+    }
+    setForgotErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  const validateForgotReset = () => {
+    const errs = {};
+    if (!forgotOtp.trim() || forgotOtp.trim().length < 6) {
+      errs.otp = "Please enter the 6-digit OTP code.";
+    }
+    if (!forgotNewPassword) {
+      errs.newPassword = "New password is required.";
+    } else if (forgotNewPassword.length < 8) {
+      errs.newPassword = "Password must be at least 8 characters.";
+    }
+    if (!forgotConfirmPassword) {
+      errs.confirmPassword = "Confirm password is required.";
+    } else if (forgotNewPassword !== forgotConfirmPassword) {
+      errs.confirmPassword = "Passwords do not match.";
+    }
+    setForgotErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   // Submit handlers
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -137,7 +189,7 @@ export const AuthModal = () => {
     }
   };
 
-  // Step 1: Send OTP
+  // Register Step 1: Send OTP
   const handleRegisterSendOtp = async (e) => {
     e.preventDefault();
     setRegApiError("");
@@ -159,7 +211,7 @@ export const AuthModal = () => {
     }
   };
 
-  // Resend OTP
+  // Register Resend OTP
   const handleRegisterResendOtp = async () => {
     setIsResendingOtp(true);
     try {
@@ -175,7 +227,7 @@ export const AuthModal = () => {
     }
   };
 
-  // Step 2: Verify & Register
+  // Register Step 2: Verify & Register
   const handleRegisterVerifyAndComplete = async () => {
     if (!regOtp || regOtp.length < 6) {
       setRegOtpError("Please enter the 6-digit OTP code.");
@@ -213,6 +265,80 @@ export const AuthModal = () => {
     }
   };
 
+  // Forgot Password Step 1: Send OTP
+  const handleForgotSendOtp = async (e) => {
+    e?.preventDefault();
+    setForgotApiError("");
+    setForgotSuccessMsg("");
+    if (!validateForgotEmail()) return;
+
+    setIsForgotSubmitting(true);
+    try {
+      await authService.sendForgotPasswordOtp({ email: forgotEmail.trim() });
+      setIsForgotSubmitting(false);
+      setForgotStep(2);
+      setForgotSuccessMsg("Reset code sent! Please check your email inbox.");
+    } catch (err) {
+      setIsForgotSubmitting(false);
+      setForgotApiError(
+        err?.response?.data?.message ||
+          err.message ||
+          "Failed to send reset code. Please check your email.",
+      );
+    }
+  };
+
+  // Forgot Password Resend OTP
+  const handleForgotResendOtp = async () => {
+    setIsForgotResending(true);
+    setForgotApiError("");
+    try {
+      await authService.sendForgotPasswordOtp({ email: forgotEmail.trim() });
+      setIsForgotResending(false);
+      setForgotSuccessMsg("A new reset code has been resent to your email.");
+    } catch (err) {
+      setIsForgotResending(false);
+      setForgotApiError(
+        err?.response?.data?.message ||
+          err.message ||
+          "Failed to resend OTP. Please wait before retrying.",
+      );
+    }
+  };
+
+  // Forgot Password Step 2: Reset password
+  const handleForgotResetPassword = async (e) => {
+    e.preventDefault();
+    setForgotApiError("");
+    if (!validateForgotReset()) return;
+
+    setIsForgotSubmitting(true);
+    try {
+      await authService.resetPassword({
+        email: forgotEmail.trim(),
+        otpCode: forgotOtp.trim(),
+        newPassword: forgotNewPassword,
+      });
+
+      setIsForgotSubmitting(false);
+      setForgotSuccessMsg(
+        "Password reset successfully! Redirecting to Sign In...",
+      );
+      setLoginEmail(forgotEmail.trim());
+      setTimeout(() => {
+        setAuthModalTab("login");
+        setForgotStep(1);
+      }, 1500);
+    } catch (err) {
+      setIsForgotSubmitting(false);
+      setForgotApiError(
+        err?.response?.data?.message ||
+          err.message ||
+          "Failed to reset password. Please check your OTP code.",
+      );
+    }
+  };
+
   return (
     <div
       className="modal fade show auth-modal-backdrop"
@@ -224,7 +350,7 @@ export const AuthModal = () => {
     >
       <div
         className="modal-dialog modal-dialog-centered"
-        style={{ maxWidth: "480px", margin: "1.75rem auto" }}
+        style={{ maxWidth: "620px", width: "94%", margin: "1.75rem auto" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -247,8 +373,8 @@ export const AuthModal = () => {
             <div className="text-center mb-3">
               <Link to="/" onClick={closeAuthModal} className="d-inline-block">
                 <img
-                  src="assets/media/logo.png"
-                  alt="Clinic Logo"
+                  src="/assets/media/logo.png"
+                  alt="Stationery Logo"
                   style={{ maxHeight: "46px" }}
                 />
               </Link>
@@ -259,12 +385,18 @@ export const AuthModal = () => {
               <h3 className="medium-black fw-700 mb-2">
                 {authModalTab === "login"
                   ? "Welcome Back"
-                  : "Create Your Account"}
+                  : authModalTab === "register"
+                    ? "Create Your Account"
+                    : "Reset Password"}
               </h3>
               <p className="dark-gray subtitle" style={{ fontSize: "14px" }}>
                 {authModalTab === "login"
-                  ? "Sign in to continue your care journey."
-                  : "Start your personalized care journey with us."}
+                  ? "Sign in to continue your stationery journey."
+                  : authModalTab === "register"
+                    ? "Join us to explore premium stationery and tools."
+                    : forgotStep === 1
+                      ? "Enter your email address to receive a verification code."
+                      : "Enter your OTP code and create a new password."}
               </p>
             </div>
 
@@ -281,14 +413,26 @@ export const AuthModal = () => {
                 {regApiError}
               </div>
             )}
-            {regSuccessMsg && (
+            {regSuccessMsg && authModalTab === "register" && (
               <div className="alert alert-success py-2 px-3 br-10 mb-3 text-center fs-14">
                 <i className="fa-solid fa-circle-check me-2"></i>
                 {regSuccessMsg}
               </div>
             )}
+            {forgotApiError && authModalTab === "forgot" && (
+              <div className="alert alert-danger py-2 px-3 br-10 mb-3 text-center fs-14">
+                <i className="fa-solid fa-circle-exclamation me-2"></i>
+                {forgotApiError}
+              </div>
+            )}
+            {forgotSuccessMsg && authModalTab === "forgot" && (
+              <div className="alert alert-success py-2 px-3 br-10 mb-3 text-center fs-14">
+                <i className="fa-solid fa-circle-check me-2"></i>
+                {forgotSuccessMsg}
+              </div>
+            )}
 
-            {/* LOGIN FORM */}
+            {/* 1. LOGIN FORM */}
             {authModalTab === "login" && (
               <form onSubmit={handleLoginSubmit} noValidate>
                 {/* Email Field */}
@@ -343,13 +487,13 @@ export const AuthModal = () => {
                     >
                       Password
                     </label>
-                    <Link
-                      to="/forgot-password"
-                      className="color-primary fs-13 fw-500 text-decoration-underline"
-                      onClick={closeAuthModal}
+                    <button
+                      type="button"
+                      className="color-primary fs-13 fw-500 text-decoration-underline border-0 bg-transparent p-0"
+                      onClick={() => setAuthModalTab("forgot")}
                     >
                       Forgot password?
-                    </Link>
+                    </button>
                   </div>
                   <div className="input-block">
                     <input
@@ -435,7 +579,7 @@ export const AuthModal = () => {
               </form>
             )}
 
-            {/* REGISTER FORM */}
+            {/* 2. REGISTER FORM */}
             {authModalTab === "register" && (
               <>
                 {regStep === 1 ? (
@@ -470,6 +614,21 @@ export const AuthModal = () => {
                           disabled={isRegSubmitting}
                           autoComplete="name"
                         />
+                        {/* User Icon */}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#141516"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
+                        </svg>
                       </div>
                       <AuthTooltip
                         message={regErrors.fullName}
@@ -504,6 +663,19 @@ export const AuthModal = () => {
                           disabled={isRegSubmitting}
                           autoComplete="username"
                         />
+                        {/* Mail Icon */}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                        >
+                          <path
+                            d="M18.2422 2.96875H1.75781C0.786602 2.96875 0 3.76023 0 4.72656V15.2734C0 16.2455 0.792383 17.0312 1.75781 17.0312H18.2422C19.2053 17.0312 20 16.2488 20 15.2734V4.72656C20 3.76195 19.2165 2.96875 18.2422 2.96875ZM17.996 4.14062C17.6369 4.49785 11.4564 10.6458 11.243 10.8581C10.9109 11.1901 10.4695 11.3729 10 11.3729C9.53047 11.3729 9.08906 11.1901 8.75594 10.857C8.61242 10.7142 2.50012 4.63414 2.00398 4.14062H17.996ZM1.17188 15.0349V4.96582L6.23586 10.0031L1.17188 15.0349ZM2.00473 15.8594L7.06672 10.8296L7.9284 11.6867C8.48176 12.2401 9.21746 12.5448 10 12.5448C10.7825 12.5448 11.5182 12.2401 12.0705 11.6878L12.9333 10.8296L17.9953 15.8594H2.00473ZM18.8281 15.0349L13.7641 10.0031L18.8281 4.96582V15.0349Z"
+                            fill="#141516"
+                          />
+                        </svg>
                       </div>
                       <AuthTooltip message={regErrors.email} position="top" />
                     </div>
@@ -538,6 +710,19 @@ export const AuthModal = () => {
                           disabled={isRegSubmitting}
                           autoComplete="new-password"
                         />
+                        {/* Lock Icon */}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                        >
+                          <path
+                            d="M10 2C6.134 2 3 5.134 3 9V11H2C1.448 11 1 11.448 1 12V18C1 18.552 1.448 19 2 19H18C18.552 19 19 18.552 19 18V12C19 11.448 18.552 11 18 11H17V9C17 5.134 13.866 2 10 2ZM5 9C5 6.239 7.239 4 10 4C12.761 4 15 6.239 15 9V11H5V9Z"
+                            fill="#141516"
+                          />
+                        </svg>
                         <button
                           type="button"
                           className="auth-password-toggle"
@@ -589,6 +774,19 @@ export const AuthModal = () => {
                           disabled={isRegSubmitting}
                           autoComplete="new-password"
                         />
+                        {/* Lock Icon */}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                        >
+                          <path
+                            d="M10 2C6.134 2 3 5.134 3 9V11H2C1.448 11 1 11.448 1 12V18C1 18.552 1.448 19 2 19H18C18.552 19 19 18.552 19 18V12C19 11.448 18.552 11 18 11H17V9C17 5.134 13.866 2 10 2ZM5 9C5 6.239 7.239 4 10 4C12.761 4 15 6.239 15 9V11H5V9Z"
+                            fill="#141516"
+                          />
+                        </svg>
                         <button
                           type="button"
                           className="auth-password-toggle"
@@ -705,6 +903,339 @@ export const AuthModal = () => {
                     isResending={isResendingOtp}
                     submitButtonText="Verify & Register"
                   />
+                )}
+              </>
+            )}
+
+            {/* 3. FORGOT PASSWORD FORM */}
+            {authModalTab === "forgot" && (
+              <>
+                {forgotStep === 1 ? (
+                  <form onSubmit={handleForgotSendOtp} noValidate>
+                    {/* Email Field */}
+                    <div className="auth-field-wrapper mb-3 position-relative">
+                      <label
+                        htmlFor="forgot-email"
+                        className="form-label fw-600 medium-black mb-1"
+                      >
+                        Email Address
+                      </label>
+                      <div className="input-block">
+                        <input
+                          type="email"
+                          id="forgot-email"
+                          name="email"
+                          className={`form-control form-control-2 ${
+                            forgotErrors.email ? "is-invalid-field" : ""
+                          }`}
+                          placeholder="Enter your registered email"
+                          value={forgotEmail}
+                          onChange={(e) => {
+                            setForgotEmail(e.target.value);
+                            if (forgotErrors.email) {
+                              setForgotErrors((prev) => ({
+                                ...prev,
+                                email: "",
+                              }));
+                            }
+                          }}
+                          disabled={isForgotSubmitting}
+                          autoComplete="email"
+                        />
+                        {/* Mail Icon */}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                        >
+                          <path
+                            d="M18.2422 2.96875H1.75781C0.786602 2.96875 0 3.76023 0 4.72656V15.2734C0 16.2455 0.792383 17.0312 1.75781 17.0312H18.2422C19.2053 17.0312 20 16.2488 20 15.2734V4.72656C20 3.76195 19.2165 2.96875 18.2422 2.96875ZM17.996 4.14062C17.6369 4.49785 11.4564 10.6458 11.243 10.8581C10.9109 11.1901 10.4695 11.3729 10 11.3729C9.53047 11.3729 9.08906 11.1901 8.75594 10.857C8.61242 10.7142 2.50012 4.63414 2.00398 4.14062H17.996ZM1.17188 15.0349V4.96582L6.23586 10.0031L1.17188 15.0349ZM2.00473 15.8594L7.06672 10.8296L7.9284 11.6867C8.48176 12.2401 9.21746 12.5448 10 12.5448C10.7825 12.5448 11.5182 12.2401 12.0705 11.6878L12.9333 10.8296L17.9953 15.8594H2.00473ZM18.8281 15.0349L13.7641 10.0031L18.8281 4.96582V15.0349Z"
+                            fill="#141516"
+                          />
+                        </svg>
+                      </div>
+                      <AuthTooltip
+                        message={forgotErrors.email}
+                        position="top"
+                      />
+                    </div>
+
+                    {/* Submit CTA */}
+                    <div className="mt-4">
+                      <button
+                        type="submit"
+                        className="cus-btn w-100 text-center border-0"
+                        disabled={isForgotSubmitting}
+                      >
+                        <span className="btn-text">
+                          {isForgotSubmitting
+                            ? "Sending Reset Code..."
+                            : "Send Reset Code"}
+                        </span>
+                        <span>
+                          {isForgotSubmitting
+                            ? "Sending Reset Code..."
+                            : "Send Reset Code"}
+                        </span>
+                      </button>
+                    </div>
+
+                    {/* Back to Sign In */}
+                    <div className="text-center mt-3 pt-2">
+                      <button
+                        type="button"
+                        className="color-primary fw-600 border-0 bg-transparent p-0 fs-14 text-decoration-underline"
+                        onClick={() => setAuthModalTab("login")}
+                      >
+                        <i className="fa-solid fa-arrow-left me-1"></i> Back to
+                        Sign In
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <form onSubmit={handleForgotResetPassword} noValidate>
+                    {/* Notice bar */}
+                    <div className="p-3 bg-light rounded-3 mb-3 fs-13 text-muted text-center border">
+                      Code sent to <strong>{forgotEmail}</strong>.{" "}
+                      <button
+                        type="button"
+                        className="color-primary border-0 bg-transparent p-0 fs-13 text-decoration-underline ms-1"
+                        onClick={() => setForgotStep(1)}
+                      >
+                        Change email
+                      </button>
+                    </div>
+
+                    {/* OTP Code */}
+                    <div className="auth-field-wrapper mb-3 position-relative">
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <label
+                          htmlFor="forgot-otp"
+                          className="form-label fw-600 medium-black mb-0"
+                        >
+                          6-Digit OTP Code *
+                        </label>
+                        <button
+                          type="button"
+                          className="color-primary border-0 bg-transparent p-0 fs-12 text-decoration-underline"
+                          onClick={handleForgotResendOtp}
+                          disabled={isForgotResending}
+                        >
+                          {isForgotResending ? "Resending..." : "Resend Code"}
+                        </button>
+                      </div>
+                      <div className="input-block">
+                        <input
+                          type="text"
+                          id="forgot-otp"
+                          name="otp"
+                          maxLength="6"
+                          className={`form-control form-control-2 text-center fw-700 ${
+                            forgotErrors.otp ? "is-invalid-field" : ""
+                          }`}
+                          style={{ letterSpacing: "4px", fontSize: "16px" }}
+                          placeholder="------"
+                          value={forgotOtp}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, "");
+                            setForgotOtp(val);
+                            if (forgotErrors.otp) {
+                              setForgotErrors((prev) => ({
+                                ...prev,
+                                otp: "",
+                              }));
+                            }
+                          }}
+                          disabled={isForgotSubmitting}
+                          autoComplete="one-time-code"
+                        />
+                        {/* Key Icon */}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#141516"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M21 2l-2 2m-1.5 1.5L16 7m-1.5 1.5l-2 2M11 9l-7.5 7.5a2.121 2.121 0 0 0 3 3L14 12" />
+                          <circle cx="18" cy="6" r="3" />
+                        </svg>
+                      </div>
+                      <AuthTooltip message={forgotErrors.otp} position="top" />
+                    </div>
+
+                    {/* New Password */}
+                    <div className="auth-field-wrapper mb-3 position-relative">
+                      <label
+                        htmlFor="forgot-new-pass"
+                        className="form-label fw-600 medium-black mb-1"
+                      >
+                        New Password *
+                      </label>
+                      <div className="input-block">
+                        <input
+                          type={showForgotNewPassword ? "text" : "password"}
+                          id="forgot-new-pass"
+                          name="newPassword"
+                          className={`form-control form-control-2 pe-5 ${
+                            forgotErrors.newPassword ? "is-invalid-field" : ""
+                          }`}
+                          placeholder="Minimum 8 characters"
+                          value={forgotNewPassword}
+                          onChange={(e) => {
+                            setForgotNewPassword(e.target.value);
+                            if (forgotErrors.newPassword) {
+                              setForgotErrors((prev) => ({
+                                ...prev,
+                                newPassword: "",
+                              }));
+                            }
+                          }}
+                          disabled={isForgotSubmitting}
+                          autoComplete="new-password"
+                        />
+                        {/* Lock Icon */}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                        >
+                          <path
+                            d="M10 2C6.134 2 3 5.134 3 9V11H2C1.448 11 1 11.448 1 12V18C1 18.552 1.448 19 2 19H18C18.552 19 19 18.552 19 18V12C19 11.448 18.552 11 18 11H17V9C17 5.134 13.866 2 10 2ZM5 9C5 6.239 7.239 4 10 4C12.761 4 15 6.239 15 9V11H5V9Z"
+                            fill="#141516"
+                          />
+                        </svg>
+                        <button
+                          type="button"
+                          className="auth-password-toggle"
+                          onClick={() =>
+                            setShowForgotNewPassword((prev) => !prev)
+                          }
+                          tabIndex="-1"
+                        >
+                          <i
+                            className={
+                              showForgotNewPassword
+                                ? "fa-regular fa-eye-slash"
+                                : "fa-regular fa-eye"
+                            }
+                          ></i>
+                        </button>
+                      </div>
+                      <AuthTooltip
+                        message={forgotErrors.newPassword}
+                        position="top"
+                      />
+                    </div>
+
+                    {/* Confirm New Password */}
+                    <div className="auth-field-wrapper mb-3 position-relative">
+                      <label
+                        htmlFor="forgot-confirm-pass"
+                        className="form-label fw-600 medium-black mb-1"
+                      >
+                        Confirm New Password *
+                      </label>
+                      <div className="input-block">
+                        <input
+                          type={showForgotConfirmPassword ? "text" : "password"}
+                          id="forgot-confirm-pass"
+                          name="confirmPassword"
+                          className={`form-control form-control-2 pe-5 ${
+                            forgotErrors.confirmPassword
+                              ? "is-invalid-field"
+                              : ""
+                          }`}
+                          placeholder="Re-enter new password"
+                          value={forgotConfirmPassword}
+                          onChange={(e) => {
+                            setForgotConfirmPassword(e.target.value);
+                            if (forgotErrors.confirmPassword) {
+                              setForgotErrors((prev) => ({
+                                ...prev,
+                                confirmPassword: "",
+                              }));
+                            }
+                          }}
+                          disabled={isForgotSubmitting}
+                          autoComplete="new-password"
+                        />
+                        {/* Lock Icon */}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          viewBox="0 0 20 20"
+                          fill="none"
+                        >
+                          <path
+                            d="M10 2C6.134 2 3 5.134 3 9V11H2C1.448 11 1 11.448 1 12V18C1 18.552 1.448 19 2 19H18C18.552 19 19 18.552 19 18V12C19 11.448 18.552 11 18 11H17V9C17 5.134 13.866 2 10 2ZM5 9C5 6.239 7.239 4 10 4C12.761 4 15 6.239 15 9V11H5V9Z"
+                            fill="#141516"
+                          />
+                        </svg>
+                        <button
+                          type="button"
+                          className="auth-password-toggle"
+                          onClick={() =>
+                            setShowForgotConfirmPassword((prev) => !prev)
+                          }
+                          tabIndex="-1"
+                        >
+                          <i
+                            className={
+                              showForgotConfirmPassword
+                                ? "fa-regular fa-eye-slash"
+                                : "fa-regular fa-eye"
+                            }
+                          ></i>
+                        </button>
+                      </div>
+                      <AuthTooltip
+                        message={forgotErrors.confirmPassword}
+                        position="top"
+                      />
+                    </div>
+
+                    {/* Submit CTA */}
+                    <div className="mt-4">
+                      <button
+                        type="submit"
+                        className="cus-btn w-100 text-center border-0"
+                        disabled={isForgotSubmitting}
+                      >
+                        <span className="btn-text">
+                          {isForgotSubmitting
+                            ? "Resetting Password..."
+                            : "Reset Password"}
+                        </span>
+                        <span>
+                          {isForgotSubmitting
+                            ? "Resetting Password..."
+                            : "Reset Password"}
+                        </span>
+                      </button>
+                    </div>
+
+                    {/* Back to Sign In */}
+                    <div className="text-center mt-3 pt-2">
+                      <button
+                        type="button"
+                        className="color-primary fw-600 border-0 bg-transparent p-0 fs-14 text-decoration-underline"
+                        onClick={() => setAuthModalTab("login")}
+                      >
+                        <i className="fa-solid fa-arrow-left me-1"></i> Back to
+                        Sign In
+                      </button>
+                    </div>
+                  </form>
                 )}
               </>
             )}

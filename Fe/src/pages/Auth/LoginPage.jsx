@@ -5,7 +5,7 @@ import TitleBanner from "../../components/shared/TitleBanner";
 import { useAuth } from "../../providers/AuthContext";
 
 export const LoginPage = () => {
-  const { login } = useAuth();
+  const { login, openAuthModal } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -62,7 +62,7 @@ export const LoginPage = () => {
                 <div className="text-center mb-3">
                   <Link to="/" className="d-inline-block">
                     <img
-                      src="assets/media/logo.png"
+                      src="/assets/media/logo.png"
                       alt="Clinic Logo"
                       style={{ maxHeight: "48px" }}
                     />
@@ -137,12 +137,13 @@ export const LoginPage = () => {
                       >
                         Password
                       </label>
-                      <Link
-                        to="/forgot-password"
-                        className="color-primary fs-13 fw-500 text-decoration-underline"
+                      <button
+                        type="button"
+                        className="color-primary fs-13 fw-500 text-decoration-underline border-0 bg-transparent p-0"
+                        onClick={() => openAuthModal("forgot")}
                       >
                         Forgot password?
-                      </Link>
+                      </button>
                     </div>
                     <div className="input-block">
                       <input

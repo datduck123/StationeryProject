@@ -36,7 +36,7 @@ export const QuickViewModal = () => {
                         <img
                           src={
                             quickViewProduct.image ||
-                            "assets/media/products/large-image-1.png"
+                            "/assets/media/products/large-image-1.png"
                           }
                           alt=""
                         />

@@ -10,8 +10,6 @@ export const AdminUserManagement = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   // Filter & Pagination states
   const [keyword, setKeyword] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -269,515 +267,401 @@ export const AdminUserManagement = () => {
   };
 
   return (
-    <div className="admin-wrapper">
-      {/* Sidebar Mobile Overlay */}
-      {sidebarOpen && (
-        <div
-          className="position-fixed top-0 start-0 w-100 h-100 bg-dark opacity-50 z-index-1030 d-lg-none"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
+    <div className="p-4">
+      {/* Page Header */}
+      <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+        <div>
+          <h4 className="fw-700 medium-black mb-1">
+            User & Customer Management
+          </h4>
+          <p className="text-muted fs-13 mb-0">
+            View, search, filter, edit, and manage system accounts and customer
+            profiles.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="admin-btn-primary"
+          onClick={() => {
+            setAddForm({
+              fullName: "",
+              email: "",
+              phone: "",
+              address: "",
+              role: "CUSTOMER",
+            });
+            setAddErrors({});
+            setIsAddModalOpen(true);
+          }}
+        >
+          <i className="fa-solid fa-user-plus me-1"></i> Add New User
+        </button>
+      </div>
+      {/* Success / Error alerts */}
+      {successMsg && (
+        <div className="alert alert-success py-3 px-4 br-10 mb-4 shadow-sm">
+          <i className="fa-solid fa-circle-check me-2"></i>
+          {successMsg}
+        </div>
+      )}
+      {apiError && (
+        <div className="alert alert-danger py-3 px-4 br-10 mb-4 shadow-sm">
+          <i className="fa-solid fa-circle-exclamation me-2"></i>
+          {apiError}
+        </div>
       )}
 
-      {/* SIDEBAR */}
-      <aside className={`admin-sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="admin-sidebar-brand">
-          <Link
-            to="/"
-            className="d-flex align-items-center gap-2 text-decoration-none"
-          >
-            <img
-              src="/assets/media/logo.png"
-              alt="Logo"
-              style={{ maxHeight: "36px" }}
-              onError={(e) => {
-                e.target.style.display = "none";
-              }}
-            />
-            <span className="fw-700 fs-18 text-white">Clinic Admin</span>
-          </Link>
-          <button
-            type="button"
-            className="btn-close btn-close-white d-lg-none"
-            aria-label="Close"
-            onClick={() => setSidebarOpen(false)}
-          ></button>
-        </div>
-
-        <div className="py-2">
-          <div className="admin-nav-group-title">MAIN MENU</div>
-          <ul className="admin-nav-list">
-            <li className="admin-nav-item">
-              <Link to="/admin" className="admin-nav-link text-decoration-none">
-                <i className="fa-solid fa-chart-pie"></i>
-                <span>Overview Dashboard</span>
-              </Link>
-            </li>
-            <li className="admin-nav-item">
-              <Link
-                to="/admin/users"
-                className="admin-nav-link active text-decoration-none"
-              >
-                <i className="fa-solid fa-users-gear"></i>
-                <span>User Management</span>
-                <span className="admin-nav-badge bg-light text-dark">
-                  {totalElements}
+      {/* TOOLBAR CARD */}
+      <div className="admin-card mb-4">
+        <div className="row g-3 align-items-center justify-content-between">
+          {/* Search Form */}
+          <div className="col-xl-4 col-lg-5 col-md-6">
+            <form onSubmit={handleSearchSubmit} className="d-flex gap-2">
+              <div className="input-group">
+                <span className="input-group-text bg-light border-end-0">
+                  <i className="fa-solid fa-magnifying-glass text-muted"></i>
                 </span>
-              </Link>
-            </li>
-          </ul>
-
-          <div className="admin-nav-group-title">QUICK LINKS</div>
-          <ul className="admin-nav-list">
-            <li className="admin-nav-item">
-              <Link to="/" className="admin-nav-link text-decoration-none">
-                <i className="fa-solid fa-store"></i>
-                <span>Main Website</span>
-              </Link>
-            </li>
-            <li className="admin-nav-item">
-              <Link
-                to="/profile"
-                className="admin-nav-link text-decoration-none"
+                <input
+                  type="text"
+                  className="form-control border-start-0 ps-0"
+                  placeholder="Search by name or email..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn btn-dark bg-color-primary border-0 px-3 fw-600"
               >
-                <i className="fa-regular fa-user"></i>
-                <span>My Profile</span>
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </aside>
-
-      {/* MAIN ADMIN CONTENT AREA */}
-      <div className="admin-main">
-        {/* TOP HEADER */}
-        <header className="admin-topbar">
-          <div className="d-flex align-items-center gap-3">
-            <button
-              type="button"
-              className="btn btn-sm btn-light d-lg-none border"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <i className="fa-solid fa-bars"></i>
-            </button>
-            <h4 className="fw-700 mb-0 d-none d-sm-block medium-black">
-              User Management
-            </h4>
-          </div>
-
-          <div className="d-flex align-items-center gap-3">
-            <div className="d-flex align-items-center gap-2">
-              <div
-                className="rounded-circle d-flex align-items-center justify-content-center text-white fw-700"
-                style={{
-                  width: 36,
-                  height: 36,
-                  background: "#e9613f",
-                  fontSize: 14,
-                }}
-              >
-                {user?.fullName?.charAt(0) || "A"}
-              </div>
-              <div className="d-none d-md-block text-start">
-                <div className="fw-600 fs-13 lh-1">
-                  {user?.fullName || "Admin"}
-                </div>
-                <small className="text-muted fs-11">Administrator</small>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-danger rounded-pill px-3"
-              onClick={logout}
-              title="Sign Out"
-            >
-              <i className="fa-solid fa-arrow-right-from-bracket me-1"></i>
-              <span className="d-none d-sm-inline">Sign Out</span>
-            </button>
-          </div>
-        </header>
-
-        {/* CONTENT BODY */}
-        <main className="admin-content p-4">
-          {/* Success / Error alerts */}
-          {successMsg && (
-            <div className="alert alert-success py-3 px-4 br-10 mb-4 shadow-sm">
-              <i className="fa-solid fa-circle-check me-2"></i>
-              {successMsg}
-            </div>
-          )}
-          {apiError && (
-            <div className="alert alert-danger py-3 px-4 br-10 mb-4 shadow-sm">
-              <i className="fa-solid fa-circle-exclamation me-2"></i>
-              {apiError}
-            </div>
-          )}
-
-          {/* TOOLBAR CARD */}
-          <div className="admin-card mb-4">
-            <div className="row g-3 align-items-center justify-content-between">
-              {/* Search Form */}
-              <div className="col-xl-4 col-lg-5 col-md-6">
-                <form onSubmit={handleSearchSubmit} className="d-flex gap-2">
-                  <div className="input-group">
-                    <span className="input-group-text bg-light border-end-0">
-                      <i className="fa-solid fa-magnifying-glass text-muted"></i>
-                    </span>
-                    <input
-                      type="text"
-                      className="form-control border-start-0 ps-0"
-                      placeholder="Search by name or email..."
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="btn btn-dark bg-color-primary border-0 px-3 fw-600"
-                  >
-                    Search
-                  </button>
-                  {keyword && (
-                    <button
-                      type="button"
-                      className="btn btn-light border"
-                      onClick={() => {
-                        setSearchInput("");
-                        setKeyword("");
-                        setPage(0);
-                      }}
-                      title="Clear search"
-                    >
-                      <i className="fa-solid fa-xmark"></i>
-                    </button>
-                  )}
-                </form>
-              </div>
-
-              {/* Filters & Actions */}
-              <div className="col-xl-8 col-lg-7 col-md-6 d-flex flex-wrap align-items-center justify-content-md-end gap-2">
-                {/* Status Filter */}
-                <select
-                  className="form-select form-select-sm"
-                  style={{ width: "135px" }}
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value);
-                    setPage(0);
-                  }}
-                >
-                  <option value="ALL">All Statuses</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="BLOCKED">Blocked</option>
-                </select>
-
-                {/* Role Filter */}
-                <select
-                  className="form-select form-select-sm"
-                  style={{ width: "135px" }}
-                  value={roleFilter}
-                  onChange={(e) => {
-                    setRoleFilter(e.target.value);
-                    setPage(0);
-                  }}
-                >
-                  <option value="ALL">All Roles</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="CUSTOMER">Customer</option>
-                </select>
-
-                {/* Sort dropdown */}
-                <select
-                  className="form-select form-select-sm"
-                  style={{ width: "150px" }}
-                  value={`${sortBy}-${sortDir}`}
-                  onChange={(e) => {
-                    const [sb, sd] = e.target.value.split("-");
-                    setSortBy(sb);
-                    setSortDir(sd);
-                    setPage(0);
-                  }}
-                >
-                  <option value="userId-desc">Newest First</option>
-                  <option value="userId-asc">Oldest First</option>
-                  <option value="fullName-asc">Name (A-Z)</option>
-                  <option value="fullName-desc">Name (Z-A)</option>
-                </select>
-
-                {/* Add User Button */}
+                Search
+              </button>
+              {keyword && (
                 <button
                   type="button"
-                  className="admin-btn-primary"
+                  className="btn btn-light border"
                   onClick={() => {
-                    setAddForm({
-                      fullName: "",
-                      email: "",
-                      phone: "",
-                      address: "",
-                      role: "CUSTOMER",
-                    });
-                    setAddErrors({});
-                    setIsAddModalOpen(true);
+                    setSearchInput("");
+                    setKeyword("");
+                    setPage(0);
                   }}
+                  title="Clear search"
                 >
-                  <i className="fa-solid fa-user-plus"></i>
-                  <span>Add New User</span>
+                  <i className="fa-solid fa-xmark"></i>
                 </button>
-              </div>
-            </div>
-          </div>
-
-          {/* USERS TABLE CARD */}
-          <div className="admin-card">
-            <div className="table-responsive">
-              <table className="admin-table">
-                <thead>
-                  <tr>
-                    <th>USER ID</th>
-                    <th>FULL NAME</th>
-                    <th>EMAIL ADDRESS</th>
-                    <th>PHONE</th>
-                    <th>ROLE</th>
-                    <th>STATUS</th>
-                    <th>CREATED AT</th>
-                    <th className="text-end">ACTIONS</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    <tr>
-                      <td colSpan="8" className="text-center py-5">
-                        <div
-                          className="spinner-border color-primary"
-                          role="status"
-                        ></div>
-                        <p className="mt-2 text-muted fs-14">
-                          Loading users...
-                        </p>
-                      </td>
-                    </tr>
-                  ) : users.length > 0 ? (
-                    users.map((u) => {
-                      const isCurrentUser =
-                        user?.email === u.email || user?.userId === u.userId;
-                      const isUserAdmin =
-                        u.role === "ROLE_ADMIN" || u.role === "ADMIN";
-
-                      return (
-                        <tr key={u.userId}>
-                          <td>
-                            <span className="fw-700 color-primary fs-13">
-                              #{u.userId}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="d-flex align-items-center gap-2">
-                              <div
-                                className="rounded-circle d-flex align-items-center justify-content-center text-white fw-700"
-                                style={{
-                                  width: 34,
-                                  height: 34,
-                                  background: isUserAdmin
-                                    ? "#e9613f"
-                                    : "#10b981",
-                                  fontSize: 12,
-                                }}
-                              >
-                                {u.fullName?.charAt(0) || "U"}
-                              </div>
-                              <div>
-                                <span className="fw-600 d-block">
-                                  {u.fullName}
-                                </span>
-                                {isCurrentUser && (
-                                  <span className="badge bg-secondary rounded-pill fs-10">
-                                    You
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="text-muted fs-13">{u.email}</td>
-                          <td className="fs-13">{u.phone || "—"}</td>
-                          <td>
-                            <span
-                              className={`admin-badge ${
-                                isUserAdmin
-                                  ? "user-role-admin"
-                                  : "user-role-patient"
-                              }`}
-                            >
-                              {isUserAdmin ? "ADMIN" : "CUSTOMER"}
-                            </span>
-                          </td>
-                          <td>
-                            <span
-                              className={`badge rounded-pill px-3 py-1 fs-12 ${
-                                u.status === "ACTIVE"
-                                  ? "bg-success text-white"
-                                  : "bg-danger text-white"
-                              }`}
-                            >
-                              {u.status}
-                            </span>
-                          </td>
-                          <td className="text-muted fs-13">
-                            {u.createdAt
-                              ? new Date(u.createdAt).toLocaleDateString(
-                                  "vi-VN",
-                                )
-                              : "—"}
-                          </td>
-                          <td className="text-end">
-                            {/* View Detail */}
-                            <button
-                              type="button"
-                              className="admin-action-icon-btn"
-                              title="View User Details"
-                              onClick={() => handleOpenDetail(u)}
-                            >
-                              <i className="fa-regular fa-eye"></i>
-                            </button>
-
-                            {/* Edit */}
-                            <button
-                              type="button"
-                              className="admin-action-icon-btn"
-                              title="Edit User"
-                              onClick={() => handleOpenEdit(u)}
-                            >
-                              <i className="fa-regular fa-pen-to-square"></i>
-                            </button>
-
-                            {/* Lock / Unlock */}
-                            <button
-                              type="button"
-                              className={`admin-action-icon-btn ${
-                                u.status === "ACTIVE"
-                                  ? "text-danger"
-                                  : "text-success"
-                              }`}
-                              title={
-                                isCurrentUser
-                                  ? "You cannot lock your own account"
-                                  : u.status === "ACTIVE"
-                                    ? "Lock Account"
-                                    : "Unlock Account"
-                              }
-                              disabled={isCurrentUser}
-                              onClick={() => handleOpenToggleStatus(u)}
-                            >
-                              {u.status === "ACTIVE" ? (
-                                <i className="fa-solid fa-lock"></i>
-                              ) : (
-                                <i className="fa-solid fa-lock-open"></i>
-                              )}
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan="8" className="text-center py-5 text-muted">
-                        <i className="fa-solid fa-user-slash fa-2x mb-3 d-block text-muted"></i>
-                        No users found matching your criteria.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* PAGINATION BAR */}
-            <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top gap-2">
-              <div className="d-flex align-items-center gap-3">
-                <span className="text-muted fs-13">
-                  Showing{" "}
-                  <strong>
-                    {totalElements === 0 ? 0 : page * size + 1} to{" "}
-                    {Math.min((page + 1) * size, totalElements)}
-                  </strong>{" "}
-                  of <strong>{totalElements}</strong> users
-                </span>
-
-                <div className="d-flex align-items-center gap-1">
-                  <label className="text-muted fs-13 mb-0">Show:</label>
-                  <select
-                    className="form-select form-select-sm"
-                    style={{ width: "75px" }}
-                    value={size}
-                    onChange={(e) => {
-                      setSize(Number(e.target.value));
-                      setPage(0);
-                    }}
-                  >
-                    <option value="5">5</option>
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                  </select>
-                </div>
-              </div>
-
-              {totalPages > 1 && (
-                <div className="btn-group btn-group-sm">
-                  <button
-                    type="button"
-                    className="btn btn-light border"
-                    disabled={page === 0}
-                    onClick={() => setPage((p) => Math.max(p - 1, 0))}
-                  >
-                    Previous
-                  </button>
-                  {Array.from({ length: totalPages }, (_, i) => i)
-                    .filter(
-                      (i) =>
-                        i === 0 ||
-                        i === totalPages - 1 ||
-                        Math.abs(i - page) <= 1,
-                    )
-                    .map((pageNum, idx, arr) => {
-                      const prev = arr[idx - 1];
-                      return (
-                        <React.Fragment key={pageNum}>
-                          {prev !== undefined && pageNum - prev > 1 && (
-                            <button
-                              type="button"
-                              className="btn btn-light border disabled"
-                            >
-                              ...
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className={`btn ${
-                              pageNum === page
-                                ? "btn-dark bg-color-primary border-0 fw-700"
-                                : "btn-light border"
-                            }`}
-                            onClick={() => setPage(pageNum)}
-                          >
-                            {pageNum + 1}
-                          </button>
-                        </React.Fragment>
-                      );
-                    })}
-                  <button
-                    type="button"
-                    className="btn btn-light border"
-                    disabled={page >= totalPages - 1}
-                    onClick={() =>
-                      setPage((p) => Math.min(p + 1, totalPages - 1))
-                    }
-                  >
-                    Next
-                  </button>
-                </div>
               )}
+            </form>
+          </div>
+
+          {/* Filters & Actions */}
+          <div className="col-xl-8 col-lg-7 col-md-6 d-flex flex-wrap align-items-center justify-content-md-end gap-2">
+            {/* Status Filter */}
+            <select
+              className="form-select form-select-sm"
+              style={{ width: "135px" }}
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="BLOCKED">Blocked</option>
+            </select>
+
+            {/* Role Filter */}
+            <select
+              className="form-select form-select-sm"
+              style={{ width: "135px" }}
+              value={roleFilter}
+              onChange={(e) => {
+                setRoleFilter(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="ALL">All Roles</option>
+              <option value="ADMIN">Admin</option>
+              <option value="CUSTOMER">Customer</option>
+            </select>
+
+            {/* Sort dropdown */}
+            <select
+              className="form-select form-select-sm"
+              style={{ width: "150px" }}
+              value={`${sortBy}-${sortDir}`}
+              onChange={(e) => {
+                const [sb, sd] = e.target.value.split("-");
+                setSortBy(sb);
+                setSortDir(sd);
+                setPage(0);
+              }}
+            >
+              <option value="userId-desc">Newest First</option>
+              <option value="userId-asc">Oldest First</option>
+              <option value="fullName-asc">Name (A-Z)</option>
+              <option value="fullName-desc">Name (Z-A)</option>
+            </select>
+
+            {/* Add User Button */}
+            <button
+              type="button"
+              className="admin-btn-primary"
+              onClick={() => {
+                setAddForm({
+                  fullName: "",
+                  email: "",
+                  phone: "",
+                  address: "",
+                  role: "CUSTOMER",
+                });
+                setAddErrors({});
+                setIsAddModalOpen(true);
+              }}
+            >
+              <i className="fa-solid fa-user-plus"></i>
+              <span>Add New User</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* USERS TABLE CARD */}
+      <div className="admin-card">
+        <div className="table-responsive">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>USER ID</th>
+                <th>FULL NAME</th>
+                <th>EMAIL ADDRESS</th>
+                <th>PHONE</th>
+                <th>ROLE</th>
+                <th>STATUS</th>
+                <th>CREATED AT</th>
+                <th className="text-end">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan="8" className="text-center py-5">
+                    <div
+                      className="spinner-border color-primary"
+                      role="status"
+                    ></div>
+                    <p className="mt-2 text-muted fs-14">Loading users...</p>
+                  </td>
+                </tr>
+              ) : users.length > 0 ? (
+                users.map((u) => {
+                  const isCurrentUser =
+                    user?.email === u.email || user?.userId === u.userId;
+                  const isUserAdmin =
+                    u.role === "ROLE_ADMIN" || u.role === "ADMIN";
+
+                  return (
+                    <tr key={u.userId}>
+                      <td>
+                        <span className="fw-700 color-primary fs-13">
+                          #{u.userId}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="d-flex align-items-center gap-2">
+                          <div
+                            className="rounded-circle d-flex align-items-center justify-content-center text-white fw-700"
+                            style={{
+                              width: 34,
+                              height: 34,
+                              background: isUserAdmin ? "#e9613f" : "#10b981",
+                              fontSize: 12,
+                            }}
+                          >
+                            {u.fullName?.charAt(0) || "U"}
+                          </div>
+                          <div>
+                            <span className="fw-600 d-block">{u.fullName}</span>
+                            {isCurrentUser && (
+                              <span className="badge bg-secondary rounded-pill fs-10">
+                                You
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="text-muted fs-13">{u.email}</td>
+                      <td className="fs-13">{u.phone || "—"}</td>
+                      <td>
+                        <span
+                          className={`admin-badge ${
+                            isUserAdmin
+                              ? "user-role-admin"
+                              : "user-role-patient"
+                          }`}
+                        >
+                          {isUserAdmin ? "ADMIN" : "CUSTOMER"}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className={`badge rounded-pill px-3 py-1 fs-12 ${
+                            u.status === "ACTIVE"
+                              ? "bg-success text-white"
+                              : "bg-danger text-white"
+                          }`}
+                        >
+                          {u.status}
+                        </span>
+                      </td>
+                      <td className="text-muted fs-13">
+                        {u.createdAt
+                          ? new Date(u.createdAt).toLocaleDateString("vi-VN")
+                          : "—"}
+                      </td>
+                      <td className="text-end">
+                        {/* View Detail */}
+                        <button
+                          type="button"
+                          className="admin-action-icon-btn"
+                          title="View User Details"
+                          onClick={() => handleOpenDetail(u)}
+                        >
+                          <i className="fa-regular fa-eye"></i>
+                        </button>
+
+                        {/* Edit */}
+                        <button
+                          type="button"
+                          className="admin-action-icon-btn"
+                          title="Edit User"
+                          onClick={() => handleOpenEdit(u)}
+                        >
+                          <i className="fa-regular fa-pen-to-square"></i>
+                        </button>
+
+                        {/* Lock / Unlock */}
+                        <button
+                          type="button"
+                          className={`admin-action-icon-btn ${
+                            u.status === "ACTIVE"
+                              ? "text-danger"
+                              : "text-success"
+                          }`}
+                          title={
+                            isCurrentUser
+                              ? "You cannot lock your own account"
+                              : u.status === "ACTIVE"
+                                ? "Lock Account"
+                                : "Unlock Account"
+                          }
+                          disabled={isCurrentUser}
+                          onClick={() => handleOpenToggleStatus(u)}
+                        >
+                          {u.status === "ACTIVE" ? (
+                            <i className="fa-solid fa-lock"></i>
+                          ) : (
+                            <i className="fa-solid fa-lock-open"></i>
+                          )}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="8" className="text-center py-5 text-muted">
+                    <i className="fa-solid fa-user-slash fa-2x mb-3 d-block text-muted"></i>
+                    No users found matching your criteria.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* PAGINATION BAR */}
+        <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top gap-2">
+          <div className="d-flex align-items-center gap-3">
+            <span className="text-muted fs-13">
+              Showing{" "}
+              <strong>
+                {totalElements === 0 ? 0 : page * size + 1} to{" "}
+                {Math.min((page + 1) * size, totalElements)}
+              </strong>{" "}
+              of <strong>{totalElements}</strong> users
+            </span>
+
+            <div className="d-flex align-items-center gap-1">
+              <label className="text-muted fs-13 mb-0">Show:</label>
+              <select
+                className="form-select form-select-sm"
+                style={{ width: "75px" }}
+                value={size}
+                onChange={(e) => {
+                  setSize(Number(e.target.value));
+                  setPage(0);
+                }}
+              >
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
             </div>
           </div>
-        </main>
+
+          {totalPages > 1 && (
+            <div className="btn-group btn-group-sm">
+              <button
+                type="button"
+                className="btn btn-light border"
+                disabled={page === 0}
+                onClick={() => setPage((p) => Math.max(p - 1, 0))}
+              >
+                Previous
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i)
+                .filter(
+                  (i) =>
+                    i === 0 || i === totalPages - 1 || Math.abs(i - page) <= 1,
+                )
+                .map((pageNum, idx, arr) => {
+                  const prev = arr[idx - 1];
+                  return (
+                    <React.Fragment key={pageNum}>
+                      {prev !== undefined && pageNum - prev > 1 && (
+                        <button
+                          type="button"
+                          className="btn btn-light border disabled"
+                        >
+                          ...
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className={`btn ${
+                          pageNum === page
+                            ? "btn-dark bg-color-primary border-0 fw-700"
+                            : "btn-light border"
+                        }`}
+                        onClick={() => setPage(pageNum)}
+                      >
+                        {pageNum + 1}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+              <button
+                type="button"
+                className="btn btn-light border"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => Math.min(p + 1, totalPages - 1))}
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* --- 1. USER DETAILS MODAL --- */}

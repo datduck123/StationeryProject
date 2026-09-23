@@ -13,7 +13,7 @@ export const TitleBanner = ({ title = "Shop" }) => {
             </div>
             <div className="col-lg-6 col-md-6 col-sm-6 d-sm-block d-none">
               <div className="text-end">
-                <img src="assets/media/banner/title-banner-image.png" alt="" />
+                <img src="/assets/media/banner/title-banner-image.png" alt="" />
               </div>
             </div>
           </div>

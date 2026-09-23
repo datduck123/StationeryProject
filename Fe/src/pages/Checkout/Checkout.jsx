@@ -417,7 +417,7 @@ export const Checkout = () => {
                       onChange={() => setShippingMethod("basic")}
                     />
                     <span className="plan-content">
-                      <img src="assets/media/icons/fedex.png" alt="" />
+                      <img src="/assets/media/icons/fedex.png" alt="" />
                       <span className="plan-details">
                         <span className="fw-500 medium-black">FedEx</span>
                         <span className="light-gray d-block">
@@ -437,7 +437,7 @@ export const Checkout = () => {
                     />
                     <span className="plan-content">
                       <img
-                        src="assets/media/icons/shipping-icon-2.png"
+                        src="/assets/media/icons/shipping-icon-2.png"
                         alt=""
                       />
                       <span className="plan-details">
@@ -461,7 +461,7 @@ export const Checkout = () => {
                     />
                     <span className="plan-content">
                       <img
-                        src="assets/media/icons/shipping-icon-3.png"
+                        src="/assets/media/icons/shipping-icon-3.png"
                         alt=""
                       />
                       <span className="plan-details">
@@ -483,7 +483,7 @@ export const Checkout = () => {
                     />
                     <span className="plan-content">
                       <img
-                        src="assets/media/icons/shipping-icon-4.png"
+                        src="/assets/media/icons/shipping-icon-4.png"
                         alt=""
                       />
                       <span className="plan-details">
@@ -519,7 +519,7 @@ export const Checkout = () => {
                       />
                       <span className="plan-content content-2">
                         <img
-                          src="assets/media/icons/payment-card-1.png"
+                          src="/assets/media/icons/payment-card-1.png"
                           alt=""
                         />
                         <span className="plan-details">
@@ -539,7 +539,7 @@ export const Checkout = () => {
                       />
                       <span className="plan-content content-2">
                         <img
-                          src="assets/media/icons/payment-card-2.png"
+                          src="/assets/media/icons/payment-card-2.png"
                           alt=""
                         />
                         <span className="plan-details">
@@ -560,7 +560,7 @@ export const Checkout = () => {
                       />
                       <span className="plan-content content-2">
                         <img
-                          src="assets/media/icons/payment-card-3.png"
+                          src="/assets/media/icons/payment-card-3.png"
                           alt=""
                         />
                         <span className="plan-details">
@@ -580,7 +580,7 @@ export const Checkout = () => {
                       />
                       <span className="plan-content content-2">
                         <img
-                          src="assets/media/icons/payment-card-1.png"
+                          src="/assets/media/icons/payment-card-1.png"
                           alt=""
                         />
                         <span className="plan-details">
@@ -675,7 +675,10 @@ export const Checkout = () => {
                 <div className="item-container mb-16">
                   <div className="left-box d-flex align-items-center gap-16">
                     <div className="icon-box">
-                      <img src="assets/media/products/nav-image-1.png" alt="" />
+                      <img
+                        src="/assets/media/products/nav-image-1.png"
+                        alt=""
+                      />
                     </div>
                     <Link
                       to="/product-detail.html"
@@ -692,7 +695,10 @@ export const Checkout = () => {
                 <div className="item-container mb-32">
                   <div className="left-box d-flex align-items-center gap-16">
                     <div className="icon-box">
-                      <img src="assets/media/products/nav-image-2.png" alt="" />
+                      <img
+                        src="/assets/media/products/nav-image-2.png"
+                        alt=""
+                      />
                     </div>
                     <Link
                       to="/product-detail.html"
