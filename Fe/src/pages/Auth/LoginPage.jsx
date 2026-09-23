@@ -39,7 +39,7 @@ export const LoginPage = () => {
       const res = await login(email, password);
       setIsSubmitting(false);
       if (res.isAdmin) {
-        navigate("/admin");
+        navigate("/admin/users");
       } else {
         navigate("/");
       }
@@ -137,18 +137,12 @@ export const LoginPage = () => {
                       >
                         Password
                       </label>
-                      <a
-                        href="#forgot"
+                      <Link
+                        to="/forgot-password"
                         className="color-primary fs-13 fw-500 text-decoration-underline"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          alert(
-                            "Please contact clinic support to reset your password.",
-                          );
-                        }}
                       >
                         Forgot password?
-                      </a>
+                      </Link>
                     </div>
                     <div className="input-block">
                       <input

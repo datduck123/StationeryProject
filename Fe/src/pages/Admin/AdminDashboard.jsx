@@ -220,19 +220,16 @@ export const AdminDashboard = () => {
               </button>
             </li>
             <li className="admin-nav-item">
-              <button
-                type="button"
-                className={`admin-nav-link ${
-                  activeMenu === "patients" ? "active" : ""
-                }`}
-                onClick={() => setActiveMenu("patients")}
+              <Link
+                to="/admin/users"
+                className="admin-nav-link text-decoration-none"
               >
                 <i className="fa-solid fa-hospital-user"></i>
                 <span>Patients & Users</span>
                 <span className="admin-nav-badge bg-light text-dark">
-                  {patients.length}
+                  Manage
                 </span>
-              </button>
+              </Link>
             </li>
             <li className="admin-nav-item">
               <button

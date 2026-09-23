@@ -72,7 +72,7 @@ export const Header = () => {
                 <div className="user-menu-wrapper" ref={userMenuRef}>
                   <button
                     type="button"
-                    className="button-block border-0 bg-transparent p-0"
+                    className="button-block border-0 bg-transparent p-0 d-flex align-items-center gap-2"
                     onClick={handleUserClick}
                     aria-label={user ? "User Menu" : "Sign In / Register"}
                     title={
@@ -97,6 +97,14 @@ export const Header = () => {
                         fill={user ? "#e9613f" : "#1E1F20"}
                       />
                     </svg>
+                    {user && (
+                      <span
+                        className="fw-600 fs-13 d-none d-md-inline-block color-primary text-truncate"
+                        style={{ maxWidth: 120 }}
+                      >
+                        Hi, {user.fullName || "User"}!
+                      </span>
+                    )}
                   </button>
 
                   {/* Logged in User Menu Dropdown */}
@@ -112,25 +120,43 @@ export const Header = () => {
                             isAdmin ? "user-role-admin" : "user-role-patient"
                           }`}
                         >
-                          {isAdmin ? "Admin" : "Patient"}
+                          {isAdmin ? "Admin" : "Customer"}
                         </span>
                       </div>
+                      <Link
+                        to="/profile"
+                        className="user-menu-item"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <i className="fa-regular fa-user color-primary"></i>
+                        <span>My Profile</span>
+                      </Link>
                       {isAdmin && (
-                        <Link
-                          to="/admin"
-                          className="user-menu-item"
-                          onClick={() => setShowUserMenu(false)}
-                        >
-                          <i className="fa-solid fa-gauge-high color-primary"></i>
-                          <span>Admin Dashboard</span>
-                        </Link>
+                        <>
+                          <Link
+                            to="/admin"
+                            className="user-menu-item"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <i className="fa-solid fa-gauge-high color-primary"></i>
+                            <span>Admin Dashboard</span>
+                          </Link>
+                          <Link
+                            to="/admin/users"
+                            className="user-menu-item"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <i className="fa-solid fa-users-gear color-primary"></i>
+                            <span>User Management</span>
+                          </Link>
+                        </>
                       )}
                       <button
                         type="button"
                         className="user-menu-item text-danger"
                         onClick={() => {
-                          logout();
                           setShowUserMenu(false);
+                          logout();
                         }}
                       >
                         <i className="fa-solid fa-arrow-right-from-bracket"></i>

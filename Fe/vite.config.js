@@ -6,6 +6,7 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    preserveSymlinks: true,
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
@@ -13,5 +14,8 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    fs: {
+      strict: false,
+    },
   },
 });
