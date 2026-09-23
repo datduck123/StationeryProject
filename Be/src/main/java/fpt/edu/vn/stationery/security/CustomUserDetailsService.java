@@ -22,7 +22,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
         if (user.getStatus() == UserStatus.BLOCKED) {
-            throw new AccountLockedException("Tài khoản của bạn đã bị khóa");
+            throw new AccountLockedException("Your account has been locked. Please contact support for assistance.");
         }
 
         String role = (user.getIsAdmin() != null && user.getIsAdmin() == 1) ? "ROLE_ADMIN" : "ROLE_CUSTOMER";

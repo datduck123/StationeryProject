@@ -51,7 +51,7 @@ public class UserServiceImpl implements UserService {
     public void sendRegisterOtp(SendOtpRequestDTO request) {
         String email = request.getEmail().trim().toLowerCase();
         if (userRepository.existsByEmail(email)) {
-            throw new DuplicateResourceException("Email đã được sử dụng");
+            throw new DuplicateResourceException("Email is already in use.");
         }
 
         String otpCode = otpService.generateAndSaveOtp(email, AppConstants.TYPE_REGISTER);
@@ -63,7 +63,7 @@ public class UserServiceImpl implements UserService {
     public void verifyAndRegister(RegisterWithOtpDTO request) {
         String email = request.getEmail().trim().toLowerCase();
         if (userRepository.existsByEmail(email)) {
-            throw new DuplicateResourceException("Email đã được sử dụng");
+            throw new DuplicateResourceException("Email is already in use.");
         }
 
         otpService.verifyOtp(email, AppConstants.TYPE_REGISTER, request.getOtpCode());
@@ -99,7 +99,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
 
         if (user.getStatus() == UserStatus.BLOCKED) {
-            throw new AccountLockedException("Tài khoản của bạn đã bị khóa");
+            throw new AccountLockedException("Your account has been locked. Please contact support for assistance.");
         }
 
         // 3. Generate token with claims
@@ -121,10 +121,10 @@ public class UserServiceImpl implements UserService {
     public void sendForgotPasswordOtp(SendOtpRequestDTO request) {
         String email = request.getEmail().trim().toLowerCase();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại trong hệ thống"));
+                .orElseThrow(() -> new ResourceNotFoundException("Email does not exist in the system."));
 
         if (user.getStatus() == UserStatus.BLOCKED) {
-            throw new AccountLockedException("Tài khoản của bạn đã bị khóa");
+            throw new AccountLockedException("Your account has been locked. Please contact support for assistance.");
         }
 
         String otpCode = otpService.generateAndSaveOtp(email, AppConstants.TYPE_FORGOT_PASSWORD);
@@ -136,10 +136,10 @@ public class UserServiceImpl implements UserService {
     public void resetPassword(ResetPasswordRequestDTO request) {
         String email = request.getEmail().trim().toLowerCase();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Email không tồn tại trong hệ thống"));
+                .orElseThrow(() -> new ResourceNotFoundException("Email does not exist in the system."));
 
         if (user.getStatus() == UserStatus.BLOCKED) {
-            throw new AccountLockedException("Tài khoản của bạn đã bị khóa");
+            throw new AccountLockedException("Your account has been locked. Please contact support for assistance.");
         }
 
         otpService.verifyOtp(email, AppConstants.TYPE_FORGOT_PASSWORD, request.getOtpCode());
@@ -182,11 +182,11 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new BadRequestException("Mật khẩu hiện tại không chính xác");
+            throw new BadRequestException("Current password is incorrect.");
         }
 
         if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
-            throw new BadRequestException("Mật khẩu mới không được trùng với mật khẩu cũ");
+            throw new BadRequestException("New password cannot be the same as the current password.");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
@@ -278,7 +278,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("Current admin not found"));
 
         if (currentAdmin.getUserId().equals(userId)) {
-            throw new BadRequestException("Không thể tự khóa tài khoản của chính mình");
+            throw new BadRequestException("You cannot lock your own account.");
         }
 
         UserStatus newStatus = (user.getStatus() == UserStatus.ACTIVE)
@@ -298,7 +298,7 @@ public class UserServiceImpl implements UserService {
     public UserResponseDTO createUserByAdmin(CreateUserByAdminRequestDTO request) {
         String email = request.getEmail().trim().toLowerCase();
         if (userRepository.existsByEmail(email)) {
-            throw new DuplicateResourceException("Email đã được sử dụng");
+            throw new DuplicateResourceException("Email is already in use.");
         }
 
         String rawPassword = generateRandomComplexPassword();

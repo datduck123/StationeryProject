@@ -45,7 +45,7 @@ public class OtpServiceImpl implements OtpService {
             long secondsElapsed = ChronoUnit.SECONDS.between(existing.getLastSentAt(), now);
             if (secondsElapsed < 60) {
                 long waitSeconds = 60 - secondsElapsed;
-                throw new TooManyRequestsException("Vui lòng chờ " + waitSeconds + " giây trước khi yêu cầu gửi lại mã");
+                throw new TooManyRequestsException("Please wait " + waitSeconds + " seconds before requesting a new OTP code.");
             }
         }
 
@@ -65,16 +65,16 @@ public class OtpServiceImpl implements OtpService {
         OtpData otpData = otpStorage.get(key);
 
         if (otpData == null) {
-            throw new BadRequestException("Mã OTP đã hết hiệu lực, vui lòng lấy mã mới");
+            throw new BadRequestException("OTP code has expired. Please request a new code.");
         }
 
         if (otpData.getExpiresAt() != null && otpData.getExpiresAt().isBefore(now)) {
             otpStorage.remove(key);
-            throw new BadRequestException("Mã OTP đã hết hiệu lực, vui lòng lấy mã mới");
+            throw new BadRequestException("OTP code has expired. Please request a new code.");
         }
 
         if (!otpData.getOtpCode().equals(otpCode)) {
-            throw new BadRequestException("Mã OTP không chính xác");
+            throw new BadRequestException("Invalid OTP code.");
         }
     }
 
