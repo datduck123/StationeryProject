@@ -36,7 +36,7 @@ export const CartProvider = ({ children }) => {
         title: "Hardcover Notebook",
         price: "$180.00",
         oldPrice: "$200.00",
-        image: "assets/media/products/large-image-1.png",
+        image: "/assets/media/products/large-image-1.png",
         rating: "★★★★★",
         reviews: "(02 Customer Reviews)",
         stock: "40 in stock, ready to ship",

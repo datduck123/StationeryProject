@@ -13,14 +13,14 @@ export const SidebarCart = () => {
     {
       id: 1,
       title: "Daily Planner Pro",
-      image: "assets/media/products/product-1.png",
+      image: "/assets/media/products/product-1.png",
       price: 30.0,
       quantity: 5,
     },
     {
       id: 2,
       title: "Brownies",
-      image: "assets/media/products/product-2.png",
+      image: "/assets/media/products/product-2.png",
       price: 12.0,
       quantity: 3,
     },
@@ -105,7 +105,7 @@ export const SidebarCart = () => {
                     handleRemove(item.id);
                   }}
                 >
-                  <img src="assets/media/icons/cancel.png" alt="" />
+                  <img src="/assets/media/icons/cancel.png" alt="" />
                 </a>
                 <div className="quantity quantity-wrap">
                   <div className="input-area quantity-wrap">

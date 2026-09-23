@@ -1,5 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import AdminLayout from "../layouts/AdminLayout";
 import MainLayout from "../layouts/MainLayout";
+import AdminBrandManagement from "../pages/Admin/AdminBrandManagement";
+import AdminCategoryManagement from "../pages/Admin/AdminCategoryManagement";
 import AdminDashboard from "../pages/Admin/AdminDashboard";
 import AdminUserManagement from "../pages/Admin/AdminUserManagement";
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
@@ -17,23 +20,19 @@ import ProtectedRoute from "./ProtectedRoute";
 export const AppRoutes = () => {
   return (
     <Routes>
-      {/* Admin routes protected by AdminRoute */}
+      {/* Admin routes protected by AdminRoute and rendered inside AdminLayout */}
       <Route
-        path="/admin"
         element={
           <AdminRoute>
-            <AdminDashboard />
+            <AdminLayout />
           </AdminRoute>
         }
-      />
-      <Route
-        path="/admin/users"
-        element={
-          <AdminRoute>
-            <AdminUserManagement />
-          </AdminRoute>
-        }
-      />
+      >
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/users" element={<AdminUserManagement />} />
+        <Route path="/admin/categories" element={<AdminCategoryManagement />} />
+        <Route path="/admin/brands" element={<AdminBrandManagement />} />
+      </Route>
 
       {/* Public and Customer routes in MainLayout */}
       <Route element={<MainLayout />}>

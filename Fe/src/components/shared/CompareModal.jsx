@@ -42,7 +42,7 @@ export const CompareModal = () => {
                       <th id="product-col" className="table-col">
                         <img
                           className="product-img mb-16"
-                          src="assets/media/products/product-1.png"
+                          src="/assets/media/products/product-1.png"
                           alt=""
                         />
                         <span className="h6">
@@ -58,7 +58,7 @@ export const CompareModal = () => {
                       <th className="table-col">
                         <img
                           className="product-img mb-16"
-                          src="assets/media/products/product-2.png"
+                          src="/assets/media/products/product-2.png"
                           alt=""
                         />
                         <span className="h6">
@@ -74,7 +74,7 @@ export const CompareModal = () => {
                       <th className="table-col">
                         <img
                           className="product-img mb-16"
-                          src="assets/media/products/product-3.png"
+                          src="/assets/media/products/product-3.png"
                           alt=""
                         />
                         <span className="h6">
@@ -90,7 +90,7 @@ export const CompareModal = () => {
                       <th className="table-col">
                         <img
                           className="product-img mb-16"
-                          src="assets/media/products/product-4.png"
+                          src="/assets/media/products/product-4.png"
                           alt=""
                         />
                         <span className="h6">
@@ -106,7 +106,7 @@ export const CompareModal = () => {
                       <th className="table-col">
                         <img
                           className="product-img mb-16"
-                          src="assets/media/products/product-5.png"
+                          src="/assets/media/products/product-5.png"
                           alt=""
                         />
                         <span className="h6">

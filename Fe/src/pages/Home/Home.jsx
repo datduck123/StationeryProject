@@ -181,49 +181,49 @@ export const Home = () => {
       id: 1,
       name: "Book Pin",
       count: "12",
-      image: "assets/media/collection/collection-1.png",
+      image: "/assets/media/collection/collection-1.png",
       delay: "200ms",
     },
     {
       id: 2,
       name: "Pencil",
       count: "18",
-      image: "assets/media/collection/collection-2.png",
+      image: "/assets/media/collection/collection-2.png",
       delay: "300ms",
     },
     {
       id: 3,
       name: "Pencil Pocket",
       count: "5",
-      image: "assets/media/collection/collection-3.png",
+      image: "/assets/media/collection/collection-3.png",
       delay: "400ms",
     },
     {
       id: 4,
       name: "Notebook",
       count: "8",
-      image: "assets/media/collection/collection-4.png",
+      image: "/assets/media/collection/collection-4.png",
       delay: "500ms",
     },
     {
       id: 5,
       name: "Tape",
       count: "16",
-      image: "assets/media/collection/collection-5.png",
+      image: "/assets/media/collection/collection-5.png",
       delay: "600ms",
     },
     {
       id: 6,
       name: "Book Pin",
       count: "10",
-      image: "assets/media/collection/collection-6.png",
+      image: "/assets/media/collection/collection-6.png",
       delay: "700ms",
     },
     {
       id: 7,
       name: "Geometry",
       count: "5",
-      image: "assets/media/collection/collection-7.png",
+      image: "/assets/media/collection/collection-7.png",
       delay: "400ms",
     },
   ];
@@ -232,56 +232,56 @@ export const Home = () => {
     {
       id: 1,
       title: "Daily Planner Pro",
-      image: "assets/media/products/product-1.png",
+      image: "/assets/media/products/product-1.png",
       price: "$59.00",
       badge: "Sale",
     },
     {
       id: 2,
       title: "SmoothFlow Pens",
-      image: "assets/media/products/product-2.png",
+      image: "/assets/media/products/product-2.png",
       price: "$59.00",
       badge: "",
     },
     {
       id: 3,
       title: "Premium Bags",
-      image: "assets/media/products/product-3.png",
+      image: "/assets/media/products/product-3.png",
       price: "$59.00",
       badge: "-15%",
     },
     {
       id: 4,
       title: "Premium Letter Paper",
-      image: "assets/media/products/product-4.png",
+      image: "/assets/media/products/product-4.png",
       price: "$59.00",
       badge: "Sale",
     },
     {
       id: 5,
       title: "Daily Planner Pro",
-      image: "assets/media/products/product-1.png",
+      image: "/assets/media/products/product-1.png",
       price: "$59.00",
       badge: "Sale",
     },
     {
       id: 6,
       title: "SmoothFlow Pens",
-      image: "assets/media/products/product-2.png",
+      image: "/assets/media/products/product-2.png",
       price: "$59.00",
       badge: "",
     },
     {
       id: 7,
       title: "Premium Bags",
-      image: "assets/media/products/product-3.png",
+      image: "/assets/media/products/product-3.png",
       price: "$59.00",
       badge: "-15%",
     },
     {
       id: 8,
       title: "Premium Letter Paper",
-      image: "assets/media/products/product-4.png",
+      image: "/assets/media/products/product-4.png",
       price: "$59.00",
       badge: "Sale",
     },
@@ -291,56 +291,56 @@ export const Home = () => {
     {
       id: 1,
       title: "Classic Ballpoint Pens",
-      image: "assets/media/products/product-5.png",
+      image: "/assets/media/products/product-5.png",
       price: "$59.00",
       badge: "Sale",
     },
     {
       id: 2,
       title: "Magnetic Paper Clips",
-      image: "assets/media/products/product-6.png",
+      image: "/assets/media/products/product-6.png",
       price: "$59.00",
       badge: "",
     },
     {
       id: 3,
       title: "Pen's Box",
-      image: "assets/media/products/product-7.png",
+      image: "/assets/media/products/product-7.png",
       price: "$59.00",
       badge: "-15%",
     },
     {
       id: 4,
       title: "Calculator",
-      image: "assets/media/products/product-8.png",
+      image: "/assets/media/products/product-8.png",
       price: "$59.00",
       badge: "Sale",
     },
     {
       id: 5,
       title: "Watercolor Paper Pad",
-      image: "assets/media/products/product-9.png",
+      image: "/assets/media/products/product-9.png",
       price: "$59.00",
       badge: "Sale",
     },
     {
       id: 6,
       title: "Watercolor Paper Pad",
-      image: "assets/media/products/product-10.png",
+      image: "/assets/media/products/product-10.png",
       price: "$59.00",
       badge: "",
     },
     {
       id: 7,
       title: "Daily Planner Pro",
-      image: "assets/media/products/product-11.png",
+      image: "/assets/media/products/product-11.png",
       price: "$59.00",
       badge: "-15%",
     },
     {
       id: 8,
       title: "Hardcover Notebook",
-      image: "assets/media/products/product-12.png",
+      image: "/assets/media/products/product-12.png",
       price: "$59.00",
       badge: "Sale",
     },
@@ -388,7 +388,7 @@ export const Home = () => {
   const blogs = [
     {
       id: 1,
-      image: "assets/media/blogs/blog-1.png",
+      image: "/assets/media/blogs/blog-1.png",
       date: "By Admin • 24 Jan, 2025",
       title: "Why Quality Stationery Matters: Elevate Your Workspace",
       desc: "Lorem ipsum dolor sit amet consectetur. Velit mi vitae dolor curabitur duis sociis. Eget risus.",
@@ -396,7 +396,7 @@ export const Home = () => {
     },
     {
       id: 2,
-      image: "assets/media/blogs/blog-2.png",
+      image: "/assets/media/blogs/blog-2.png",
       date: "By Admin • 24 Jan, 2025",
       title: "Minimalist vs. Aesthetic: Finding Your Stationery Style",
       desc: "Lorem ipsum dolor sit amet consectetur. Velit mi vitae dolor curabitur duis sociis. Eget risus.",
@@ -404,7 +404,7 @@ export const Home = () => {
     },
     {
       id: 3,
-      image: "assets/media/blogs/blog-3.png",
+      image: "/assets/media/blogs/blog-3.png",
       date: "By Admin • 24 Jan, 2025",
       title: "The Ultimate Guide to Choosing the Perfect Notebook",
       desc: "Lorem ipsum dolor sit amet consectetur. Velit mi vitae dolor curabitur duis sociis. Eget risus.",
@@ -419,17 +419,17 @@ export const Home = () => {
         <div className="container-2">
           <div className="hero-banner-wrapper">
             <img
-              src="assets/media/banner/hero-element.png"
+              src="/assets/media/banner/hero-element.png"
               alt=""
               className="element-1"
             />
             <img
-              src="assets/media/banner/hero-element-2.png"
+              src="/assets/media/banner/hero-element-2.png"
               alt=""
               className="element-2"
             />
             <img
-              src="assets/media/banner/hero-element-3.png"
+              src="/assets/media/banner/hero-element-3.png"
               alt=""
               className="element-3"
             />
@@ -438,17 +438,17 @@ export const Home = () => {
                 <div className="hero-content-block">
                   <h1
                     className="medium-black fw-700 mb-16 wow fadeInLeft animated"
-                    data-wow-delay="1900ms"
+                    data-wow-delay="100ms"
                   >
                     <span className="color-primary">
                       {t("home.heroTitle1")}{" "}
                     </span>
-                    <br className="d-lg-block d-none" />
+                    <br className="d-block" />
                     {t("home.heroTitle2")}
                   </h1>
                   <p
                     className="mb-32 wow fadeInLeft animated"
-                    data-wow-delay="1900ms"
+                    data-wow-delay="100ms"
                   >
                     {t("home.heroDesc")}
                   </p>
@@ -461,7 +461,7 @@ export const Home = () => {
               <div className="col-lg-6 col-md-6">
                 <div className="hero-image">
                   <img
-                    src="assets/media/banner/hero-image.png"
+                    src="/assets/media/banner/hero-image.png"
                     alt=""
                     className="w-100"
                   />
@@ -548,7 +548,7 @@ export const Home = () => {
             <div className="col-lg-6">
               <div className="collection-grid">
                 <img
-                  src="assets/media/collection/main-col-1.png"
+                  src="/assets/media/collection/main-col-1.png"
                   alt=""
                   className="w-100"
                 />
@@ -569,7 +569,7 @@ export const Home = () => {
             <div className="col-lg-6">
               <div className="collection-grid mb-24">
                 <img
-                  src="assets/media/collection/main-col-2.png"
+                  src="/assets/media/collection/main-col-2.png"
                   alt=""
                   className="w-100"
                 />
@@ -588,7 +588,7 @@ export const Home = () => {
               </div>
               <div className="collection-grid">
                 <img
-                  src="assets/media/collection/main-col-3.png"
+                  src="/assets/media/collection/main-col-3.png"
                   alt=""
                   className="w-100"
                 />
@@ -616,7 +616,7 @@ export const Home = () => {
         <div className="container-2">
           <div className="inner-wrapper">
             <img
-              src="assets/media/images/inner-banner-element.png"
+              src="/assets/media/images/inner-banner-element.png"
               alt=""
               className="element"
             />
@@ -634,7 +634,7 @@ export const Home = () => {
               <div className="col-lg-6 col-md-6">
                 <div className="banner-image text-end">
                   <img
-                    src="assets/media/images/inner-banner-image.png"
+                    src="/assets/media/images/inner-banner-image.png"
                     alt=""
                   />
                 </div>
@@ -648,7 +648,7 @@ export const Home = () => {
       {/* BEST SELLER START */}
       <section className="best-seller-sec py-40">
         <img
-          src="assets/media/images/element-1.png"
+          src="/assets/media/images/element-1.png"
           alt=""
           className="element-1"
         />
@@ -724,34 +724,34 @@ export const Home = () => {
         <div className="container-fluid">
           <div className="brand-slider">
             <div className="brand-image">
-              <img src="assets/media/brands/brand-1.png" alt="" />
+              <img src="/assets/media/brands/brand-1.png" alt="" />
             </div>
             <div className="brand-image">
-              <img src="assets/media/brands/brand-2.png" alt="" />
+              <img src="/assets/media/brands/brand-2.png" alt="" />
             </div>
             <div className="brand-image">
-              <img src="assets/media/brands/brand-3.png" alt="" />
+              <img src="/assets/media/brands/brand-3.png" alt="" />
             </div>
             <div className="brand-image">
-              <img src="assets/media/brands/brand-4.png" alt="" />
+              <img src="/assets/media/brands/brand-4.png" alt="" />
             </div>
             <div className="brand-image">
-              <img src="assets/media/brands/brand-5.png" alt="" />
+              <img src="/assets/media/brands/brand-5.png" alt="" />
             </div>
             <div className="brand-image">
-              <img src="assets/media/brands/brand-1.png" alt="" />
+              <img src="/assets/media/brands/brand-1.png" alt="" />
             </div>
             <div className="brand-image">
-              <img src="assets/media/brands/brand-2.png" alt="" />
+              <img src="/assets/media/brands/brand-2.png" alt="" />
             </div>
             <div className="brand-image">
-              <img src="assets/media/brands/brand-3.png" alt="" />
+              <img src="/assets/media/brands/brand-3.png" alt="" />
             </div>
             <div className="brand-image">
-              <img src="assets/media/brands/brand-4.png" alt="" />
+              <img src="/assets/media/brands/brand-4.png" alt="" />
             </div>
             <div className="brand-image">
-              <img src="assets/media/brands/brand-5.png" alt="" />
+              <img src="/assets/media/brands/brand-5.png" alt="" />
             </div>
           </div>
         </div>

@@ -61,7 +61,7 @@ export const Header = () => {
           <div className="col-lg-4 col-md-6 col-sm-5 col-6">
             <div className="text-start text-lg-center">
               <Link to="/" className="header-logo">
-                <img src="assets/media/logo.png" alt="" />
+                <img src="/assets/media/logo.png" alt="" />
               </Link>
             </div>
           </div>
@@ -149,6 +149,22 @@ export const Header = () => {
                             <i className="fa-solid fa-users-gear color-primary"></i>
                             <span>User Management</span>
                           </Link>
+                          <Link
+                            to="/admin/categories"
+                            className="user-menu-item"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <i className="fa-solid fa-layer-group color-primary"></i>
+                            <span>Category Management</span>
+                          </Link>
+                          <Link
+                            to="/admin/brands"
+                            className="user-menu-item"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <i className="fa-solid fa-certificate color-primary"></i>
+                            <span>Brand Management</span>
+                          </Link>
                         </>
                       )}
                       <button
@@ -192,7 +208,7 @@ export const Header = () => {
                 onClick={toggleMobileMenu}
                 aria-label="Toggle mobile menu"
               >
-                <img src="assets/media/icons/menu-2.png" alt="" />
+                <img src="/assets/media/icons/menu-2.png" alt="" />
               </a>
             </div>
           </div>

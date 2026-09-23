@@ -13,45 +13,45 @@ export const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
 
   const galleryImages = [
-    "assets/media/products/large-image-1.png",
-    "assets/media/products/large-image-2.png",
-    "assets/media/products/large-image-3.png",
-    "assets/media/products/large-image-4.png",
+    "/assets/media/products/large-image-1.png",
+    "/assets/media/products/large-image-2.png",
+    "/assets/media/products/large-image-3.png",
+    "/assets/media/products/large-image-4.png",
   ];
 
   const thumbImages = [
-    "assets/media/products/nav-image-1.png",
-    "assets/media/products/nav-image-2.png",
-    "assets/media/products/nav-image-3.png",
-    "assets/media/products/nav-image-4.png",
+    "/assets/media/products/nav-image-1.png",
+    "/assets/media/products/nav-image-2.png",
+    "/assets/media/products/nav-image-3.png",
+    "/assets/media/products/nav-image-4.png",
   ];
 
   const relatedProducts = [
     {
       id: 1,
       title: "Daily Planner Pro",
-      image: "assets/media/products/product-1.png",
+      image: "/assets/media/products/product-1.png",
       price: "$59.00",
       badge: "Sale",
     },
     {
       id: 2,
       title: "SmoothFlow Pens",
-      image: "assets/media/products/product-2.png",
+      image: "/assets/media/products/product-2.png",
       price: "$15.00",
       badge: "Sale",
     },
     {
       id: 3,
       title: "Premium Bags",
-      image: "assets/media/products/product-3.png",
+      image: "/assets/media/products/product-3.png",
       price: "$45.00",
       badge: "Sale",
     },
     {
       id: 4,
       title: "Premium Letter Paper",
-      image: "assets/media/products/product-4.png",
+      image: "/assets/media/products/product-4.png",
       price: "$20.00",
       badge: "Sale",
     },
@@ -328,7 +328,7 @@ export const ProductDetail = () => {
                   <div className="review-box mb-48">
                     <div className="comment-box mb-24">
                       <img
-                        src="assets/media/users/user-2.png"
+                        src="/assets/media/users/user-2.png"
                         alt=""
                         className="br-4"
                       />
@@ -355,7 +355,7 @@ export const ProductDetail = () => {
                     <div className="hr-line bg-light-gray mb-24"></div>
                     <div className="comment-box">
                       <img
-                        src="assets/media/users/user-3.png"
+                        src="/assets/media/users/user-3.png"
                         alt=""
                         className="br-4"
                       />

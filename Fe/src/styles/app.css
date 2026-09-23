@@ -3433,7 +3433,7 @@ header .search-block #magnifying-btn:hover {
 }
 
 .hero-banner {
-  background: url(../media/banner/hero-bg.png) no-repeat;
+  background: url(/assets/media/banner/hero-bg.png) no-repeat;
   background-size: cover;
   background-position: center;
   height: clamp(450px, 43.646vw, 1560px);
@@ -3542,7 +3542,7 @@ header .search-block #magnifying-btn:hover {
 }
 
 .hero-banner-2 {
-  background: url(../media/banner/hero-bg-2.png) no-repeat;
+  background: url(/assets/media/banner/hero-bg.png) no-repeat;
   background-size: cover;
   background-position: center;
   height: clamp(450px, 47.083vw, 1740px);
@@ -4129,7 +4129,7 @@ header .search-block #magnifying-btn:hover {
 }
 
 .inner-banner-2 {
-  background: url(../media/images/inner-banner-2.png) no-repeat;
+  background: url(/assets/media/images/inner-banner-2.png) no-repeat;
   background-position: center;
   background-size: cover;
   height: clamp(240px, 29.167vw, 950px);
@@ -4194,7 +4194,7 @@ header .search-block #magnifying-btn:hover {
 }
 
 .testimonials-sec {
-  background: url(../media/images/testimonial-bg.png) no-repeat;
+  background: url(/assets/media/images/testimonial-bg.png) no-repeat;
   background-position: center;
   background-size: cover;
   padding: clamp(48px, 3.854vw, 96px) 0;
@@ -4277,7 +4277,7 @@ header .search-block #magnifying-btn:hover {
 }
 
 footer {
-  background: url(../media/images/footer-bg.png) no-repeat;
+  background: url(/assets/media/images/footer-bg.png) no-repeat;
   background-position: center;
   background-size: cover;
   padding: clamp(32px, 2.5vw, 64px) 0 clamp(16px, 1.25vw, 40px);
@@ -4339,7 +4339,7 @@ footer .payment-cards .card-block img {
 }
 
 .title-banner {
-  background-image: url(../media/banner/title-banner.png);
+  background-image: url(/assets/media/banner/title-banner.png);
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
@@ -4686,8 +4686,7 @@ footer .payment-cards .card-block img {
   align-items: center;
   justify-content: center;
   border-radius: clamp(8px, 0.625vw, 48px) !important;
-  background: url(https://uiparadox.co.uk/templates/stationery-tales/v2/assets/media/products/sidebar-image.png)
-    no-repeat;
+  background: url(/assets/media/images/sidebar-image.png) no-repeat;
   background-position: center;
   background-size: cover;
 }
@@ -4711,7 +4710,7 @@ footer .payment-cards .card-block img {
   background-color: rgba(0, 0, 0, 0.5);
   display: none;
   z-index: 999;
-  cursor: url(../media/close.png), auto;
+  cursor: pointer;
 }
 
 .sidebar-overlay.active {
