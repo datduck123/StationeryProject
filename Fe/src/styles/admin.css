@@ -40,7 +40,7 @@
 }
 
 .admin-sidebar-header {
-  padding: 20px 24px;
+  padding: 17px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -630,4 +630,49 @@
     background: rgba(0, 0, 0, 0.4);
     z-index: 1040;
   }
+}
+
+/* Collapsible Desktop Sidebar */
+@media (min-width: 992px) {
+  .admin-sidebar.collapsed {
+    width: 72px;
+  }
+  .admin-sidebar.collapsed .admin-nav-group-title,
+  .admin-sidebar.collapsed .admin-nav-link span,
+  .admin-sidebar.collapsed .admin-user-info,
+  .admin-sidebar.collapsed .admin-sidebar-footer button span {
+    display: none !important;
+  }
+  .admin-sidebar.collapsed .admin-sidebar-header {
+    padding: 16px 8px;
+    justify-content: center;
+  }
+  .admin-sidebar.collapsed .admin-nav-item {
+    margin: 4px 8px;
+  }
+  .admin-sidebar.collapsed .admin-nav-link {
+    justify-content: center;
+    padding: 12px 0;
+  }
+  .admin-sidebar.collapsed .admin-nav-link i {
+    margin: 0;
+    font-size: 18px;
+  }
+  .admin-sidebar.collapsed .admin-user-card {
+    justify-content: center;
+    padding: 6px;
+    margin-bottom: 6px;
+  }
+  .admin-sidebar.collapsed .admin-sidebar-footer {
+    padding: 10px 8px;
+  }
+  .admin-main.sidebar-collapsed {
+    margin-left: 72px;
+  }
+}
+
+/* Topbar Profile Dropdown */
+.admin-profile-dropdown .dropdown-item:hover {
+  background-color: #f8f9fa;
+  color: var(--admin-primary) !important;
 }

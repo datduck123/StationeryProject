@@ -450,19 +450,17 @@ export const RegisterPage = () => {
                       <div className="mt-4">
                         <button
                           type="submit"
-                          className="cus-btn w-100 text-center border-0"
+                          className="auth-btn-solid"
                           disabled={isSubmitting}
                         >
-                          <span className="btn-text">
-                            {isSubmitting
-                              ? "Sending OTP..."
-                              : "Continue (Send OTP)"}
-                          </span>
-                          <span>
-                            {isSubmitting
-                              ? "Sending OTP..."
-                              : "Continue (Send OTP)"}
-                          </span>
+                          {isSubmitting ? (
+                            <span>
+                              <i className="fa-solid fa-spinner fa-spin me-2"></i>
+                              Sending OTP...
+                            </span>
+                          ) : (
+                            "Continue (Send OTP)"
+                          )}
                         </button>
                       </div>
 

@@ -201,13 +201,17 @@ export const LoginPage = () => {
                   <div className="mt-4">
                     <button
                       type="submit"
-                      className="cus-btn w-100 text-center border-0"
+                      className="auth-btn-solid"
                       disabled={isSubmitting}
                     >
-                      <span className="btn-text">
-                        {isSubmitting ? "Signing in..." : "Sign In"}
-                      </span>
-                      <span>{isSubmitting ? "Signing in..." : "Sign In"}</span>
+                      {isSubmitting ? (
+                        <span>
+                          <i className="fa-solid fa-spinner fa-spin me-2"></i>
+                          Signing in...
+                        </span>
+                      ) : (
+                        "Sign In"
+                      )}
                     </button>
                   </div>
 

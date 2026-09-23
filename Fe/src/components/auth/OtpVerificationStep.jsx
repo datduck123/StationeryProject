@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AuthTooltip from "./AuthTooltip";
+import OtpSixBoxInput from "./OtpSixBoxInput";
 
 export const OtpVerificationStep = ({
   email,
@@ -53,12 +54,20 @@ export const OtpVerificationStep = ({
     }
   };
 
-  const handleOtpChange = (e) => {
-    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+  const handleOtpChange = (val) => {
     setOtp(val);
     if (otpError && setOtpError) {
       setOtpError("");
     }
+  };
+
+  const handleVerifySubmit = (e) => {
+    e?.preventDefault();
+    if (otp.length < 6) {
+      if (setOtpError) setOtpError("Please enter all 6 digits of the OTP code");
+      return;
+    }
+    onVerify();
   };
 
   return (
@@ -89,21 +98,12 @@ export const OtpVerificationStep = ({
         <label className="form-label fw-600 medium-black mb-1 text-center d-block">
           Enter 6-Digit OTP Code
         </label>
-        <div className="input-block">
-          <input
-            type="text"
-            className={`form-control form-control-2 text-center fs-20 fw-700 tracking-widest ${
-              otpError ? "is-invalid-field" : ""
-            }`}
-            style={{ letterSpacing: "8px" }}
-            placeholder="000000"
-            maxLength="6"
-            value={otp}
-            onChange={handleOtpChange}
-            disabled={isVerifying}
-            autoFocus
-          />
-        </div>
+        <OtpSixBoxInput
+          value={otp}
+          onChange={handleOtpChange}
+          disabled={isVerifying}
+          autoFocus={true}
+        />
         <AuthTooltip message={otpError} position="top" />
       </div>
 
@@ -141,14 +141,17 @@ export const OtpVerificationStep = ({
       <div className="d-flex flex-column gap-2">
         <button
           type="button"
-          className="cus-btn w-100 text-center border-0"
-          onClick={onVerify}
+          className="auth-btn-solid"
+          onClick={handleVerifySubmit}
           disabled={isVerifying || otp.length < 6 || expiryTimer === 0}
         >
-          <span className="btn-text">
-            {isVerifying ? "Verifying..." : submitButtonText}
-          </span>
-          <span>{isVerifying ? "Verifying..." : submitButtonText}</span>
+          {isVerifying ? (
+            <span>
+              <i className="fa-solid fa-spinner fa-spin me-2"></i>Verifying...
+            </span>
+          ) : (
+            submitButtonText
+          )}
         </button>
 
         {onBack && (

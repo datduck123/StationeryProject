@@ -436,22 +436,14 @@ export const Home = () => {
             <div className="row align-items-center row-gap-4">
               <div className="col-lg-6 col-md-6">
                 <div className="hero-content-block">
-                  <h1
-                    className="medium-black fw-700 mb-16 wow fadeInLeft animated"
-                    data-wow-delay="100ms"
-                  >
+                  <h1 className="medium-black fw-700 mb-16">
                     <span className="color-primary">
                       {t("home.heroTitle1")}{" "}
                     </span>
                     <br className="d-block" />
                     {t("home.heroTitle2")}
                   </h1>
-                  <p
-                    className="mb-32 wow fadeInLeft animated"
-                    data-wow-delay="100ms"
-                  >
-                    {t("home.heroDesc")}
-                  </p>
+                  <p className="mb-32">{t("home.heroDesc")}</p>
                   <Link to="/shop-grid-sidebar.html" className="cus-btn">
                     <span className="btn-text">{t("common.shopNow")}</span>
                     <span>{t("common.goToShop")}</span>

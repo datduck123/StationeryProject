@@ -10,6 +10,7 @@ public interface UserService {
     void verifyAndRegister(RegisterWithOtpDTO request);
     AuthResponse login(LoginRequest request);
     void sendForgotPasswordOtp(SendOtpRequestDTO request);
+    void verifyForgotPasswordOtp(String email, String otpCode);
     void resetPassword(ResetPasswordRequestDTO request);
 
     // Profile flows

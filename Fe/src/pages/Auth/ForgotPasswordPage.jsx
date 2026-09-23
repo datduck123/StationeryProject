@@ -3,10 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import AuthTooltip from "../../components/auth/AuthTooltip";
 import OtpVerificationStep from "../../components/auth/OtpVerificationStep";
 import TitleBanner from "../../components/shared/TitleBanner";
+import { useToast } from "../../providers/ToastContext";
 import authService from "../../services/authService";
 
 export const ForgotPasswordPage = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   // 1: Enter email, 2: Enter OTP, 3: Enter new password
   const [step, setStep] = useState(1);
@@ -66,13 +68,15 @@ export const ForgotPasswordPage = () => {
       await authService.sendForgotPasswordOtp({ email: email.trim() });
       setIsSubmitting(false);
       setStep(2);
+      showToast("Verification code has been sent to your email.", "success");
     } catch (err) {
       setIsSubmitting(false);
-      setApiError(
+      const msg =
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to send reset code. Please check your email.",
-      );
+        err.message ||
+        "Failed to send reset code. Please check your email.";
+      setApiError(msg);
+      showToast(msg, "error");
     }
   };
 
@@ -82,23 +86,47 @@ export const ForgotPasswordPage = () => {
     try {
       await authService.sendForgotPasswordOtp({ email: email.trim() });
       setIsResending(false);
+      showToast("A new verification code has been resent.", "success");
     } catch (err) {
       setIsResending(false);
-      setOtpError(
+      const msg =
         err?.response?.data?.message ||
-          err.message ||
-          "Failed to resend OTP. Please wait before retrying.",
-      );
+        err.message ||
+        "Failed to resend OTP. Please wait before retrying.";
+      setOtpError(msg);
+      showToast(msg, "error");
     }
   };
 
   // Step 2 -> Step 3: Validate OTP entered
-  const handleOtpValidated = () => {
+  const handleOtpValidated = async () => {
     if (!otpCode || otpCode.length < 6) {
       setOtpError("Please enter the 6-digit OTP code.");
+      showToast("Please enter all 6 digits of the OTP code.", "warning");
       return;
     }
-    setStep(3);
+    setIsSubmitting(true);
+    setOtpError("");
+    try {
+      await authService.verifyForgotPasswordOtp({
+        email: email.trim(),
+        otpCode: otpCode.trim(),
+      });
+      setIsSubmitting(false);
+      setStep(3);
+      showToast(
+        "Code verified successfully! Now set your new password.",
+        "success",
+      );
+    } catch (err) {
+      setIsSubmitting(false);
+      const msg =
+        err?.response?.data?.message ||
+        err.message ||
+        "Invalid or expired OTP code.";
+      setOtpError(msg);
+      showToast(msg, "error");
+    }
   };
 
   // Step 3: Submit reset password
@@ -117,8 +145,9 @@ export const ForgotPasswordPage = () => {
       });
 
       setIsSubmitting(false);
-      setSuccessMsg(
+      showToast(
         "Password reset successfully! Redirecting to Sign In in 2 seconds...",
+        "success",
       );
       setTimeout(() => {
         navigate("/login");
@@ -130,6 +159,7 @@ export const ForgotPasswordPage = () => {
         err.message ||
         "Failed to reset password. Please check your OTP code.";
       setApiError(msg);
+      showToast(msg, "error");
     }
   };
 
@@ -223,19 +253,17 @@ export const ForgotPasswordPage = () => {
 
                       <button
                         type="submit"
-                        className="cus-btn w-100 text-center border-0"
+                        className="auth-btn-solid"
                         disabled={isSubmitting}
                       >
-                        <span className="btn-text">
-                          {isSubmitting
-                            ? "Sending Code..."
-                            : "Send Verification Code"}
-                        </span>
-                        <span>
-                          {isSubmitting
-                            ? "Sending Code..."
-                            : "Send Verification Code"}
-                        </span>
+                        {isSubmitting ? (
+                          <span>
+                            <i className="fa-solid fa-spinner fa-spin me-2"></i>
+                            Sending Code...
+                          </span>
+                        ) : (
+                          "Send Verification Code"
+                        )}
                       </button>
 
                       <div className="text-center mt-3 pt-2">
@@ -410,19 +438,17 @@ export const ForgotPasswordPage = () => {
 
                       <button
                         type="submit"
-                        className="cus-btn w-100 text-center border-0"
+                        className="auth-btn-solid"
                         disabled={isSubmitting}
                       >
-                        <span className="btn-text">
-                          {isSubmitting
-                            ? "Resetting Password..."
-                            : "Reset Password"}
-                        </span>
-                        <span>
-                          {isSubmitting
-                            ? "Resetting Password..."
-                            : "Reset Password"}
-                        </span>
+                        {isSubmitting ? (
+                          <span>
+                            <i className="fa-solid fa-spinner fa-spin me-2"></i>
+                            Resetting Password...
+                          </span>
+                        ) : (
+                          "Reset Password"
+                        )}
                       </button>
                     </form>
                   </>
