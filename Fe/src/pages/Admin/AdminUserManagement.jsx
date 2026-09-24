@@ -643,7 +643,10 @@ export const AdminUserManagement = () => {
                         : "user-role-patient"
                     }`}
                   >
-                    {selectedUser.role}
+                    {selectedUser.role === "ROLE_ADMIN" ||
+                    selectedUser.role === "ADMIN"
+                      ? "ADMIN"
+                      : "CUSTOMER"}
                   </span>
                   <span
                     className={`admin-badge ${

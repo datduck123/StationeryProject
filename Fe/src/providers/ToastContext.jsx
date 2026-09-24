@@ -10,7 +10,7 @@ export const ToastProvider = ({ children }) => {
   }, []);
 
   const showToast = useCallback(
-    (message, type = "success", duration = 4000) => {
+    (message, type = "success", duration = 1500) => {
       const id = Date.now() + Math.random().toString(36).substring(2, 9);
       const newToast = { id, message, type };
 

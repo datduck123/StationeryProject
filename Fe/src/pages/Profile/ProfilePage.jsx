@@ -165,7 +165,7 @@ export const ProfilePage = () => {
       <section className="py-60 bg-light">
         <div className="container-2">
           <div className="row justify-content-center">
-            <div className="col-lg-8 col-md-10 col-12">
+            <div className="col-lg-8 col-md-10 col-12 mb-5 mt-3">
               {loading ? (
                 <div className="text-center py-5 bg-white br-20 border shadow-sm">
                   <div
@@ -281,32 +281,6 @@ export const ProfilePage = () => {
                               Not provided
                             </span>
                           )}
-                        </div>
-                      </div>
-
-                      <div className="col-sm-6">
-                        <label className="text-muted fs-13 d-block mb-1">
-                          Member Since
-                        </label>
-                        <div className="fw-600 fs-15 text-dark">
-                          {profile.createdAt
-                            ? new Date(profile.createdAt).toLocaleDateString(
-                                "vi-VN",
-                              )
-                            : "N/A"}
-                        </div>
-                      </div>
-
-                      <div className="col-sm-6">
-                        <label className="text-muted fs-13 d-block mb-1">
-                          Last Updated
-                        </label>
-                        <div className="fw-600 fs-15 text-dark">
-                          {profile.updatedAt
-                            ? new Date(profile.updatedAt).toLocaleDateString(
-                                "vi-VN",
-                              )
-                            : "N/A"}
                         </div>
                       </div>
                     </div>

@@ -271,7 +271,11 @@ export const AdminLayout = () => {
                     {user?.fullName || "Administrator"}
                   </span>
                   <span className="fs-11 fw-500 text-muted">
-                    {user?.role || "ADMIN"}
+                    {user?.role === "ROLE_ADMIN" || user?.role === "ADMIN"
+                      ? "ADMIN"
+                      : user?.role === "ROLE_CUSTOMER"
+                        ? "CUSTOMER"
+                        : user?.role || "USER"}
                   </span>
                 </div>
                 <i className="fa-solid fa-chevron-down fs-11 text-muted ms-1"></i>
