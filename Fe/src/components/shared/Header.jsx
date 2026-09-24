@@ -77,7 +77,7 @@ export const Header = () => {
                     aria-label={user ? "User Menu" : "Sign In / Register"}
                     title={
                       user
-                        ? `${user.fullName} (${user.role})`
+                        ? `${user.fullName} (${user.role === "ROLE_ADMIN" || user.role === "ADMIN" ? "ADMIN" : "CUSTOMER"})`
                         : "Sign In / Register"
                     }
                   >

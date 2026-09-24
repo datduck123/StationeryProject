@@ -57,9 +57,7 @@ export const AuthProvider = ({ children }) => {
         "Invalid email or password. Please try again.";
 
       if (status === 403 || message.toLowerCase().includes("blocked")) {
-        throw new Error(
-          "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên (Account is blocked. Please contact administrator).",
-        );
+        throw new Error("Account is blocked. Please contact administrator.");
       }
       throw new Error(message);
     }
@@ -127,10 +125,10 @@ export const AuthProvider = ({ children }) => {
       {/* Global Logout Confirmation Dialog */}
       <ConfirmDialog
         isOpen={showLogoutConfirm}
-        title="Đăng xuất"
-        message="Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?"
-        confirmText="Đăng xuất"
-        cancelText="Hủy"
+        title="Sign out"
+        message="Are you sure you want to sign out of the system?"
+        confirmText="Sign out"
+        cancelText="Cancel"
         confirmVariant="danger"
         isLoading={isLoggingOut}
         onConfirm={directLogout}

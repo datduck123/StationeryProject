@@ -180,7 +180,7 @@ export const AdminProfileModal = ({ isOpen, onClose }) => {
               <div>
                 <h5 className="fw-700 mb-0">Administrator Profile</h5>
                 <span className="badge bg-danger-subtle text-danger fs-11">
-                  ROLE_ADMIN
+                  ADMIN
                 </span>
               </div>
             </div>
