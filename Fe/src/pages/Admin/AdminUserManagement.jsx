@@ -4,6 +4,7 @@ import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastContext";
 import adminUserService from "../../services/adminUserService";
 import "../../styles/admin.css";
+import { validateAdminUserForm } from "../../utils/validation";
 
 export const AdminUserManagement = () => {
   const { user } = useAuth();
@@ -110,32 +111,18 @@ export const AdminUserManagement = () => {
   }, [fetchUsers]);
 
   // --- ADD USER LOGIC ---
-  const validateAddForm = () => {
-    if (!addForm.fullName.trim()) {
-      showToast("Full name is required.", "error");
-      return false;
-    }
-    if (!addForm.email.trim()) {
-      showToast("Email address is required.", "error");
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addForm.email.trim())) {
-      showToast("Please enter a valid email address.", "error");
-      return false;
-    }
-    if (
-      addForm.phone.trim() &&
-      !/^(\+84|0)[0-9]{9,10}$/.test(addForm.phone.trim())
-    ) {
-      showToast("Invalid phone number (10 digits).", "error");
-      return false;
-    }
-    return true;
-  };
-
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    if (!validateAddForm()) return;
+    const result = validateAdminUserForm({
+      fullName: addForm.fullName,
+      email: addForm.email,
+      phone: addForm.phone,
+      isEdit: false,
+    });
+    if (!result.isValid) {
+      showToast(result.error, "error");
+      return;
+    }
 
     setIsAdding(true);
     try {
@@ -186,24 +173,17 @@ export const AdminUserManagement = () => {
     setIsEditModalOpen(true);
   };
 
-  const validateEditForm = () => {
-    if (!editForm.fullName.trim()) {
-      showToast("Full name is required.", "error");
-      return false;
-    }
-    if (
-      editForm.phone.trim() &&
-      !/^(\+84|0)[0-9]{9,10}$/.test(editForm.phone.trim())
-    ) {
-      showToast("Invalid phone number (10 digits).", "error");
-      return false;
-    }
-    return true;
-  };
-
   const handleUpdateUser = async (e) => {
     e.preventDefault();
-    if (!validateEditForm()) return;
+    const result = validateAdminUserForm({
+      fullName: editForm.fullName,
+      phone: editForm.phone,
+      isEdit: true,
+    });
+    if (!result.isValid) {
+      showToast(result.error, "error");
+      return;
+    }
 
     setIsEditing(true);
     try {

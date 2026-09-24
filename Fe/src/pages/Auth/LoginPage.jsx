@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import TitleBanner from "../../components/shared/TitleBanner";
 import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastContext";
+import { validateLoginForm } from "../../utils/validation";
 
 export const LoginPage = () => {
   const { login, openAuthModal } = useAuth();
@@ -14,25 +15,13 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const validate = () => {
-    if (!email.trim()) {
-      showToast("Email is required.", "error");
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      showToast("Please enter a valid email address.", "error");
-      return false;
-    }
-    if (!password) {
-      showToast("Password is required.", "error");
-      return false;
-    }
-    return true;
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validate()) return;
+    const result = validateLoginForm({ email, password });
+    if (!result.isValid) {
+      showToast(result.error, "error");
+      return;
+    }
 
     setIsSubmitting(true);
     try {

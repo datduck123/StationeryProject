@@ -3,6 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastContext";
 import authService from "../../services/authService";
+import {
+  validateEmail,
+  validateLoginForm,
+  validateRegisterStep1,
+  validateResetPasswordForm,
+} from "../../utils/validation";
 import OtpVerificationStep from "./OtpVerificationStep";
 
 export const AuthModal = () => {
@@ -63,102 +69,17 @@ export const AuthModal = () => {
 
   if (!isAuthModalOpen) return null;
 
-  const validateEmail = (email) => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(String(email).toLowerCase());
-  };
-
-  const validateLoginForm = () => {
-    if (!loginEmail.trim()) {
-      showToast("Email address is required.", "error");
-      return false;
-    }
-    if (!validateEmail(loginEmail)) {
-      showToast("Please enter a valid email address.", "error");
-      return false;
-    }
-    if (!loginPassword) {
-      showToast("Password is required.", "error");
-      return false;
-    }
-    return true;
-  };
-
-  const validateRegisterForm = () => {
-    if (!regFullName.trim()) {
-      showToast("Full name is required.", "error");
-      return false;
-    }
-    if (regFullName.trim().length < 2) {
-      showToast("Full name must be at least 2 characters.", "error");
-      return false;
-    }
-    if (!regEmail.trim()) {
-      showToast("Email address is required.", "error");
-      return false;
-    }
-    if (!validateEmail(regEmail)) {
-      showToast("Please enter a valid email address.", "error");
-      return false;
-    }
-    if (!regPassword || regPassword.length < 8) {
-      showToast("Password must be at least 8 characters.", "error");
-      return false;
-    }
-    if (!regConfirmPassword) {
-      showToast("Confirm password is required.", "error");
-      return false;
-    }
-    if (regPassword !== regConfirmPassword) {
-      showToast("Passwords do not match.", "error");
-      return false;
-    }
-    if (!agreeTerms) {
-      showToast(
-        "Please agree to the Terms of Service and Privacy Policy.",
-        "warning",
-      );
-      return false;
-    }
-    return true;
-  };
-
-  const validateForgotEmail = () => {
-    if (!forgotEmail.trim()) {
-      showToast("Email address is required.", "error");
-      return false;
-    }
-    if (!validateEmail(forgotEmail.trim())) {
-      showToast("Please enter a valid email address.", "error");
-      return false;
-    }
-    return true;
-  };
-
-  const validateForgotReset = () => {
-    if (!forgotNewPassword) {
-      showToast("New password is required.", "error");
-      return false;
-    }
-    if (forgotNewPassword.length < 8) {
-      showToast("Password must be at least 8 characters.", "error");
-      return false;
-    }
-    if (!forgotConfirmPassword) {
-      showToast("Confirm password is required.", "error");
-      return false;
-    }
-    if (forgotNewPassword !== forgotConfirmPassword) {
-      showToast("Passwords do not match.", "error");
-      return false;
-    }
-    return true;
-  };
-
   // Submit handlers
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    if (!validateLoginForm()) return;
+    const result = validateLoginForm({
+      email: loginEmail,
+      password: loginPassword,
+    });
+    if (!result.isValid) {
+      showToast(result.error, "error");
+      return;
+    }
 
     setIsLoginSubmitting(true);
     try {
@@ -183,9 +104,17 @@ export const AuthModal = () => {
   // Register Step 1: Send OTP
   const handleRegisterSendOtp = async (e) => {
     e.preventDefault();
-    setRegApiError("");
-    setRegSuccessMsg("");
-    if (!validateRegisterForm()) return;
+    const result = validateRegisterStep1({
+      fullName: regFullName,
+      email: regEmail,
+      password: regPassword,
+      confirmPassword: regConfirmPassword,
+      agreeTerms,
+    });
+    if (!result.isValid) {
+      showToast(result.error, "error");
+      return;
+    }
 
     setIsRegSubmitting(true);
     try {
@@ -260,7 +189,11 @@ export const AuthModal = () => {
   // Forgot Password Step 1: Send OTP
   const handleForgotSendOtp = async (e) => {
     e?.preventDefault();
-    if (!validateForgotEmail()) return;
+    const result = validateEmail(forgotEmail);
+    if (!result.isValid) {
+      showToast(result.error, "error");
+      return;
+    }
 
     setIsForgotSubmitting(true);
     try {
@@ -334,7 +267,14 @@ export const AuthModal = () => {
   // Forgot Password Step 3: Reset password
   const handleForgotResetPassword = async (e) => {
     e.preventDefault();
-    if (!validateForgotReset()) return;
+    const result = validateResetPasswordForm({
+      newPassword: forgotNewPassword,
+      confirmNewPassword: forgotConfirmPassword,
+    });
+    if (!result.isValid) {
+      showToast(result.error, "error");
+      return;
+    }
 
     setIsForgotSubmitting(true);
     try {
@@ -375,7 +315,7 @@ export const AuthModal = () => {
     >
       <div
         className="modal-dialog modal-dialog-centered"
-        style={{ maxWidth: "620px", width: "94%", margin: "1.75rem auto" }}
+        style={{ maxWidth: "480px", width: "94%", margin: "1.75rem auto" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -394,17 +334,6 @@ export const AuthModal = () => {
             className="modal-body p-4 p-sm-5"
             style={{ backgroundColor: "#ffffff", borderRadius: "20px" }}
           >
-            {/* Logo */}
-            <div className="text-center mb-3">
-              <Link to="/" onClick={closeAuthModal} className="d-inline-block">
-                <img
-                  src="/assets/media/logo.png"
-                  alt="Stationery Logo"
-                  style={{ maxHeight: "46px" }}
-                />
-              </Link>
-            </div>
-
             {/* Header Titles */}
             <div className="text-center mb-4">
               <h3 className="medium-black fw-700 mb-2">

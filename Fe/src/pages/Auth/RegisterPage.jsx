@@ -4,6 +4,7 @@ import OtpVerificationStep from "../../components/auth/OtpVerificationStep";
 import TitleBanner from "../../components/shared/TitleBanner";
 import { useToast } from "../../providers/ToastContext";
 import authService from "../../services/authService";
+import { validateOtp, validateRegisterStep1 } from "../../utils/validation";
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
@@ -27,48 +28,19 @@ export const RegisterPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
-  const validateStep1 = () => {
-    if (!fullName.trim()) {
-      showToast("Full name is required.", "error");
-      return false;
-    }
-    if (fullName.trim().length < 2) {
-      showToast("Full name must be at least 2 characters.", "error");
-      return false;
-    }
-    if (!email.trim()) {
-      showToast("Email address is required.", "error");
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      showToast("Please enter a valid email address.", "error");
-      return false;
-    }
-    if (!password || password.length < 8) {
-      showToast("Password must be at least 8 characters.", "error");
-      return false;
-    }
-    if (!confirmPassword) {
-      showToast("Confirm password is required.", "error");
-      return false;
-    }
-    if (password !== confirmPassword) {
-      showToast("Passwords do not match.", "error");
-      return false;
-    }
-    if (!agreeTerms) {
-      showToast(
-        "Please agree to the Terms of Service and Privacy Policy.",
-        "warning",
-      );
-      return false;
-    }
-    return true;
-  };
-
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    if (!validateStep1()) return;
+    const result = validateRegisterStep1({
+      fullName,
+      email,
+      password,
+      confirmPassword,
+      agreeTerms,
+    });
+    if (!result.isValid) {
+      showToast(result.error, "error");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -105,8 +77,9 @@ export const RegisterPage = () => {
   };
 
   const handleVerifyAndRegister = async () => {
-    if (!otpCode || otpCode.length < 6) {
-      showToast("Please enter all 6 digits of the OTP code.", "warning");
+    const otpRes = validateOtp(otpCode);
+    if (!otpRes.isValid) {
+      showToast(otpRes.error, "warning");
       return;
     }
 

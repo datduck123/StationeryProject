@@ -4,6 +4,11 @@ import OtpVerificationStep from "../../components/auth/OtpVerificationStep";
 import TitleBanner from "../../components/shared/TitleBanner";
 import { useToast } from "../../providers/ToastContext";
 import authService from "../../services/authService";
+import {
+  validateEmail,
+  validateOtp,
+  validateResetPasswordForm,
+} from "../../utils/validation";
 
 export const ForgotPasswordPage = () => {
   const navigate = useNavigate();
@@ -23,42 +28,14 @@ export const ForgotPasswordPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
-  const validateEmailStep = () => {
-    if (!email.trim()) {
-      showToast("Email address is required.", "error");
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      showToast("Please enter a valid email address.", "error");
-      return false;
-    }
-    return true;
-  };
-
-  const validatePasswordStep = () => {
-    if (!newPassword) {
-      showToast("New password is required.", "error");
-      return false;
-    }
-    if (newPassword.length < 8) {
-      showToast("Password must be at least 8 characters.", "error");
-      return false;
-    }
-    if (!confirmNewPassword) {
-      showToast("Confirm password is required.", "error");
-      return false;
-    }
-    if (newPassword !== confirmNewPassword) {
-      showToast("Passwords do not match.", "error");
-      return false;
-    }
-    return true;
-  };
-
   // Step 1: Send OTP to email
   const handleSendOtp = async (e) => {
     e.preventDefault();
-    if (!validateEmailStep()) return;
+    const emailRes = validateEmail(email);
+    if (!emailRes.isValid) {
+      showToast(emailRes.error, "error");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -97,8 +74,9 @@ export const ForgotPasswordPage = () => {
 
   // Step 2 -> Step 3: Validate OTP entered
   const handleOtpValidated = async () => {
-    if (!otpCode || otpCode.length < 6) {
-      showToast("Please enter all 6 digits of the OTP code.", "warning");
+    const otpRes = validateOtp(otpCode);
+    if (!otpRes.isValid) {
+      showToast(otpRes.error, "warning");
       return;
     }
     setIsSubmitting(true);
@@ -127,7 +105,14 @@ export const ForgotPasswordPage = () => {
   // Step 3: Submit reset password
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    if (!validatePasswordStep()) return;
+    const result = validateResetPasswordForm({
+      newPassword,
+      confirmNewPassword,
+    });
+    if (!result.isValid) {
+      showToast(result.error, "error");
+      return;
+    }
 
     setIsSubmitting(true);
     try {

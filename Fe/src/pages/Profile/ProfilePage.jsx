@@ -3,6 +3,10 @@ import TitleBanner from "../../components/shared/TitleBanner";
 import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastContext";
 import userService from "../../services/userService";
+import {
+  validateChangePasswordForm,
+  validateProfileForm,
+} from "../../utils/validation";
 
 export const ProfilePage = () => {
   const { user, setUser } = useAuth();
@@ -52,26 +56,17 @@ export const ProfilePage = () => {
     fetchProfile();
   }, []);
 
-  // Validation for Edit Profile
-  const validateEditForm = () => {
-    if (!editFullName.trim()) {
-      showToast("Full name is required.", "error");
-      return false;
-    }
-    if (editFullName.trim().length < 2) {
-      showToast("Full name must be at least 2 characters.", "error");
-      return false;
-    }
-    if (editPhone.trim() && !/^(\+84|0)[0-9]{9,10}$/.test(editPhone.trim())) {
-      showToast("Please enter a valid phone number (10 digits).", "error");
-      return false;
-    }
-    return true;
-  };
-
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    if (!validateEditForm()) return;
+    const result = validateProfileForm({
+      fullName: editFullName,
+      phone: editPhone,
+      address: editAddress,
+    });
+    if (!result.isValid) {
+      showToast(result.error, "error");
+      return;
+    }
 
     setIsSavingProfile(true);
     try {
@@ -105,34 +100,17 @@ export const ProfilePage = () => {
     }
   };
 
-  // Validation for Change Password
-  const validatePwForm = () => {
-    if (!currentPassword) {
-      showToast("Current password is required.", "error");
-      return false;
-    }
-    if (!newPassword) {
-      showToast("New password is required.", "error");
-      return false;
-    }
-    if (newPassword.length < 8) {
-      showToast("Password must be at least 8 characters.", "error");
-      return false;
-    }
-    if (!confirmPassword) {
-      showToast("Confirm password is required.", "error");
-      return false;
-    }
-    if (newPassword !== confirmPassword) {
-      showToast("Passwords do not match.", "error");
-      return false;
-    }
-    return true;
-  };
-
   const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (!validatePwForm()) return;
+    const result = validateChangePasswordForm({
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    });
+    if (!result.isValid) {
+      showToast(result.error, "error");
+      return;
+    }
 
     setIsChangingPw(true);
     try {
@@ -283,6 +261,32 @@ export const ProfilePage = () => {
                           )}
                         </div>
                       </div>
+
+                      <div className="col-sm-6">
+                        <label className="text-muted fs-13 d-block mb-1">
+                          Member Since
+                        </label>
+                        <div className="fw-600 fs-15 text-dark">
+                          {profile.createdAt
+                            ? new Date(profile.createdAt).toLocaleDateString(
+                                "vi-VN",
+                              )
+                            : "N/A"}
+                        </div>
+                      </div>
+
+                      <div className="col-sm-6">
+                        <label className="text-muted fs-13 d-block mb-1">
+                          Last Updated
+                        </label>
+                        <div className="fw-600 fs-15 text-dark">
+                          {profile.updatedAt
+                            ? new Date(profile.updatedAt).toLocaleDateString(
+                                "vi-VN",
+                              )
+                            : "N/A"}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Action Buttons */}
@@ -344,7 +348,10 @@ export const ProfilePage = () => {
             }
           }}
         >
-          <div className="modal-dialog modal-dialog-centered">
+          <div
+            className="modal-dialog modal-dialog-centered"
+            style={{ maxWidth: "480px", width: "95%" }}
+          >
             <div
               className="modal-content shadow-lg border-0 rounded-4 p-4"
               style={{ background: "#ffffff" }}
@@ -360,19 +367,36 @@ export const ProfilePage = () => {
               </div>
 
               <form onSubmit={handleSaveProfile} noValidate>
+                {/* Full Name with User Icon */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">Full Name *</label>
                   <div className="input-block">
                     <input
                       type="text"
                       className="form-control form-control-2"
+                      placeholder="Enter full name"
                       value={editFullName}
                       onChange={(e) => setEditFullName(e.target.value)}
                       disabled={isSavingProfile}
                     />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
                   </div>
                 </div>
 
+                {/* Phone Number with Phone Icon */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">Phone Number</label>
                   <div className="input-block">
@@ -384,9 +408,23 @@ export const ProfilePage = () => {
                       onChange={(e) => setEditPhone(e.target.value)}
                       disabled={isSavingProfile}
                     />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg>
                   </div>
                 </div>
 
+                {/* Address with Location Icon */}
                 <div className="auth-field-wrapper mb-4 position-relative">
                   <label className="form-label fw-600 mb-1">Address</label>
                   <div className="input-block">
@@ -398,6 +436,20 @@ export const ProfilePage = () => {
                       onChange={(e) => setEditAddress(e.target.value)}
                       disabled={isSavingProfile}
                     />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
                   </div>
                 </div>
 
@@ -445,7 +497,10 @@ export const ProfilePage = () => {
             }
           }}
         >
-          <div className="modal-dialog modal-dialog-centered">
+          <div
+            className="modal-dialog modal-dialog-centered"
+            style={{ maxWidth: "480px", width: "95%" }}
+          >
             <div
               className="modal-content shadow-lg border-0 rounded-4 p-4"
               style={{ background: "#ffffff" }}
@@ -461,6 +516,7 @@ export const ProfilePage = () => {
               </div>
 
               <form onSubmit={handleChangePassword} noValidate>
+                {/* Current Password with Lock Icon */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">
                     Current Password *
@@ -474,11 +530,28 @@ export const ProfilePage = () => {
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       disabled={isChangingPw}
                     />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                    >
+                      <path
+                        d="M10 2C6.134 2 3 5.134 3 9V11H2C1.448 11 1 11.448 1 12V18C1 18.552 1.448 19 2 19H18C18.552 19 19 18.552 19 18V12C19 11.448 18.552 11 18 11H17V9C17 5.134 13.866 2 10 2ZM5 9C5 6.239 7.239 4 10 4C12.761 4 15 6.239 15 9V11H5V9Z"
+                        fill="#141516"
+                      />
+                    </svg>
                     <button
                       type="button"
                       className="auth-password-toggle"
                       onClick={() => setShowCurrentPw((p) => !p)}
                       tabIndex="-1"
+                      aria-label={
+                        showCurrentPw
+                          ? "Hide current password"
+                          : "Show current password"
+                      }
                     >
                       <i
                         className={
@@ -491,6 +564,7 @@ export const ProfilePage = () => {
                   </div>
                 </div>
 
+                {/* New Password with Lock Icon */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">
                     New Password *
@@ -499,16 +573,31 @@ export const ProfilePage = () => {
                     <input
                       type={showNewPw ? "text" : "password"}
                       className="form-control form-control-2 pe-5"
-                      placeholder="At least 8 characters"
+                      placeholder="8-20 chars: uppercase, lowercase, digit, special (@#$!%*?&)"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       disabled={isChangingPw}
                     />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                    >
+                      <path
+                        d="M10 2C6.134 2 3 5.134 3 9V11H2C1.448 11 1 11.448 1 12V18C1 18.552 1.448 19 2 19H18C18.552 19 19 18.552 19 18V12C19 11.448 18.552 11 18 11H17V9C17 5.134 13.866 2 10 2ZM5 9C5 6.239 7.239 4 10 4C12.761 4 15 6.239 15 9V11H5V9Z"
+                        fill="#141516"
+                      />
+                    </svg>
                     <button
                       type="button"
                       className="auth-password-toggle"
                       onClick={() => setShowNewPw((p) => !p)}
                       tabIndex="-1"
+                      aria-label={
+                        showNewPw ? "Hide new password" : "Show new password"
+                      }
                     >
                       <i
                         className={
@@ -521,6 +610,7 @@ export const ProfilePage = () => {
                   </div>
                 </div>
 
+                {/* Confirm New Password with Lock Icon */}
                 <div className="auth-field-wrapper mb-4 position-relative">
                   <label className="form-label fw-600 mb-1">
                     Confirm New Password *
@@ -534,11 +624,28 @@ export const ProfilePage = () => {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       disabled={isChangingPw}
                     />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 20 20"
+                      fill="none"
+                    >
+                      <path
+                        d="M10 2C6.134 2 3 5.134 3 9V11H2C1.448 11 1 11.448 1 12V18C1 18.552 1.448 19 2 19H18C18.552 19 19 18.552 19 18V12C19 11.448 18.552 11 18 11H17V9C17 5.134 13.866 2 10 2ZM5 9C5 6.239 7.239 4 10 4C12.761 4 15 6.239 15 9V11H5V9Z"
+                        fill="#141516"
+                      />
+                    </svg>
                     <button
                       type="button"
                       className="auth-password-toggle"
                       onClick={() => setShowConfirmPw((p) => !p)}
                       tabIndex="-1"
+                      aria-label={
+                        showConfirmPw
+                          ? "Hide confirm password"
+                          : "Show confirm password"
+                      }
                     >
                       <i
                         className={
