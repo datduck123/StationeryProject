@@ -54,7 +54,7 @@ export const OtpVerificationStep = ({
       setResendCooldown(60);
       setExpiryTimer(300);
     } catch {
-      // handled by parent
+      showToast("Failed to send OTP. Please try again.", "warning");
     }
   };
 

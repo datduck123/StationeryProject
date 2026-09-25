@@ -1,5 +1,3 @@
-// Migrated from: index.html, lines 3235-3238; assets/js/app.js lines 36-50
-// HTML->JSX conversion: class -> className, href onClick handling
 import { useBackToTop } from "../../hooks/useBackToTop";
 
 export const BackToTop = () => {
