@@ -13,6 +13,9 @@ import Checkout from "../pages/Checkout/Checkout";
 import Home from "../pages/Home/Home";
 import ProductDetail from "../pages/ProductDetail/ProductDetail";
 import ProfilePage from "../pages/Profile/ProfilePage";
+import OrderDetailPage from "../pages/Orders/OrderDetailPage";
+import OrderHistoryPage from "../pages/Orders/OrderHistoryPage";
+import OrderSuccessPage from "../pages/Orders/OrderSuccessPage";
 import ShopGridSidebar from "../pages/Shop/ShopGridSidebar";
 import AdminRoute from "./AdminRoute";
 import ProtectedRoute from "./ProtectedRoute";
@@ -47,6 +50,19 @@ export const AppRoutes = () => {
         <Route path="/cart.html" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/checkout.html" element={<Checkout />} />
+
+        <Route
+          path="/account/orders"
+          element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/account/orders/:id"
+          element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/order-success"
+          element={<ProtectedRoute><OrderSuccessPage /></ProtectedRoute>}
+        />
 
         {/* Authentication Routes */}
         <Route path="/login" element={<LoginPage />} />
