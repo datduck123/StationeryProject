@@ -4,6 +4,7 @@ import MainLayout from "../layouts/MainLayout";
 import AdminBrandManagement from "../pages/Admin/AdminBrandManagement";
 import AdminCategoryManagement from "../pages/Admin/AdminCategoryManagement";
 import AdminDashboard from "../pages/Admin/AdminDashboard";
+import AdminOrderManagement from "../pages/Admin/AdminOrderManagement";
 import AdminUserManagement from "../pages/Admin/AdminUserManagement";
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 import LoginPage from "../pages/Auth/LoginPage";
@@ -35,6 +36,7 @@ export const AppRoutes = () => {
         <Route path="/admin/users" element={<AdminUserManagement />} />
         <Route path="/admin/categories" element={<AdminCategoryManagement />} />
         <Route path="/admin/brands" element={<AdminBrandManagement />} />
+        <Route path="/admin/orders" element={<AdminOrderManagement />} />
       </Route>
 
       {/* Public and Customer routes in MainLayout */}

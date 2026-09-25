@@ -15,6 +15,16 @@ const orderService = {
     const response = await api.put(`/orders/${orderId}/cancel`);
     return response.data;
   },
+
+  async getOrders(params = {}) {
+    const response = await api.get("/admin/orders", { params });
+    return response.data;
+  },
+
+  async getOrder(orderId) {
+    const response = await api.get(`/admin/orders/${orderId}`);
+    return response.data;
+  },
 };
 
 export default orderService;
