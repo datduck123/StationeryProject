@@ -1053,11 +1053,11 @@ export const AdminUserManagement = () => {
                       }
                       disabled={isEditing}
                     >
-                      <option value="ACTIVE">ACTIVE (Active Account)</option>
+                      <option value="ACTIVE">ACTIVE</option>
                       <option value="INACTIVE">
-                        INACTIVE (Inactive / Idle)
+                        INACTIVE
                       </option>
-                      <option value="BLOCKED">BLOCKED (Locked Account)</option>
+                      <option value="BLOCKED">BLOCKED</option>
                     </select>
                   </div>
                 </div>
