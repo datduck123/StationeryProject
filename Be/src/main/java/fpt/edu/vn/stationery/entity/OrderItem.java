@@ -7,7 +7,7 @@ import org.hibernate.annotations.Nationalized;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "OrderItems")
+@Table(name = "OrderItems", schema = "dbo")
 @Getter
 @Setter
 @NoArgsConstructor
