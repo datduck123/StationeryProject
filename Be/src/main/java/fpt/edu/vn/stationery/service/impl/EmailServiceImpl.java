@@ -27,7 +27,6 @@ public class EmailServiceImpl implements EmailService {
 
         boolean sentViaSmtp = trySendHtmlEmail(to, subject, htmlContent);
 
-        // Formatted visual log for console / development preview
         log.info("╔═══════════════════════════════════════════════════════════════════╗");
         log.info("║                    STATIONERY STORE - EMAIL                      ║");
         log.info("╠═══════════════════════════════════════════════════════════════════╣");
