@@ -14,6 +14,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.mockito.ArgumentCaptor;
 
 import java.util.List;
 import java.util.Optional;
@@ -73,6 +75,27 @@ class OrderServiceTest {
 
         assertNotNull(result);
         verify(orderRepository).findByOrderStatus(eq("PENDING"), any());
+    }
+
+    @Test
+    void adminCanSearchByOrderIdAndSortResults() {
+        when(orderRepository.searchAdminOrders(eq("PENDING"), eq("#42"), eq(42L), any()))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        orderService.getAllOrders(" pending ", " #42 ", 1, 10, "totalCost", "asc");
+
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(orderRepository).searchAdminOrders(eq("PENDING"), eq("#42"), eq(42L), pageable.capture());
+        assertEquals(1, pageable.getValue().getPageNumber());
+        assertTrue(pageable.getValue().getSort().getOrderFor("totalCost").isAscending());
+    }
+
+    @Test
+    void adminRejectsUnsupportedStatusAndSort() {
+        assertThrows(BadRequestException.class,
+                () -> orderService.getAllOrders("INVALID", null, 0, 10, "createdAt", "desc"));
+        assertThrows(BadRequestException.class,
+                () -> orderService.getAllOrders(null, null, 0, 10, "user.passwordHash", "desc"));
     }
 
     @Test

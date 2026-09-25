@@ -17,6 +17,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     Page<Order> findByOrderStatus(String orderStatus, Pageable pageable);
 
+    @Query("SELECT o FROM Order o JOIN o.user u " +
+            "WHERE (:status IS NULL OR o.orderStatus = :status) " +
+            "AND (LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR o.orderId = :orderId)")
+    Page<Order> searchAdminOrders(@Param("status") String status,
+                                  @Param("keyword") String keyword,
+                                  @Param("orderId") Long orderId,
+                                  Pageable pageable);
+
     @EntityGraph(attributePaths = "orderItems")
     Optional<Order> findWithOrderItemsByOrderIdAndUser_Email(Long orderId, String email);
 

@@ -9,5 +9,7 @@ public interface OrderService {
     OrderDetailResponseDTO getCustomerOrder(Long orderId, String email);
     OrderDetailResponseDTO cancelCustomerOrder(Long orderId, String email);
     PageDTO<OrderResponseDTO> getAllOrders(String status, int page, int size);
+    PageDTO<OrderResponseDTO> getAllOrders(String status, String keyword, int page, int size,
+                                            String sortBy, String sortDir);
     OrderDetailResponseDTO getOrderForAdmin(Long orderId);
 }
