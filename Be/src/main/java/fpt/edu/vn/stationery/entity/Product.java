@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "products")
+@Table(name = "Products")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,7 +18,7 @@ public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "product_id")
-    private Long productId;
+    private Integer productId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
@@ -31,20 +31,23 @@ public class Product {
     @Column(name = "sku", nullable = false, unique = true, length = 50)
     private String sku;
 
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "name", nullable = false, length = 200)
     private String name;
 
     @Column(name = "price", nullable = false, precision = 18, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "stock", nullable = false)
-    @Builder.Default
-    private Integer stock = 0;
+    @Column(name = "weight_kg", nullable = false, precision = 10, scale = 3)
+    private BigDecimal weightKg;
 
-    @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
+    @Column(name = "stock_quantity", nullable = false)
+    @Builder.Default
+    private Integer stockQuantity = 0;
+
+    @Column(name = "description", columnDefinition = "NVARCHAR(1000)")
     private String description;
 
-    @Column(name = "image_url")
+    @Column(name = "image_url", length = 500)
     private String imageUrl;
 
     @Enumerated(EnumType.STRING)
@@ -62,7 +65,7 @@ public class Product {
     protected void onCreate() {
         if (createdAt == null) createdAt = LocalDateTime.now();
         if (status == null) status = ProductStatus.ACTIVE;
-        if (stock == null) stock = 0;
+        if (stockQuantity == null) stockQuantity = 0;
     }
 
     @PreUpdate

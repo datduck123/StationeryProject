@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "brands")
+@Table(name = "Brands")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,7 +17,7 @@ public class Brand {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "brand_id")
-    private Long brandId;
+    private Integer brandId;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;
@@ -27,6 +27,10 @@ public class Brand {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private String status = "ACTIVE";
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
