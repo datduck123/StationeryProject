@@ -32,7 +32,7 @@ public class Brand {
     @Builder.Default
     private String status = "ACTIVE";
 
-    @Column(name = "updated_at")
+    @Column(name = "updated_at", insertable = false)
     private LocalDateTime updatedAt;
     
     @OneToMany(mappedBy = "brand", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

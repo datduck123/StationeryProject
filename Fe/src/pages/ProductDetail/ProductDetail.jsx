@@ -1,26 +1,55 @@
 // Migrated from: product-detail.html, lines 205-1705
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / input self-closing, gallery thumbnail active state, tab switcher state, i18n support
-import { useState } from "react";
-import { Link } from "react-router-dom";
+// API integration: useParams to read product ID, fetch real data from /api/products/:id
+import { useState, useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
+import { getProductById, getProductImage } from "../../services/productService";
 
 export const ProductDetail = () => {
   const { openCart, openQuickView, openCompare } = useCartContext();
   const { t } = useTranslation();
+  const { id } = useParams();
+
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("review");
   const [quantity, setQuantity] = useState(1);
 
-  const galleryImages = [
-    "/assets/media/products/large-image-1.png",
+  // API state
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(!!id);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    getProductById(id)
+      .then((res) => setProduct(res.data))
+      .catch(() => setError("Không thể tải thông tin sản phẩm."))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const formatCurrency = (amount) => {
+    if (amount == null) return "";
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
+
+  // Use standardized product image matching product name and id
+  const primaryImage = getProductImage(product);
+
+  const galleryImages = [primaryImage,
     "/assets/media/products/large-image-2.png",
     "/assets/media/products/large-image-3.png",
     "/assets/media/products/large-image-4.png",
   ];
 
   const thumbImages = [
-    "/assets/media/products/nav-image-1.png",
+    primaryImage,
     "/assets/media/products/nav-image-2.png",
     "/assets/media/products/nav-image-3.png",
     "/assets/media/products/nav-image-4.png",
@@ -56,6 +85,47 @@ export const ProductDetail = () => {
       badge: "Sale",
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="text-center py-80">
+        <div
+          className="spinner-border"
+          role="status"
+          style={{ color: "var(--color-primary, #e57c32)", width: "3rem", height: "3rem" }}
+        >
+          <span className="visually-hidden">Đang tải...</span>
+        </div>
+        <p className="mt-16 dark-gray">Đang tải sản phẩm...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-80">
+        <p style={{ color: "red" }}>{error}</p>
+        <Link
+          to="/shop-grid-sidebar.html"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            padding: "10px 24px",
+            backgroundColor: "#e57c32",
+            color: "#ffffff",
+            borderRadius: "30px",
+            fontWeight: "600",
+            fontSize: "14px",
+            textDecoration: "none",
+            marginTop: "16px",
+            boxShadow: "0 4px 12px rgba(229, 124, 50, 0.25)",
+          }}
+        >
+          Quay lại cửa hàng
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -102,35 +172,25 @@ export const ProductDetail = () => {
             <div className="col-lg-6">
               <div className="product-text-container">
                 <h3 className="medium-black fw-700 mb-16">
-                  Classic Ballpoint Pens
+                  {product?.name ?? "Classic Ballpoint Pens"}
                 </h3>
                 <div className="d-flex align-items-center gap-8 mb-16">
                   <span className="color-primary">★★★★★</span>
                   <p className="dark-gray fw-500">(02 {t("common.reviews")})</p>
                 </div>
                 <div className="d-flex align-items-center gap-16 mb-24">
-                  <h4 className="color-primary fw-700">$59.00</h4>
-                  <h5 className="light-gray text-decoration-line-through fw-500">
-                    $75.00
-                  </h5>
+                  <h4 className="color-primary fw-700">
+                    {product ? formatCurrency(product.price) : "$59.00"}
+                  </h4>
                 </div>
                 <p className="quick-view-text mb-24">
-                  The Clean Wave Washing Machine Automatic Washing Machine is
-                  engineered to make laundry effortless with its advanced
-                  cleaning technology. Featuring multiple wash cycles, water
-                  level sensors, and a quiet motor...
+                  {product?.description || "Sản phẩm văn phòng phẩm chất lượng cao, bền đẹp và tiện lợi."}
                 </p>
-                <p className="fw-500 mb-16">
-                  Hurry! Only <span className="color-primary">35/100</span>{" "}
-                  units left in stock!
-                </p>
-                <div className="progress mb-24" style={{ height: "8px" }}>
-                  <div
-                    className="progress-bar bg-primary"
-                    role="progressbar"
-                    style={{ width: "35%" }}
-                  ></div>
-                </div>
+                {product?.stockQuantity != null && (
+                  <p className="fw-500 mb-16">
+                    Còn lại: <span className="color-primary fw-700">{product.stockQuantity}</span> sản phẩm trong kho!
+                  </p>
+                )}
                 <p className="fw-500 medium-black mb-8">
                   {t("common.quantity")}:
                 </p>

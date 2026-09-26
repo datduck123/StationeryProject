@@ -43,6 +43,7 @@ export const AppRoutes = () => {
         <Route path="/shop-grid-sidebar.html" element={<ShopGridSidebar />} />
         <Route path="/product-detail" element={<ProductDetail />} />
         <Route path="/product-detail.html" element={<ProductDetail />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/cart.html" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />

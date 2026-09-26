@@ -114,7 +114,7 @@ public class ProductServiceImplTest {
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
         when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
 
-        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 10, null, null, null, null);
+        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 10, null, null, null, null, null, null);
 
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
@@ -131,7 +131,7 @@ public class ProductServiceImplTest {
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
         when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
 
-        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 12, "Gel Pen", null, null, "price,asc");
+        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 12, "Gel Pen", null, null, null, null, "price,asc");
 
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
@@ -146,7 +146,7 @@ public class ProductServiceImplTest {
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
         when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
 
-        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 12, null, 1L, null, "price,asc");
+        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 12, null, 1L, null, null, null, "price,asc");
 
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
@@ -161,7 +161,7 @@ public class ProductServiceImplTest {
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
         when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
 
-        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 12, null, null, 1L, "price,asc");
+        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 12, null, null, 1L, null, null, "price,asc");
 
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
@@ -177,7 +177,7 @@ public class ProductServiceImplTest {
         when(productRepository.findAll(any(Specification.class), pageableCaptor.capture())).thenReturn(page);
         when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
 
-        productService.getProducts(0, 10, null, null, null, "price,asc");
+        productService.getProducts(0, 10, null, null, null, null, null, "price,asc");
 
         Pageable capturedPageable = pageableCaptor.getValue();
         Sort.Order order = capturedPageable.getSort().getOrderFor("price");
@@ -194,7 +194,7 @@ public class ProductServiceImplTest {
         when(productRepository.findAll(any(Specification.class), pageableCaptor.capture())).thenReturn(page);
         when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
 
-        productService.getProducts(0, 10, null, null, null, "price,desc");
+        productService.getProducts(0, 10, null, null, null, null, null, "price,desc");
 
         Pageable capturedPageable = pageableCaptor.getValue();
         Sort.Order order = capturedPageable.getSort().getOrderFor("price");
@@ -211,7 +211,7 @@ public class ProductServiceImplTest {
         when(productRepository.findAll(any(Specification.class), pageableCaptor.capture())).thenReturn(page);
         when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
 
-        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 5, "gel", 1L, 1L, "price,desc");
+        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 5, "gel", 1L, 1L, null, null, "price,desc");
 
         assertNotNull(result);
         assertEquals(1, result.getContent().size());
@@ -228,7 +228,7 @@ public class ProductServiceImplTest {
         Page<Product> emptyPage = new PageImpl<>(Collections.emptyList(), org.springframework.data.domain.PageRequest.of(0, 10), 0);
         when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(emptyPage);
 
-        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 10, "NonExistentProduct", null, null, "price,asc");
+        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 10, "NonExistentProduct", null, null, null, null, "price,asc");
 
         assertNotNull(result);
         assertTrue(result.getContent().isEmpty());
@@ -241,19 +241,23 @@ public class ProductServiceImplTest {
     @DisplayName("9. Invalid Parameter: throws BadRequestException for invalid pagination, sorting, or IDs")
     void testInvalidParameter() {
         // Negative page
-        assertThrows(BadRequestException.class, () -> productService.getProducts(-1, 10, null, null, null, "price,asc"));
+        assertThrows(BadRequestException.class, () -> productService.getProducts(-1, 10, null, null, null, null, null, "price,asc"));
         // Non-positive size
-        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 0, null, null, null, "price,asc"));
+        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 0, null, null, null, null, null, "price,asc"));
         // Size > 100
-        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 101, null, null, null, "price,asc"));
+        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 101, null, null, null, null, null, "price,asc"));
         // Invalid categoryId <= 0
-        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 10, null, -1L, null, "price,asc"));
+        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 10, null, -1L, null, null, null, "price,asc"));
         // Invalid brandId <= 0
-        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 10, null, null, -2L, "price,asc"));
+        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 10, null, null, -2L, null, null, "price,asc"));
         // Invalid sort field
-        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 10, null, null, null, "unknownField,asc"));
+        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 10, null, null, null, null, null, "unknownField,asc"));
         // Invalid sort direction
-        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 10, null, null, null, "price,diagonal"));
+        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 10, null, null, null, null, null, "price,diagonal"));
+        // Negative minPrice
+        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 10, null, null, null, new BigDecimal("-1"), null, "price,asc"));
+        // minPrice > maxPrice
+        assertThrows(BadRequestException.class, () -> productService.getProducts(0, 10, null, null, null, new BigDecimal("500"), new BigDecimal("100"), "price,asc"));
         // Invalid product ID for detail
         assertThrows(BadRequestException.class, () -> productService.getProductById(0L));
         assertThrows(BadRequestException.class, () -> productService.getProductById(-10L));

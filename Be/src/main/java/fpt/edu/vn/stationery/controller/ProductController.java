@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
@@ -25,8 +27,10 @@ public class ProductController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Long brandId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false, defaultValue = "price,asc") String sort) {
-        PageDTO<ProductResponseDTO> response = productService.getProducts(page, size, keyword, categoryId, brandId, sort);
+        PageDTO<ProductResponseDTO> response = productService.getProducts(page, size, keyword, categoryId, brandId, minPrice, maxPrice, sort);
         return ResponseEntity.ok(response);
     }
 

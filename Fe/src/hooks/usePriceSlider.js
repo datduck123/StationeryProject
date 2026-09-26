@@ -1,19 +1,27 @@
 // Migrated from: assets/js/app.js, lines 384-415
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-export const usePriceSlider = (
-  initialMin = 1000,
-  initialMax = 5000,
-  maxLimit = 10000,
-  priceGap = 1000,
-) => {
+export const usePriceSlider = ({
+  initialMin = 0,
+  initialMax = 150000,
+  maxLimit = 150000,
+  priceGap = 5000,
+  onPriceChange,
+} = {}) => {
   const [minPrice, setMinPrice] = useState(initialMin);
   const [maxPrice, setMaxPrice] = useState(initialMax);
+
+  const notifyChange = (newMin, newMax) => {
+    if (onPriceChange) {
+      onPriceChange({ minPrice: newMin, maxPrice: newMax });
+    }
+  };
 
   const handleMinInputChange = (e) => {
     const val = parseInt(e.target.value) || 0;
     if (maxPrice - val >= priceGap && val >= 0) {
       setMinPrice(val);
+      notifyChange(val, maxPrice);
     }
   };
 
@@ -21,29 +29,32 @@ export const usePriceSlider = (
     const val = parseInt(e.target.value) || 0;
     if (val - minPrice >= priceGap && val <= maxLimit) {
       setMaxPrice(val);
+      notifyChange(minPrice, val);
     }
   };
 
   const handleMinRangeChange = (e) => {
     const val = parseInt(e.target.value) || 0;
+    let newMin = val;
     if (maxPrice - val < priceGap) {
-      setMinPrice(maxPrice - priceGap);
-    } else {
-      setMinPrice(val);
+      newMin = maxPrice - priceGap;
     }
+    setMinPrice(newMin);
+    notifyChange(newMin, maxPrice);
   };
 
   const handleMaxRangeChange = (e) => {
     const val = parseInt(e.target.value) || 0;
+    let newMax = val;
     if (val - minPrice < priceGap) {
-      setMaxPrice(minPrice + priceGap);
-    } else {
-      setMaxPrice(val);
+      newMax = minPrice + priceGap;
     }
+    setMaxPrice(newMax);
+    notifyChange(minPrice, newMax);
   };
 
-  const leftPercent = (minPrice / maxLimit) * 100;
-  const rightPercent = 100 - (maxPrice / maxLimit) * 100;
+  const leftPercent = Math.min(Math.max((minPrice / maxLimit) * 100, 0), 100);
+  const rightPercent = Math.min(Math.max(100 - (maxPrice / maxLimit) * 100, 0), 100);
 
   return {
     minPrice,
@@ -55,6 +66,8 @@ export const usePriceSlider = (
     handleMaxInputChange,
     handleMinRangeChange,
     handleMaxRangeChange,
+    setMinPrice,
+    setMaxPrice,
   };
 };
 

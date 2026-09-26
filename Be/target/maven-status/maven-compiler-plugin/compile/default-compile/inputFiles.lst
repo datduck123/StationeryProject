@@ -1,9 +1,11 @@
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\controller\CategoryController.java
+F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\service\ProductService.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\constant\AppConstants.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\response\CategoryResponseDTO.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\entity\Brand.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\repository\CategoryRepository.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\service\CategoryService.java
+F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\specification\ProductSpecification.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\request\CreateUserByAdminRequestDTO.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\request\VerifyOtpRequestDTO.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\service\impl\EmailServiceImpl.java
@@ -15,6 +17,7 @@ F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\service\impl
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\exception\BadRequestException.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\mapper\CategoryMapper.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\service\OtpService.java
+F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\response\BrandSummaryDTO.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\repository\ProductRepository.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\service\EmailService.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\entity\Category.java
@@ -24,6 +27,7 @@ F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\request\
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\repository\UserRepository.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\controller\AdminController.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\controller\AuthController.java
+F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\mapper\ProductMapper.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\config\OpenApiConfig.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\response\UserResponse.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\response\UserResponseDTO.java
@@ -34,6 +38,7 @@ F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\entity\Produ
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\repository\BrandRepository.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\response\UserProfileResponseDTO.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\request\LoginRequest.java
+F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\response\CategorySummaryDTO.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\exception\GlobalExceptionHandler.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\response\BrandResponseDTO.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\exception\TooManyRequestsException.java
@@ -45,11 +50,14 @@ F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\service\Bran
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\constant\UserStatus.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\request\ChangePasswordRequestDTO.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\controller\AdminBrandController.java
+F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\controller\ProductController.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\StationeryApplication.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\controller\BrandController.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\config\AppConfig.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\constant\ProductStatus.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\request\BrandRequestDTO.java
+F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\response\ProductResponseDTO.java
+F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\service\impl\ProductServiceImpl.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\exception\ResourceNotFoundException.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\response\PageDTO.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\entity\User.java

@@ -32,7 +32,15 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public PageDTO<ProductResponseDTO> getProducts(int page, int size, String keyword, Long categoryId, Long brandId, String sort) {
+    public PageDTO<ProductResponseDTO> getProducts(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            java.math.BigDecimal minPrice,
+            java.math.BigDecimal maxPrice,
+            String sort) {
         validatePagination(page, size);
 
         if (categoryId != null && categoryId <= 0) {
@@ -41,11 +49,20 @@ public class ProductServiceImpl implements ProductService {
         if (brandId != null && brandId <= 0) {
             throw new BadRequestException("Invalid brand ID: " + brandId);
         }
+        if (minPrice != null && minPrice.compareTo(java.math.BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("minPrice must not be negative");
+        }
+        if (maxPrice != null && maxPrice.compareTo(java.math.BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("maxPrice must not be negative");
+        }
+        if (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0) {
+            throw new BadRequestException("minPrice must be less than or equal to maxPrice");
+        }
 
         Sort sortObj = parseSort(sort);
         Pageable pageable = PageRequest.of(page, size, sortObj);
 
-        Specification<Product> spec = ProductSpecification.filterPublicProducts(keyword, categoryId, brandId);
+        Specification<Product> spec = ProductSpecification.filterPublicProducts(keyword, categoryId, brandId, minPrice, maxPrice);
         Page<Product> productPage = productRepository.findAll(spec, pageable);
 
         Page<ProductResponseDTO> dtoPage = productPage.map(productMapper::toDto);

@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-09-26T00:17:23+0700",
-    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 22.0.2 (Oracle Corporation)"
+    date = "2026-09-27T00:11:02+0700",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.100.v20260826-1225, environment: Java 21.0.12.1 (Eclipse Adoptium)"
 )
 @Component
 public class CategoryMapperImpl implements CategoryMapper {
@@ -22,8 +22,8 @@ public class CategoryMapperImpl implements CategoryMapper {
 
         Category.CategoryBuilder category = Category.builder();
 
-        category.name( dto.getName() );
         category.description( dto.getDescription() );
+        category.name( dto.getName() );
 
         return category.build();
     }
@@ -37,9 +37,9 @@ public class CategoryMapperImpl implements CategoryMapper {
         CategoryResponseDTO.CategoryResponseDTOBuilder categoryResponseDTO = CategoryResponseDTO.builder();
 
         categoryResponseDTO.categoryId( entity.getCategoryId() );
-        categoryResponseDTO.name( entity.getName() );
-        categoryResponseDTO.description( entity.getDescription() );
         categoryResponseDTO.createdAt( entity.getCreatedAt() );
+        categoryResponseDTO.description( entity.getDescription() );
+        categoryResponseDTO.name( entity.getName() );
         categoryResponseDTO.updatedAt( entity.getUpdatedAt() );
 
         return categoryResponseDTO.build();
@@ -51,7 +51,7 @@ public class CategoryMapperImpl implements CategoryMapper {
             return;
         }
 
-        entity.setName( dto.getName() );
         entity.setDescription( dto.getDescription() );
+        entity.setName( dto.getName() );
     }
 }
