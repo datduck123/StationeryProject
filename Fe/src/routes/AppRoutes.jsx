@@ -4,6 +4,7 @@ import MainLayout from "../layouts/MainLayout";
 import AdminBrandManagement from "../pages/Admin/AdminBrandManagement";
 import AdminCategoryManagement from "../pages/Admin/AdminCategoryManagement";
 import AdminDashboard from "../pages/Admin/AdminDashboard";
+import AdminOrderManagement from "../pages/Admin/AdminOrderManagement";
 import AdminUserManagement from "../pages/Admin/AdminUserManagement";
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 import LoginPage from "../pages/Auth/LoginPage";
@@ -13,6 +14,9 @@ import Checkout from "../pages/Checkout/Checkout";
 import Home from "../pages/Home/Home";
 import ProductDetail from "../pages/ProductDetail/ProductDetail";
 import ProfilePage from "../pages/Profile/ProfilePage";
+import OrderDetailPage from "../pages/Orders/OrderDetailPage";
+import OrderHistoryPage from "../pages/Orders/OrderHistoryPage";
+import OrderSuccessPage from "../pages/Orders/OrderSuccessPage";
 import ShopGridSidebar from "../pages/Shop/ShopGridSidebar";
 import AdminRoute from "./AdminRoute";
 import ProtectedRoute from "./ProtectedRoute";
@@ -32,6 +36,7 @@ export const AppRoutes = () => {
         <Route path="/admin/users" element={<AdminUserManagement />} />
         <Route path="/admin/categories" element={<AdminCategoryManagement />} />
         <Route path="/admin/brands" element={<AdminBrandManagement />} />
+        <Route path="/admin/orders" element={<AdminOrderManagement />} />
       </Route>
 
       {/* Public and Customer routes in MainLayout */}
@@ -47,6 +52,19 @@ export const AppRoutes = () => {
         <Route path="/cart.html" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/checkout.html" element={<Checkout />} />
+
+        <Route
+          path="/account/orders"
+          element={<ProtectedRoute><OrderHistoryPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/account/orders/:id"
+          element={<ProtectedRoute><OrderDetailPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/order-success"
+          element={<ProtectedRoute><OrderSuccessPage /></ProtectedRoute>}
+        />
 
         {/* Authentication Routes */}
         <Route path="/login" element={<LoginPage />} />
