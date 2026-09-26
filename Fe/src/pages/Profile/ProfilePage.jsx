@@ -261,32 +261,6 @@ export const ProfilePage = () => {
                           )}
                         </div>
                       </div>
-
-                      <div className="col-sm-6">
-                        <label className="text-muted fs-13 d-block mb-1">
-                          Member Since
-                        </label>
-                        <div className="fw-600 fs-15 text-dark">
-                          {profile.createdAt
-                            ? new Date(profile.createdAt).toLocaleDateString(
-                                "vi-VN",
-                              )
-                            : "N/A"}
-                        </div>
-                      </div>
-
-                      <div className="col-sm-6">
-                        <label className="text-muted fs-13 d-block mb-1">
-                          Last Updated
-                        </label>
-                        <div className="fw-600 fs-15 text-dark">
-                          {profile.updatedAt
-                            ? new Date(profile.updatedAt).toLocaleDateString(
-                                "vi-VN",
-                              )
-                            : "N/A"}
-                        </div>
-                      </div>
                     </div>
 
                     {/* Action Buttons */}
@@ -396,7 +370,7 @@ export const ProfilePage = () => {
                   </div>
                 </div>
 
-                {/* Phone Number with Phone Icon */}
+                {/* Phone Number */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">Phone Number</label>
                   <div className="input-block">
@@ -424,7 +398,7 @@ export const ProfilePage = () => {
                   </div>
                 </div>
 
-                {/* Address with Location Icon */}
+                {/* Address */}
                 <div className="auth-field-wrapper mb-4 position-relative">
                   <label className="form-label fw-600 mb-1">Address</label>
                   <div className="input-block">
@@ -516,7 +490,7 @@ export const ProfilePage = () => {
               </div>
 
               <form onSubmit={handleChangePassword} noValidate>
-                {/* Current Password with Lock Icon */}
+                {/* Current Password */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">
                     Current Password *
@@ -564,7 +538,7 @@ export const ProfilePage = () => {
                   </div>
                 </div>
 
-                {/* New Password with Lock Icon */}
+                {/* New Password */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">
                     New Password *
