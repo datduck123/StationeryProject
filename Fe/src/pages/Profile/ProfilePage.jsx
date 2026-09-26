@@ -490,7 +490,7 @@ export const ProfilePage = () => {
               </div>
 
               <form onSubmit={handleChangePassword} noValidate>
-                {/* Current Password with Lock Icon */}
+                {/* Current Password */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">
                     Current Password *

@@ -687,7 +687,7 @@ export const AdminUserManagement = () => {
         </div>
       )}
 
-      {/* --- 2. ADD USER MODAL (With input icons) --- */}
+      {/* --- 2. ADD USER MODAL --- */}
       {isAddModalOpen && (
         <div
           className="modal fade show d-block"
@@ -1054,9 +1054,7 @@ export const AdminUserManagement = () => {
                       disabled={isEditing}
                     >
                       <option value="ACTIVE">ACTIVE</option>
-                      <option value="INACTIVE">
-                        INACTIVE
-                      </option>
+                      <option value="INACTIVE">INACTIVE</option>
                       <option value="BLOCKED">BLOCKED</option>
                     </select>
                   </div>
