@@ -370,7 +370,7 @@ export const ProfilePage = () => {
                   </div>
                 </div>
 
-                {/* Phone Number with Phone Icon */}
+                {/* Phone Number */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">Phone Number</label>
                   <div className="input-block">
