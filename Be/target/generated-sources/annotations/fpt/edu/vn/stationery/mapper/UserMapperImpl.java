@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-09-25T15:48:43+0700",
-    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.100.v20260826-1225, environment: Java 21.0.12.1 (Eclipse Adoptium)"
+    date = "2026-09-26T00:17:23+0700",
+    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 22.0.2 (Oracle Corporation)"
 )
 @Component
 public class UserMapperImpl implements UserMapper {
@@ -27,12 +27,12 @@ public class UserMapperImpl implements UserMapper {
 
         userResponseDTO.id( user.getUserId() );
         userResponseDTO.userId( user.getUserId() );
-        userResponseDTO.address( user.getAddress() );
-        userResponseDTO.createdAt( user.getCreatedAt() );
-        userResponseDTO.email( user.getEmail() );
         userResponseDTO.fullName( user.getFullName() );
-        userResponseDTO.isAdmin( user.getIsAdmin() );
+        userResponseDTO.email( user.getEmail() );
         userResponseDTO.phone( user.getPhone() );
+        userResponseDTO.address( user.getAddress() );
+        userResponseDTO.isAdmin( user.getIsAdmin() );
+        userResponseDTO.createdAt( user.getCreatedAt() );
         userResponseDTO.updatedAt( user.getUpdatedAt() );
 
         userResponseDTO.role( (user.getIsAdmin() != null && user.getIsAdmin() == 1) ? "ROLE_ADMIN" : "ROLE_CUSTOMER" );
@@ -95,10 +95,10 @@ public class UserMapperImpl implements UserMapper {
         UserProfileResponseDTO.UserProfileResponseDTOBuilder userProfileResponseDTO = UserProfileResponseDTO.builder();
 
         userProfileResponseDTO.id( user.getUserId() );
-        userProfileResponseDTO.address( user.getAddress() );
-        userProfileResponseDTO.email( user.getEmail() );
         userProfileResponseDTO.fullName( user.getFullName() );
+        userProfileResponseDTO.email( user.getEmail() );
         userProfileResponseDTO.phone( user.getPhone() );
+        userProfileResponseDTO.address( user.getAddress() );
 
         userProfileResponseDTO.role( (user.getIsAdmin() != null && user.getIsAdmin() == 1) ? "ROLE_ADMIN" : "ROLE_CUSTOMER" );
 
