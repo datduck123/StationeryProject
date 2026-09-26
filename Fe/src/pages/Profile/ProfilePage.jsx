@@ -398,7 +398,7 @@ export const ProfilePage = () => {
                   </div>
                 </div>
 
-                {/* Address with Location Icon */}
+                {/* Address */}
                 <div className="auth-field-wrapper mb-4 position-relative">
                   <label className="form-label fw-600 mb-1">Address</label>
                   <div className="input-block">
