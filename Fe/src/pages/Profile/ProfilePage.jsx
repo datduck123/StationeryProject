@@ -261,32 +261,6 @@ export const ProfilePage = () => {
                           )}
                         </div>
                       </div>
-
-                      <div className="col-sm-6">
-                        <label className="text-muted fs-13 d-block mb-1">
-                          Member Since
-                        </label>
-                        <div className="fw-600 fs-15 text-dark">
-                          {profile.createdAt
-                            ? new Date(profile.createdAt).toLocaleDateString(
-                                "vi-VN",
-                              )
-                            : "N/A"}
-                        </div>
-                      </div>
-
-                      <div className="col-sm-6">
-                        <label className="text-muted fs-13 d-block mb-1">
-                          Last Updated
-                        </label>
-                        <div className="fw-600 fs-15 text-dark">
-                          {profile.updatedAt
-                            ? new Date(profile.updatedAt).toLocaleDateString(
-                                "vi-VN",
-                              )
-                            : "N/A"}
-                        </div>
-                      </div>
                     </div>
 
                     {/* Action Buttons */}
