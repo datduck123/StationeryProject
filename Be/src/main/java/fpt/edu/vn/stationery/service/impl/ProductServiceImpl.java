@@ -1,12 +1,19 @@
 package fpt.edu.vn.stationery.service.impl;
 
 import fpt.edu.vn.stationery.constant.ProductStatus;
+import fpt.edu.vn.stationery.dto.request.ProductRequestDTO;
+import fpt.edu.vn.stationery.dto.request.UpdateStockRequestDTO;
 import fpt.edu.vn.stationery.dto.response.PageDTO;
 import fpt.edu.vn.stationery.dto.response.ProductResponseDTO;
+import fpt.edu.vn.stationery.entity.Brand;
+import fpt.edu.vn.stationery.entity.Category;
 import fpt.edu.vn.stationery.entity.Product;
 import fpt.edu.vn.stationery.exception.BadRequestException;
+import fpt.edu.vn.stationery.exception.DuplicateResourceException;
 import fpt.edu.vn.stationery.exception.ResourceNotFoundException;
 import fpt.edu.vn.stationery.mapper.ProductMapper;
+import fpt.edu.vn.stationery.repository.BrandRepository;
+import fpt.edu.vn.stationery.repository.CategoryRepository;
 import fpt.edu.vn.stationery.repository.ProductRepository;
 import fpt.edu.vn.stationery.service.ProductService;
 import fpt.edu.vn.stationery.specification.ProductSpecification;
@@ -19,6 +26,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -28,6 +36,8 @@ public class ProductServiceImpl implements ProductService {
     private static final List<String> ALLOWED_SORT_FIELDS = List.of("price", "name", "createdAt", "productId", "stockQuantity");
 
     private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
+    private final BrandRepository brandRepository;
     private final ProductMapper productMapper;
 
     @Override
@@ -84,6 +94,124 @@ public class ProductServiceImpl implements ProductService {
         }
 
         return productMapper.toDto(product);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductResponseDTO getProductByIdAdmin(Long id) {
+        if (id == null || id <= 0) {
+            throw new BadRequestException("Invalid product ID: " + id);
+        }
+
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+
+        return productMapper.toDto(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDTO createProduct(ProductRequestDTO request) {
+        String sku = request.getSku().trim();
+        if (productRepository.existsBySku(sku)) {
+            throw new DuplicateResourceException("Product with SKU '" + sku + "' already exists");
+        }
+
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + request.getCategoryId()));
+
+        Brand brand = brandRepository.findById(request.getBrandId())
+                .orElseThrow(() -> new ResourceNotFoundException("Brand not found with id: " + request.getBrandId()));
+
+        Product product = productMapper.toEntity(request);
+        product.setCategory(category);
+        product.setBrand(brand);
+        product.setSku(sku);
+
+        if (product.getWeightKg() == null || product.getWeightKg().compareTo(BigDecimal.ZERO) <= 0) {
+            product.setWeightKg(new BigDecimal("0.100"));
+        }
+
+        if (product.getStatus() == null) {
+            product.setStatus(ProductStatus.ACTIVE);
+        }
+
+        Product savedProduct = productRepository.save(product);
+        return productMapper.toDto(savedProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDTO updateProduct(Long id, ProductRequestDTO request) {
+        if (id == null || id <= 0) {
+            throw new BadRequestException("Invalid product ID: " + id);
+        }
+
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+
+        String sku = request.getSku().trim();
+        if (productRepository.existsBySkuAndProductIdNot(sku, id)) {
+            throw new DuplicateResourceException("Product with SKU '" + sku + "' already exists");
+        }
+
+        Category category = categoryRepository.findById(request.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + request.getCategoryId()));
+
+        Brand brand = brandRepository.findById(request.getBrandId())
+                .orElseThrow(() -> new ResourceNotFoundException("Brand not found with id: " + request.getBrandId()));
+
+        productMapper.updateEntity(product, request);
+        product.setCategory(category);
+        product.setBrand(brand);
+        product.setSku(sku);
+
+        if (product.getWeightKg() == null || product.getWeightKg().compareTo(BigDecimal.ZERO) <= 0) {
+            product.setWeightKg(new BigDecimal("0.100"));
+        }
+
+        if (request.getStatus() != null) {
+            product.setStatus(request.getStatus());
+        }
+
+        Product updatedProduct = productRepository.save(product);
+        return productMapper.toDto(updatedProduct);
+    }
+
+    @Override
+    @Transactional
+    public void deleteProduct(Long id) {
+        if (id == null || id <= 0) {
+            throw new BadRequestException("Invalid product ID: " + id);
+        }
+
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+
+        if (productRepository.countOrderItemsByProductId(id) > 0) {
+            throw new BadRequestException("Cannot delete product as it is referenced by existing orders. Consider deactivating the product instead.");
+        }
+
+        if (productRepository.countCartItemsByProductId(id) > 0) {
+            throw new BadRequestException("Cannot delete product as it is currently in customer carts. Consider deactivating the product instead.");
+        }
+
+        productRepository.delete(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponseDTO updateStock(Long id, UpdateStockRequestDTO request) {
+        if (id == null || id <= 0) {
+            throw new BadRequestException("Invalid product ID: " + id);
+        }
+
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+
+        product.setStockQuantity(request.getStockQuantity());
+        Product updatedProduct = productRepository.save(product);
+        return productMapper.toDto(updatedProduct);
     }
 
     private void validatePagination(int page, int size) {

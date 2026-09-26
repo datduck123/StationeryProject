@@ -24,6 +24,7 @@ F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\entity\Categ
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\exception\DuplicateResourceException.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\service\impl\BrandServiceImpl.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\request\ResetPasswordRequestDTO.java
+F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\request\ProductRequestDTO.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\repository\UserRepository.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\controller\AdminController.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\controller\AuthController.java
@@ -53,6 +54,7 @@ F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\controller\A
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\controller\ProductController.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\StationeryApplication.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\controller\BrandController.java
+F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\request\UpdateStockRequestDTO.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\config\AppConfig.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\constant\ProductStatus.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\request\BrandRequestDTO.java
@@ -67,6 +69,7 @@ F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\config\Secur
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\security\CustomUserDetailsService.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\request\CategoryRequestDTO.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\service\impl\CategoryServiceImpl.java
+F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\controller\AdminProductController.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\security\JwtTokenProvider.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\dto\response\AuthResponse.java
 F:\CodeGit\StationeryProject\Be\src\main\java\fpt\edu\vn\stationery\util\DateUtils.java

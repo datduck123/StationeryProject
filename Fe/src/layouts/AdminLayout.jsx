@@ -133,7 +133,21 @@ export const AdminLayout = () => {
               </Link>
             </li>
 
-            {/* 3. Category Management */}
+            {/* 3. Product Management */}
+            <li className="admin-nav-item">
+              <Link
+                to="/admin/products"
+                className={`admin-nav-link ${
+                  isActive("/admin/products") ? "active" : ""
+                }`}
+                title="Product Management"
+              >
+                <i className="fa-solid fa-boxes-stacked"></i>
+                <span>Product Management</span>
+              </Link>
+            </li>
+
+            {/* 4. Category Management */}
             <li className="admin-nav-item">
               <Link
                 to="/admin/categories"
@@ -147,7 +161,7 @@ export const AdminLayout = () => {
               </Link>
             </li>
 
-            {/* 4. Brand Management */}
+            {/* 5. Brand Management */}
             <li className="admin-nav-item">
               <Link
                 to="/admin/brands"
@@ -168,10 +182,10 @@ export const AdminLayout = () => {
               <Link
                 to="/shop"
                 className="admin-nav-link"
-                title="Product Catalog"
+                title="View Client Shop"
               >
-                <i className="fa-solid fa-boxes-stacked"></i>
-                <span>Product Catalog</span>
+                <i className="fa-solid fa-store"></i>
+                <span>View Client Shop</span>
               </Link>
             </li>
             <li className="admin-nav-item">

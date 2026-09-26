@@ -8,9 +8,14 @@ import fpt.edu.vn.stationery.dto.response.ProductResponseDTO;
 import fpt.edu.vn.stationery.entity.Brand;
 import fpt.edu.vn.stationery.entity.Category;
 import fpt.edu.vn.stationery.entity.Product;
+import fpt.edu.vn.stationery.dto.request.ProductRequestDTO;
+import fpt.edu.vn.stationery.dto.request.UpdateStockRequestDTO;
 import fpt.edu.vn.stationery.exception.BadRequestException;
+import fpt.edu.vn.stationery.exception.DuplicateResourceException;
 import fpt.edu.vn.stationery.exception.ResourceNotFoundException;
 import fpt.edu.vn.stationery.mapper.ProductMapper;
+import fpt.edu.vn.stationery.repository.BrandRepository;
+import fpt.edu.vn.stationery.repository.CategoryRepository;
 import fpt.edu.vn.stationery.repository.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -41,6 +46,12 @@ public class ProductServiceImplTest {
 
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private CategoryRepository categoryRepository;
+
+    @Mock
+    private BrandRepository brandRepository;
 
     @Mock
     private ProductMapper productMapper;
@@ -305,5 +316,240 @@ public class ProductServiceImplTest {
         when(productRepository.findById(2L)).thenReturn(Optional.of(inactiveProduct));
 
         assertThrows(ResourceNotFoundException.class, () -> productService.getProductById(2L));
+    }
+
+    // 13. Admin: Create Product Success
+    @Test
+    @DisplayName("13. Admin Create Product Success")
+    void testCreateProduct_Success() {
+        ProductRequestDTO request = ProductRequestDTO.builder()
+                .name("New Notebook")
+                .sku("NB-001")
+                .price(new BigDecimal("25000.00"))
+                .weightKg(new BigDecimal("0.200"))
+                .stockQuantity(50)
+                .categoryId(1L)
+                .brandId(1L)
+                .description("High quality notebook")
+                .imageUrl("https://example.com/nb.jpg")
+                .status(ProductStatus.ACTIVE)
+                .build();
+
+        when(productRepository.existsBySku("NB-001")).thenReturn(false);
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+        when(productMapper.toEntity(request)).thenReturn(activeProduct);
+        when(productRepository.save(any(Product.class))).thenReturn(activeProduct);
+        when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
+
+        ProductResponseDTO result = productService.createProduct(request);
+
+        assertNotNull(result);
+        assertEquals("TL-GEL01", result.getSku());
+        verify(productRepository).save(any(Product.class));
+    }
+
+    // 14. Admin: Create Product Duplicate SKU
+    @Test
+    @DisplayName("14. Admin Create Product: throws DuplicateResourceException on duplicate SKU")
+    void testCreateProduct_DuplicateSku() {
+        ProductRequestDTO request = ProductRequestDTO.builder()
+                .name("New Notebook")
+                .sku("TL-GEL01")
+                .price(new BigDecimal("25000.00"))
+                .stockQuantity(50)
+                .categoryId(1L)
+                .brandId(1L)
+                .build();
+
+        when(productRepository.existsBySku("TL-GEL01")).thenReturn(true);
+
+        assertThrows(DuplicateResourceException.class, () -> productService.createProduct(request));
+        verify(productRepository, never()).save(any());
+    }
+
+    // 15. Admin: Create Product Invalid Category
+    @Test
+    @DisplayName("15. Admin Create Product: throws ResourceNotFoundException on non-existent category")
+    void testCreateProduct_InvalidCategory() {
+        ProductRequestDTO request = ProductRequestDTO.builder()
+                .name("New Notebook")
+                .sku("NB-999")
+                .price(new BigDecimal("25000.00"))
+                .stockQuantity(50)
+                .categoryId(999L)
+                .brandId(1L)
+                .build();
+
+        when(productRepository.existsBySku("NB-999")).thenReturn(false);
+        when(categoryRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> productService.createProduct(request));
+        verify(productRepository, never()).save(any());
+    }
+
+    // 16. Admin: Create Product Invalid Brand
+    @Test
+    @DisplayName("16. Admin Create Product: throws ResourceNotFoundException on non-existent brand")
+    void testCreateProduct_InvalidBrand() {
+        ProductRequestDTO request = ProductRequestDTO.builder()
+                .name("New Notebook")
+                .sku("NB-999")
+                .price(new BigDecimal("25000.00"))
+                .stockQuantity(50)
+                .categoryId(1L)
+                .brandId(999L)
+                .build();
+
+        when(productRepository.existsBySku("NB-999")).thenReturn(false);
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+        when(brandRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> productService.createProduct(request));
+        verify(productRepository, never()).save(any());
+    }
+
+    // 17. Admin: Update Product Success
+    @Test
+    @DisplayName("17. Admin Update Product Success")
+    void testUpdateProduct_Success() {
+        ProductRequestDTO request = ProductRequestDTO.builder()
+                .name("Updated Gel Pen")
+                .sku("TL-GEL01")
+                .price(new BigDecimal("18000.00"))
+                .stockQuantity(120)
+                .categoryId(1L)
+                .brandId(1L)
+                .status(ProductStatus.ACTIVE)
+                .build();
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.existsBySkuAndProductIdNot("TL-GEL01", 1L)).thenReturn(false);
+        when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
+        when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
+        when(productRepository.save(activeProduct)).thenReturn(activeProduct);
+        when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
+
+        ProductResponseDTO result = productService.updateProduct(1L, request);
+
+        assertNotNull(result);
+        verify(productMapper).updateEntity(activeProduct, request);
+        verify(productRepository).save(activeProduct);
+    }
+
+    // 18. Admin: Update Product Duplicate SKU
+    @Test
+    @DisplayName("18. Admin Update Product: throws DuplicateResourceException on duplicate SKU with another product")
+    void testUpdateProduct_DuplicateSku() {
+        ProductRequestDTO request = ProductRequestDTO.builder()
+                .name("Updated Gel Pen")
+                .sku("TL-OTHER")
+                .price(new BigDecimal("18000.00"))
+                .stockQuantity(120)
+                .categoryId(1L)
+                .brandId(1L)
+                .build();
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.existsBySkuAndProductIdNot("TL-OTHER", 1L)).thenReturn(true);
+
+        assertThrows(DuplicateResourceException.class, () -> productService.updateProduct(1L, request));
+        verify(productRepository, never()).save(any());
+    }
+
+    // 19. Admin: Update Product Not Found
+    @Test
+    @DisplayName("19. Admin Update Product: throws ResourceNotFoundException when product does not exist")
+    void testUpdateProduct_NotFound() {
+        ProductRequestDTO request = ProductRequestDTO.builder()
+                .name("Updated Gel Pen")
+                .sku("TL-GEL01")
+                .price(new BigDecimal("18000.00"))
+                .stockQuantity(120)
+                .categoryId(1L)
+                .brandId(1L)
+                .build();
+
+        when(productRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> productService.updateProduct(999L, request));
+    }
+
+    // 20. Admin: Delete Product Success
+    @Test
+    @DisplayName("20. Admin Delete Product Success")
+    void testDeleteProduct_Success() {
+        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.countOrderItemsByProductId(1L)).thenReturn(0L);
+        when(productRepository.countCartItemsByProductId(1L)).thenReturn(0L);
+
+        productService.deleteProduct(1L);
+
+        verify(productRepository).delete(activeProduct);
+    }
+
+    // 21. Admin: Delete Product Not Found
+    @Test
+    @DisplayName("21. Admin Delete Product: throws ResourceNotFoundException when product does not exist")
+    void testDeleteProduct_NotFound() {
+        when(productRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> productService.deleteProduct(999L));
+        verify(productRepository, never()).delete(any(Product.class));
+    }
+
+    // 22. Admin: Delete Product Referenced By Orders
+    @Test
+    @DisplayName("22. Admin Delete Product: throws BadRequestException when product is referenced by orders")
+    void testDeleteProduct_ReferencedByOrders() {
+        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.countOrderItemsByProductId(1L)).thenReturn(3L);
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> productService.deleteProduct(1L));
+        assertTrue(ex.getMessage().contains("orders"));
+        verify(productRepository, never()).delete(any(Product.class));
+    }
+
+    // 23. Admin: Delete Product Referenced By Carts
+    @Test
+    @DisplayName("23. Admin Delete Product: throws BadRequestException when product is referenced by carts")
+    void testDeleteProduct_ReferencedByCarts() {
+        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.countOrderItemsByProductId(1L)).thenReturn(0L);
+        when(productRepository.countCartItemsByProductId(1L)).thenReturn(2L);
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> productService.deleteProduct(1L));
+        assertTrue(ex.getMessage().contains("carts"));
+        verify(productRepository, never()).delete(any(Product.class));
+    }
+
+    // 24. Admin: Update Stock Success
+    @Test
+    @DisplayName("24. Admin Update Stock Success")
+    void testUpdateStock_Success() {
+        UpdateStockRequestDTO stockRequest = UpdateStockRequestDTO.builder().stockQuantity(250).build();
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.save(activeProduct)).thenReturn(activeProduct);
+        when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
+
+        ProductResponseDTO result = productService.updateStock(1L, stockRequest);
+
+        assertNotNull(result);
+        assertEquals(250, activeProduct.getStockQuantity());
+        verify(productRepository).save(activeProduct);
+    }
+
+    // 25. Admin: Get Product By ID (including INACTIVE)
+    @Test
+    @DisplayName("25. Admin Get Product By ID: returns product even if INACTIVE")
+    void testGetProductByIdAdmin_InactiveProduct() {
+        when(productRepository.findById(2L)).thenReturn(Optional.of(inactiveProduct));
+        when(productMapper.toDto(inactiveProduct)).thenReturn(productResponseDTO);
+
+        ProductResponseDTO result = productService.getProductByIdAdmin(2L);
+
+        assertNotNull(result);
+        verify(productRepository).findById(2L);
     }
 }

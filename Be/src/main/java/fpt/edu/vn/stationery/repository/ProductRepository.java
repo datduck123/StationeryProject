@@ -19,6 +19,16 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByBrandBrandId(Long brandId);
 
+    boolean existsBySku(String sku);
+
+    boolean existsBySkuAndProductIdNot(String sku, Long productId);
+
+    @org.springframework.data.jpa.repository.Query(value = "SELECT COUNT(*) FROM OrderItems WHERE product_id = :productId", nativeQuery = true)
+    long countOrderItemsByProductId(@org.springframework.data.repository.query.Param("productId") Long productId);
+
+    @org.springframework.data.jpa.repository.Query(value = "SELECT COUNT(*) FROM CartItems WHERE product_id = :productId", nativeQuery = true)
+    long countCartItemsByProductId(@org.springframework.data.repository.query.Param("productId") Long productId);
+
     @Override
     @EntityGraph(attributePaths = {"category", "brand"})
     Page<Product> findAll(@Nullable Specification<Product> spec, Pageable pageable);

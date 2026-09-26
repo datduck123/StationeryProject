@@ -41,6 +41,43 @@ export const getCategories = () => api.get("/categories");
  */
 export const getBrands = () => api.get("/brands");
 
+// ==========================================
+// Admin Product APIs (/api/admin/products)
+// ==========================================
+
+/**
+ * Admin: Fetch product by ID (including inactive).
+ * @param {number|string} id
+ */
+export const adminGetProductById = (id) => api.get(`/admin/products/${id}`);
+
+/**
+ * Admin: Create a new product.
+ * @param {Object} data - ProductRequestDTO
+ */
+export const adminCreateProduct = (data) => api.post("/admin/products", data);
+
+/**
+ * Admin: Update an existing product.
+ * @param {number|string} id
+ * @param {Object} data - ProductRequestDTO
+ */
+export const adminUpdateProduct = (id, data) => api.put(`/admin/products/${id}`, data);
+
+/**
+ * Admin: Delete a product.
+ * @param {number|string} id
+ */
+export const adminDeleteProduct = (id) => api.delete(`/admin/products/${id}`);
+
+/**
+ * Admin: Quick update product stock quantity.
+ * @param {number|string} id
+ * @param {number} stockQuantity
+ */
+export const adminUpdateStock = (id, stockQuantity) =>
+  api.patch(`/admin/products/${id}/stock`, { stockQuantity });
+
 /**
  * Standardize and resolve image URL for a product so name and image match 100%.
  * @param {Object} product
