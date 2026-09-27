@@ -22,7 +22,6 @@ public class ProductRequestDTO {
     @Size(max = 200, message = "Product name must not exceed 200 characters")
     private String name;
 
-    @NotBlank(message = "SKU is required")
     @Size(max = 50, message = "SKU must not exceed 50 characters")
     private String sku;
 
@@ -31,6 +30,8 @@ public class ProductRequestDTO {
     private BigDecimal price;
 
     @DecimalMin(value = "0.001", message = "Weight must be greater than 0")
+    @JsonProperty("weightKg")
+    @JsonAlias({"weight", "weight_kg"})
     private BigDecimal weightKg;
 
     @NotNull(message = "Stock quantity is required")

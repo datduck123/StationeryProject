@@ -151,18 +151,18 @@ export const Footer = () => {
                 <Link to="/">{t("header.home")}</Link>
               </li>
               <li className="mb-12">
-                <Link to="/shop-grid-sidebar.html">{t("footer.aboutUs")}</Link>
+                <Link to="/shop">{t("footer.aboutUs")}</Link>
               </li>
               <li className="mb-12">
-                <Link to="/shop-grid-sidebar.html">
+                <Link to="/shop">
                   {t("home.latestArticles")}
                 </Link>
               </li>
               <li className="mb-12">
-                <Link to="/shop-grid-sidebar.html">{t("header.shop")}</Link>
+                <Link to="/shop">{t("header.shop")}</Link>
               </li>
               <li>
-                <Link to="/shop-grid-sidebar.html">{t("footer.faq")}</Link>
+                <Link to="/shop">{t("footer.faq")}</Link>
               </li>
             </ul>
           </div>
@@ -175,22 +175,22 @@ export const Footer = () => {
             </h6>
             <ul className="list-unstyled mb-0">
               <li className="mb-12">
-                <Link to="/shop-grid-sidebar.html">{t("header.shop")}</Link>
+                <Link to="/shop">{t("header.shop")}</Link>
               </li>
               <li className="mb-12">
-                <Link to="/checkout.html">{t("footer.myAccount")}</Link>
+                <Link to="/profile">{t("footer.myAccount")}</Link>
               </li>
               <li className="mb-12">
-                <Link to="/cart.html">{t("modals.viewCart")}</Link>
+                <Link to="/cart">{t("modals.viewCart")}</Link>
               </li>
               <li className="mb-12">
-                <Link to="/shop-grid-sidebar.html">{t("footer.wishlist")}</Link>
+                <Link to="/shop">{t("footer.wishlist")}</Link>
               </li>
               <li className="mb-12">
-                <Link to="/checkout.html">{t("footer.orderTracking")}</Link>
+                <Link to="/checkout">{t("footer.orderTracking")}</Link>
               </li>
               <li>
-                <Link to="/shop-grid-sidebar.html">
+                <Link to="/shop">
                   {t("footer.contactUs")}
                 </Link>
               </li>

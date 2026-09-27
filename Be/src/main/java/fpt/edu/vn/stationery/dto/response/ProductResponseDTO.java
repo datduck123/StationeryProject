@@ -33,6 +33,11 @@ public class ProductResponseDTO {
 
     private BigDecimal weightKg;
 
+    @JsonProperty("weight")
+    public BigDecimal getWeight() {
+        return weightKg;
+    }
+
     private Integer stockQuantity;
 
     @JsonProperty("stock")

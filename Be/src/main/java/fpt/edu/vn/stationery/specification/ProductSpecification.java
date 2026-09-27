@@ -52,4 +52,43 @@ public class ProductSpecification {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
+
+    public static Specification<Product> filterAdminProducts(
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            String status) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Status filter: only filter if explicitly ACTIVE or INACTIVE. If null, blank or ALL, include ALL products!
+            if (status != null && !status.isBlank() && !status.equalsIgnoreCase("ALL")) {
+                try {
+                    ProductStatus productStatus = ProductStatus.valueOf(status.trim().toUpperCase());
+                    predicates.add(cb.equal(root.get("status"), productStatus));
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+
+            // Keyword search on name or sku
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                String pattern = "%" + keyword.trim().toLowerCase() + "%";
+                Predicate nameMatch = cb.like(cb.lower(root.get("name")), pattern);
+                Predicate skuMatch = cb.like(cb.lower(root.get("sku")), pattern);
+                predicates.add(cb.or(nameMatch, skuMatch));
+            }
+
+            // Category filter
+            if (categoryId != null && categoryId > 0) {
+                predicates.add(cb.equal(root.get("category").get("categoryId"), categoryId));
+            }
+
+            // Brand filter
+            if (brandId != null && brandId > 0) {
+                predicates.add(cb.equal(root.get("brand").get("brandId"), brandId));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
 }

@@ -29,7 +29,8 @@ const formatCurrency = (amount) => {
 };
 
 export const ShopGridSidebar = () => {
-  const { openCart, openQuickView, openCompare } = useCartContext();
+  const { openCart, openQuickView, openCompare, addCompareProduct } = useCartContext();
+  const [wishlist, setWishlist] = useState([]);
   const { t } = useTranslation();
 
   // ── Sidebar accordion state ──────────────────────────────────────────────
@@ -59,6 +60,7 @@ export const ShopGridSidebar = () => {
 
   // ── Data state ───────────────────────────────────────────────────────────
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [categories, setCategories] = useState([]);
@@ -138,6 +140,17 @@ export const ShopGridSidebar = () => {
       setLoading(false);
     }
   }, [currentPage, keyword, selectedCategoryId, selectedBrandId, minPrice, maxPrice, sortValue]);
+
+  // ── Apply client-side stock filter after fetch ────────────────────────────
+  useEffect(() => {
+    if (!stockFilter) {
+      setFilteredProducts(products);
+    } else if (stockFilter === "inStock") {
+      setFilteredProducts(products.filter((p) => (p.stockQuantity ?? p.stock_quantity ?? 0) > 0));
+    } else if (stockFilter === "outStock") {
+      setFilteredProducts(products.filter((p) => (p.stockQuantity ?? p.stock_quantity ?? 0) <= 0));
+    }
+  }, [products, stockFilter]);
 
   useEffect(() => {
     fetchProducts();
@@ -682,111 +695,153 @@ export const ShopGridSidebar = () => {
                 </div>
               ) : (
                 <div className="row row-gap-4 mb-48">
-                  {products.map((prod) => (
-                    <div
-                      key={prod.id}
-                      className="col-lg-4 col-md-6 col-sm-6 wow fadeInUp animated"
-                      data-wow-delay="400ms"
-                    >
-                      <div className="latest-product-card">
-                        <div className="image-box mb-16">
-                          <Link to={`/product/${prod.id}`} className="image">
-                            <img
-                              src={getProductImage(prod)}
-                              className="product-image"
-                              alt={prod.name}
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = "/assets/media/products/product-7.png";
-                              }}
-                            />
-                          </Link>
-                          <div className="side-icons">
-                            <ul className="list-unstyled">
-                              <li>
-                                <a href="#wishlist" onClick={(e) => e.preventDefault()}>
-                                  <i className="fa-light fa-heart"></i>
-                                </a>
-                              </li>
-                              <li>
-                                <a
-                                  href="#quickview"
-                                  className="btn"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openQuickView(prod);
-                                  }}
-                                >
-                                  <i className="fa-regular fa-eye"></i>
-                                </a>
-                              </li>
-                              <li>
-                                <a
-                                  href="#compare"
-                                  className="zui-wrapper-button"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openCompare();
-                                  }}
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="16"
-                                    height="17"
-                                    viewBox="0 0 16 17"
-                                    fill="none"
-                                  >
-                                    <path
-                                      d="M12.979 16.5293C12.8173 16.5293 12.6557 16.4669 12.5333 16.3425C12.2913 16.0964 12.2947 15.7007 12.5408 15.4586L14.6415 13.393C14.7584 13.2759 14.8228 13.1207 14.8228 12.9558C14.8228 12.7913 14.7588 12.6366 14.6426 12.5197L12.5432 10.4773C11.9709 9.87765 12.8002 9.02596 13.4148 9.5813L15.5176 11.627C15.5194 11.6288 15.5213 11.6305 15.523 11.6323C15.8775 11.9858 16.0728 12.4558 16.0727 12.9558C16.0727 13.4559 15.8775 13.9259 15.523 14.2793C15.522 14.2803 15.521 14.2813 15.5199 14.2823L13.4172 16.35C13.2955 16.4696 13.1372 16.5293 12.979 16.5293ZM12.979 13.5293H3.82275C1.755 13.5293 0.0727539 11.8471 0.0727539 9.7793V8.18555C0.103473 7.35718 1.29232 7.3578 1.32275 8.18555V9.7793C1.32275 11.1578 2.44425 12.2793 3.82275 12.2793H12.979C13.8074 12.31 13.8068 13.4989 12.979 13.5293ZM15.4478 9.49805C15.1026 9.49805 14.8228 9.21824 14.8228 8.87305V7.2793C14.8228 5.9008 13.7013 4.7793 12.3228 4.7793H3.1665C2.33813 4.74858 2.33875 3.55974 3.1665 3.5293H12.3228C14.3905 3.5293 16.0728 5.21155 16.0728 7.2793V8.87305C16.0728 9.21824 15.7929 9.49805 15.4478 9.49805ZM3.16644 7.6543C3.00938 7.6543 2.85216 7.59549 2.73069 7.47727L0.627879 5.43162C0.626035 5.42983 0.624223 5.42805 0.622441 5.42624C0.267973 5.07283 0.0727539 4.60283 0.0727539 4.1028C0.0727539 3.60277 0.267973 3.13274 0.622441 2.77937C0.623473 2.77833 0.624473 2.77733 0.625504 2.77633L2.72832 0.708647C2.97444 0.466647 3.37016 0.46996 3.61216 0.716085C3.85416 0.96221 3.85085 1.35793 3.60472 1.59993L1.50397 3.66562C1.26438 3.89593 1.26388 4.30799 1.50285 4.5389L3.60232 6.5813C3.84972 6.82199 3.85516 7.21768 3.61447 7.46512C3.492 7.59102 3.32925 7.6543 3.16644 7.6543Z"
-                                      fill="#363636"
-                                    ></path>
-                                  </svg>
-                                </a>
-                              </li>
-                            </ul>
-                          </div>
-                          <Link
-                            to="/cart.html"
-                            className="cus-btn"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              openCart();
-                            }}
-                          >
-                            <span className="btn-text">
-                              {t("common.addCart")}
-                            </span>
-                            <span>{t("common.goToCart")}</span>
-                          </Link>
-                        </div>
-                        <div className="product-desc">
-                          <div>
-                            <Link
-                              to={`/product/${prod.id}`}
-                              className="product-title h6 fw-700 mb-8"
-                            >
-                              {prod.name}
+                  {filteredProducts.map((prod) => {
+                    const prodId = prod.id || prod.productId;
+                    const isWishlisted = wishlist.includes(prodId);
+                    const inStock = (prod.stockQuantity ?? prod.stock_quantity ?? 0) > 0;
+                    return (
+                      <div
+                        key={prodId}
+                        className="col-lg-4 col-md-6 col-sm-6 wow fadeInUp animated"
+                        data-wow-delay="400ms"
+                      >
+                        <div className="latest-product-card">
+                          <div className="image-box mb-16">
+                            <Link to={`/product/${prodId}`} className="image">
+                              <img
+                                src={getProductImage(prod)}
+                                className="product-image"
+                                alt={prod.name}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = "/assets/media/products/product-7.png";
+                                }}
+                              />
                             </Link>
-                            {prod.category && (
-                              <p
-                                className="dark-gray mb-4"
-                                style={{ fontSize: "12px" }}
+                            {!inStock && (
+                              <span
+                                style={{
+                                  position: "absolute",
+                                  top: "10px",
+                                  left: "10px",
+                                  background: "#ef4444",
+                                  color: "#fff",
+                                  fontSize: "11px",
+                                  fontWeight: 700,
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  zIndex: 2,
+                                }}
                               >
-                                {prod.category.name}
-                              </p>
+                                Hết hàng
+                              </span>
                             )}
-                            <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
-                              <span className="color-primary">★★★★★</span>
-                              <p className="fw-500">(02)</p>
+                            <div className="side-icons">
+                              <ul className="list-unstyled">
+                                {/* Wishlist */}
+                                <li>
+                                  <a
+                                    href="#wishlist"
+                                    title={isWishlisted ? "Xóa yêu thích" : "Thêm yêu thích"}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setWishlist((prev) =>
+                                        prev.includes(prodId)
+                                          ? prev.filter((id) => id !== prodId)
+                                          : [...prev, prodId]
+                                      );
+                                    }}
+                                    style={{ color: isWishlisted ? "#e57c32" : undefined }}
+                                  >
+                                    <i className={isWishlisted ? "fa-solid fa-heart" : "fa-light fa-heart"} style={{ color: isWishlisted ? "#e57c32" : undefined }}></i>
+                                  </a>
+                                </li>
+                                {/* Quick View */}
+                                <li>
+                                  <a
+                                    href="#quickview"
+                                    title="Xem nhanh"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      openQuickView(prod);
+                                    }}
+                                  >
+                                    <i className="fa-regular fa-eye"></i>
+                                  </a>
+                                </li>
+                                {/* Compare - bar chart icon */}
+                                <li>
+                                  <a
+                                    href="#compare"
+                                    title="So sánh sản phẩm"
+                                    className="zui-wrapper-button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      addCompareProduct(prod);
+                                      openCompare(prod);
+                                    }}
+                                  >
+                                    <svg
+                                      width="17"
+                                      height="17"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="#363636"
+                                      strokeWidth="2.2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <line x1="18" y1="20" x2="18" y2="10" />
+                                      <line x1="12" y1="20" x2="12" y2="4" />
+                                      <line x1="6" y1="20" x2="6" y2="14" />
+                                    </svg>
+                                  </a>
+                                </li>
+                              </ul>
                             </div>
-                            <h5 className="medium-black fw-700">
-                              {formatCurrency(prod.price)}
-                            </h5>
+                            <Link
+                              to="/cart.html"
+                              className="cus-btn"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                openCart();
+                              }}
+                            >
+                              <span className="btn-text">
+                                {t("common.addCart")}
+                              </span>
+                              <span>{t("common.goToCart")}</span>
+                            </Link>
+                          </div>
+                          <div className="product-desc">
+                            <div>
+                              <Link
+                                to={`/product/${prodId}`}
+                                className="product-title h6 fw-700 mb-8"
+                              >
+                                {prod.name}
+                              </Link>
+                              {prod.category && (
+                                <p
+                                  className="dark-gray mb-4"
+                                  style={{ fontSize: "12px" }}
+                                >
+                                  {prod.category.name}
+                                </p>
+                              )}
+                              <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
+                                <span className="color-primary">★★★★★</span>
+                                <p className="fw-500">(02)</p>
+                              </div>
+                              <h5 className="medium-black fw-700">
+                                {formatCurrency(prod.price)}
+                              </h5>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 

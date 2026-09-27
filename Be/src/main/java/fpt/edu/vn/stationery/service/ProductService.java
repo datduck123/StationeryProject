@@ -19,6 +19,15 @@ public interface ProductService {
             BigDecimal maxPrice,
             String sort);
 
+    PageDTO<ProductResponseDTO> getProductsAdmin(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            String status,
+            String sort);
+
     ProductResponseDTO getProductById(Long id);
 
     ProductResponseDTO getProductByIdAdmin(Long id);

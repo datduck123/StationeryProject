@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -81,6 +82,35 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    public PageDTO<ProductResponseDTO> getProductsAdmin(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            String status,
+            String sort) {
+        validatePagination(page, size);
+
+        if (categoryId != null && categoryId <= 0) {
+            categoryId = null;
+        }
+        if (brandId != null && brandId <= 0) {
+            brandId = null;
+        }
+
+        Sort sortObj = parseSort(sort);
+        Pageable pageable = PageRequest.of(page, size, sortObj);
+
+        Specification<Product> spec = ProductSpecification.filterAdminProducts(keyword, categoryId, brandId, status);
+        Page<Product> productPage = productRepository.findAll(spec, pageable);
+
+        Page<ProductResponseDTO> dtoPage = productPage.map(productMapper::toDto);
+        return PageDTO.from(dtoPage);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public ProductResponseDTO getProductById(Long id) {
         if (id == null || id <= 0) {
             throw new BadRequestException("Invalid product ID: " + id);
@@ -112,9 +142,15 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponseDTO createProduct(ProductRequestDTO request) {
-        String sku = request.getSku().trim();
-        if (productRepository.existsBySku(sku)) {
-            throw new DuplicateResourceException("Product with SKU '" + sku + "' already exists");
+        // Auto-generate SKU if not provided
+        String sku;
+        if (request.getSku() == null || request.getSku().isBlank()) {
+            sku = "SKU-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        } else {
+            sku = request.getSku().trim();
+            if (productRepository.existsBySku(sku)) {
+                throw new DuplicateResourceException("Product with SKU '" + sku + "' already exists");
+            }
         }
 
         Category category = categoryRepository.findById(request.getCategoryId())
@@ -127,6 +163,9 @@ public class ProductServiceImpl implements ProductService {
         product.setCategory(category);
         product.setBrand(brand);
         product.setSku(sku);
+        LocalDateTime now = LocalDateTime.now();
+        product.setCreatedAt(now);
+        product.setUpdatedAt(now);
 
         if (product.getWeightKg() == null || product.getWeightKg().compareTo(BigDecimal.ZERO) <= 0) {
             product.setWeightKg(new BigDecimal("0.100"));
@@ -150,9 +189,15 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
-        String sku = request.getSku().trim();
-        if (productRepository.existsBySkuAndProductIdNot(sku, id)) {
-            throw new DuplicateResourceException("Product with SKU '" + sku + "' already exists");
+        // Keep existing SKU if not provided, otherwise update it
+        String sku;
+        if (request.getSku() == null || request.getSku().isBlank()) {
+            sku = product.getSku(); // keep existing
+        } else {
+            sku = request.getSku().trim();
+            if (productRepository.existsBySkuAndProductIdNot(sku, id)) {
+                throw new DuplicateResourceException("Product with SKU '" + sku + "' already exists");
+            }
         }
 
         Category category = categoryRepository.findById(request.getCategoryId())

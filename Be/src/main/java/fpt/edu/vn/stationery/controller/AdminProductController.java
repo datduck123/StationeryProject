@@ -24,6 +24,19 @@ public class AdminProductController {
 
     private final ProductService productService;
 
+    @Operation(summary = "Get paginated products for Admin (including INACTIVE)")
+    @GetMapping
+    public ResponseEntity<fpt.edu.vn.stationery.dto.response.PageDTO<ProductResponseDTO>> getAllProductsAdmin(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long brandId,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "createdAt,desc") String sort) {
+        return ResponseEntity.ok(productService.getProductsAdmin(page, size, keyword, categoryId, brandId, status, sort));
+    }
+
     @Operation(summary = "Get product by ID (Admin)")
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable Long id) {

@@ -444,7 +444,7 @@ export const Home = () => {
                     {t("home.heroTitle2")}
                   </h1>
                   <p className="mb-32">{t("home.heroDesc")}</p>
-                  <Link to="/shop-grid-sidebar.html" className="cus-btn">
+                  <Link to="/shop" className="cus-btn">
                     <span className="btn-text">{t("common.shopNow")}</span>
                     <span>{t("common.goToShop")}</span>
                   </Link>
@@ -484,7 +484,7 @@ export const Home = () => {
             {categories.map((cat) => (
               <Link
                 key={cat.id}
-                to="/shop-grid-sidebar.html"
+                to="/shop"
                 className="collection-block w-100 wow fadeInUp animated"
                 data-wow-delay={cat.delay}
               >
@@ -550,7 +550,7 @@ export const Home = () => {
                       {t("home.gridTitle1")}
                     </h2>
                     <p className="mb-16">{t("home.gridDesc1")}</p>
-                    <Link to="/shop-grid-sidebar.html" className="cus-btn-2">
+                    <Link to="/shop" className="cus-btn-2">
                       <span className="btn-text">{t("common.shopNow")}</span>
                       <span>{t("common.goToShop")}</span>
                     </Link>
@@ -571,7 +571,7 @@ export const Home = () => {
                       {t("home.gridTitle2")}
                     </h4>
                     <p className="mb-16">{t("home.gridDesc2")}</p>
-                    <Link to="/shop-grid-sidebar.html" className="cus-btn-2">
+                    <Link to="/shop" className="cus-btn-2">
                       <span className="btn-text">{t("common.shopNow")}</span>
                       <span>{t("common.goToShop")}</span>
                     </Link>
@@ -590,7 +590,7 @@ export const Home = () => {
                       {t("home.gridTitle3")}
                     </h4>
                     <p className="mb-16">{t("home.gridDesc3")}</p>
-                    <Link to="/shop-grid-sidebar.html" className="cus-btn-2">
+                    <Link to="/shop" className="cus-btn-2">
                       <span className="btn-text">{t("common.shopNow")}</span>
                       <span>{t("common.goToShop")}</span>
                     </Link>
@@ -618,7 +618,7 @@ export const Home = () => {
                   {t("home.creativeIdeas")}
                 </h3>
                 <p className="text mb-16">{t("home.creativeIdeasDesc")}</p>
-                <Link to="/shop-grid-sidebar.html" className="cus-btn">
+                <Link to="/shop" className="cus-btn">
                   <span className="btn-text">{t("common.shopNow")}</span>
                   <span>{t("common.goToShop")}</span>
                 </Link>
@@ -697,7 +697,7 @@ export const Home = () => {
                 <CountdownTimer targetDate="2026/12/31" />
               </div>
               <div className="text-center">
-                <Link to="/shop-grid-sidebar.html" className="cus-btn">
+                <Link to="/shop" className="cus-btn">
                   <span className="btn-text">{t("common.shopNow")}</span>
                   <span>{t("common.goToShop")}</span>
                 </Link>

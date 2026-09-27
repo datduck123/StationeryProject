@@ -150,6 +150,14 @@ export const Header = () => {
                             <span>User Management</span>
                           </Link>
                           <Link
+                            to="/admin/products"
+                            className="user-menu-item"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            <i className="fa-solid fa-boxes-stacked color-primary"></i>
+                            <span>Product Management</span>
+                          </Link>
+                          <Link
                             to="/admin/categories"
                             className="user-menu-item"
                             onClick={() => setShowUserMenu(false)}
@@ -231,40 +239,35 @@ export const Header = () => {
                         </Link>
                       </li>
                       <li>
-                        <Link to="/shop-grid-sidebar.html">
+                        <Link to="/shop">
                           {t("header.categories")}
                         </Link>
                       </li>
                       <li
-                        className={`dropdown ${isCurrent("/shop-grid-sidebar.html") || isCurrent("/product-detail.html") || isCurrent("/cart.html") || isCurrent("/checkout.html") ? "current" : ""}`}
+                        className={`dropdown ${isCurrent("/shop") || isCurrent("/product-detail") || isCurrent("/cart") || isCurrent("/checkout") ? "current" : ""}`}
                       >
-                        <Link to="/shop-grid-sidebar.html">
+                        <Link to="/shop">
                           {t("header.shop")}
                           <i className="fa-light fa-chevron-down d-lg-block d-none"></i>
                         </Link>
                         <ul className="sub-menu">
                           <li>
-                            <Link to="/shop-grid-sidebar.html">
+                            <Link to="/shop">
                               {t("header.shopGrid")}
                             </Link>
                           </li>
                           <li>
-                            <Link to="/product-detail.html">
-                              {t("header.productDetail")}
-                            </Link>
+                            <Link to="/cart">{t("header.cart")}</Link>
                           </li>
                           <li>
-                            <Link to="/cart.html">{t("header.cart")}</Link>
-                          </li>
-                          <li>
-                            <Link to="/checkout.html">
+                            <Link to="/checkout">
                               {t("header.checkout")}
                             </Link>
                           </li>
                         </ul>
                       </li>
                       <li>
-                        <Link to="/shop-grid-sidebar.html">
+                        <Link to="/shop">
                           {t("header.brands")}
                         </Link>
                       </li>

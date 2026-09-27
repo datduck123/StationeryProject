@@ -106,7 +106,7 @@ export const ProductDetail = () => {
       <div className="text-center py-80">
         <p style={{ color: "red" }}>{error}</p>
         <Link
-          to="/shop-grid-sidebar.html"
+          to="/shop"
           style={{
             display: "inline-flex",
             alignItems: "center",

@@ -64,6 +64,7 @@ public class Product {
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) createdAt = LocalDateTime.now();
+        if (updatedAt == null) updatedAt = LocalDateTime.now();
         if (status == null) status = ProductStatus.ACTIVE;
         if (stockQuantity == null) stockQuantity = 0;
     }

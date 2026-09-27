@@ -52,6 +52,7 @@ public class User {
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) createdAt = LocalDateTime.now();
+        if (updatedAt == null) updatedAt = LocalDateTime.now();
         if (status == null) status = UserStatus.ACTIVE;
         if (isAdmin == null) isAdmin = 0;
     }

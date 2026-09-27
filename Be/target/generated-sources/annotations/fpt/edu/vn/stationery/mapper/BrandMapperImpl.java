@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-09-27T00:26:59+0700",
-    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 22.0.2 (Oracle Corporation)"
+    date = "2026-09-28T00:33:50+0700",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.100.v20260826-1225, environment: Java 21.0.12.1 (Eclipse Adoptium)"
 )
 @Component
 public class BrandMapperImpl implements BrandMapper {
@@ -22,8 +22,8 @@ public class BrandMapperImpl implements BrandMapper {
 
         Brand.BrandBuilder brand = Brand.builder();
 
-        brand.name( dto.getName() );
         brand.description( dto.getDescription() );
+        brand.name( dto.getName() );
 
         return brand.build();
     }
@@ -37,9 +37,9 @@ public class BrandMapperImpl implements BrandMapper {
         BrandResponseDTO.BrandResponseDTOBuilder brandResponseDTO = BrandResponseDTO.builder();
 
         brandResponseDTO.brandId( entity.getBrandId() );
-        brandResponseDTO.name( entity.getName() );
-        brandResponseDTO.description( entity.getDescription() );
         brandResponseDTO.createdAt( entity.getCreatedAt() );
+        brandResponseDTO.description( entity.getDescription() );
+        brandResponseDTO.name( entity.getName() );
         brandResponseDTO.updatedAt( entity.getUpdatedAt() );
 
         return brandResponseDTO.build();
@@ -51,7 +51,7 @@ public class BrandMapperImpl implements BrandMapper {
             return;
         }
 
-        entity.setName( dto.getName() );
         entity.setDescription( dto.getDescription() );
+        entity.setName( dto.getName() );
     }
 }

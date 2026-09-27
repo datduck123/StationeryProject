@@ -39,7 +39,6 @@ fpt\edu\vn\stationery\constant\UserStatus.class
 fpt\edu\vn\stationery\dto\response\CategoryResponseDTO$CategoryResponseDTOBuilder.class
 fpt\edu\vn\stationery\controller\AuthController.class
 fpt\edu\vn\stationery\dto\response\BrandResponseDTO$BrandResponseDTOBuilder.class
-fpt\edu\vn\stationery\service\impl\ProductServiceImpl.class
 fpt\edu\vn\stationery\security\JwtTokenProvider.class
 fpt\edu\vn\stationery\service\EmailService.class
 fpt\edu\vn\stationery\mapper\ProductMapperImpl.class

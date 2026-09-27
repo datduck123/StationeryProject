@@ -46,6 +46,22 @@ export const getBrands = () => api.get("/brands");
 // ==========================================
 
 /**
+ * Admin: Fetch paginated, filtered product list (includes INACTIVE).
+ */
+export const adminGetProducts = (params = {}) => {
+  const query = {};
+  if (params.page !== undefined) query.page = params.page;
+  if (params.size !== undefined) query.size = params.size;
+  if (params.keyword) query.keyword = params.keyword;
+  if (params.categoryId) query.categoryId = params.categoryId;
+  if (params.brandId) query.brandId = params.brandId;
+  if (params.status && params.status !== "ALL") query.status = params.status;
+  if (params.sort) query.sort = params.sort;
+
+  return api.get("/admin/products", { params: query });
+};
+
+/**
  * Admin: Fetch product by ID (including inactive).
  * @param {number|string} id
  */
@@ -79,12 +95,38 @@ export const adminUpdateStock = (id, stockQuantity) =>
   api.patch(`/admin/products/${id}/stock`, { stockQuantity });
 
 /**
+ * Upload an image file to server.
+ * @param {File} file
+ * @returns {Promise<import("axios").AxiosResponse<{url: string, fileName: string}>>}
+ */
+export const uploadProductImage = (file) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  return api.post("/upload", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+};
+
+// ==========================================
+// Admin Category APIs (/api/admin/categories)
+// ==========================================
+export const adminGetCategories = () => api.get("/admin/categories");
+export const adminCreateCategory = (data) => api.post("/admin/categories", data);
+export const adminUpdateCategory = (id, data) => api.put(`/admin/categories/${id}`, data);
+export const adminDeleteCategory = (id) => api.delete(`/admin/categories/${id}`);
+
+/**
  * Standardize and resolve image URL for a product so name and image match 100%.
  * @param {Object} product
  * @returns {string}
  */
 export const getProductImage = (product) => {
   if (product?.imageUrl && !product.imageUrl.includes("example.com")) {
+    if (product.imageUrl.startsWith("/uploads/")) {
+      return `http://localhost:8080${product.imageUrl}`;
+    }
     return product.imageUrl;
   }
   const idMap = {
