@@ -808,51 +808,6 @@
   max-width: 260px;
 }
 
-.admin-order-inline-status {
-  min-width: 150px;
-}
-
-.admin-order-inline-status-select {
-  width: 150px;
-  max-width: 100%;
-  border-radius: 8px;
-  padding: 6px 28px 6px 10px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.admin-order-inline-status-select:disabled {
-  opacity: 1;
-  cursor: default;
-}
-
-.admin-order-inline-status-pending {
-  background-color: #fffbeb;
-  border-color: #fbbf24;
-  color: #78350f;
-}
-
-.admin-order-inline-status-confirmed {
-  background-color: #eff6ff;
-  border-color: #93c5fd;
-  color: #1e40af;
-}
-
-.admin-order-inline-status-shipping {
-  background-color: #ecfeff;
-  border-color: #67e8f9;
-  color: #155e75;
-}
-
-.admin-order-inline-status-delivered {
-  background-color: #f0fdf4;
-  border-color: #86efac;
-  color: #166534;
-}
-
-.admin-order-inline-status-cancelled {
-  background-color: #f3f4f6;
-  border-color: #d1d5db;
-  color: #374151;
+.admin-order-status-dialog {
+  width: min(480px, 100%);
 }
