@@ -37,6 +37,7 @@ export const AppRoutes = () => {
         <Route path="/admin/categories" element={<AdminCategoryManagement />} />
         <Route path="/admin/brands" element={<AdminBrandManagement />} />
         <Route path="/admin/orders" element={<AdminOrderManagement />} />
+        <Route path="/admin/orders/:id" element={<AdminOrderManagement />} />
       </Route>
 
       {/* Public and Customer routes in MainLayout */}
