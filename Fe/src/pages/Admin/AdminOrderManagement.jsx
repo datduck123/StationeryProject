@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import AdminListControls from "../../components/admin/AdminListControls";
 import AdminPagination from "../../components/admin/AdminPagination";
+import OrderStatusChanger from "../../components/orders/OrderStatusChanger";
+import OrderStatusQuickSelect from "../../components/orders/OrderStatusQuickSelect";
 import orderService from "../../services/orderService";
 
 const PAGE_SIZE = 10;
@@ -21,17 +24,12 @@ const sortOptions = [
   { value: "orderId:desc", label: "Order ID: high to low" },
   { value: "orderId:asc", label: "Order ID: low to high" },
 ];
-const statusColors = {
-  PENDING: "warning",
-  CONFIRMED: "primary",
-  SHIPPING: "info",
-  DELIVERED: "success",
-  CANCELLED: "secondary",
-};
 const money = (amount) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(amount || 0));
 
 const AdminOrderManagement = () => {
+  const navigate = useNavigate();
+  const { id: routeOrderId } = useParams();
   const [searchInput, setSearchInput] = useState("");
   const [keyword, setKeyword] = useState("");
   const [status, setStatus] = useState("");
@@ -43,8 +41,11 @@ const AdminOrderManagement = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState("");
+  const [detailNotice, setDetailNotice] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [listNotice, setListNotice] = useState("");
   const detailRequestId = useRef(0);
   const closeDetailButton = useRef(null);
 
@@ -76,12 +77,10 @@ const AdminOrderManagement = () => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [page, sort, status, keyword]);
+  }, [page, sort, status, keyword, refreshKey]);
 
   const closeDetail = () => {
-    detailRequestId.current += 1;
-    setDetailOpen(false);
-    setSelectedOrder(null);
+    navigate("/admin/orders");
   };
 
   useEffect(() => {
@@ -94,30 +93,62 @@ const AdminOrderManagement = () => {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [detailOpen]);
 
-  const viewOrder = async (orderId) => {
+  useEffect(() => {
+    if (!routeOrderId) {
+      detailRequestId.current += 1;
+      setDetailOpen(false);
+      setSelectedOrder(null);
+      return;
+    }
+    const orderId = Number(routeOrderId);
     const requestId = ++detailRequestId.current;
     setDetailOrderId(orderId);
     setSelectedOrder(null);
     setDetailError("");
+    setDetailNotice("");
     setDetailLoading(true);
     setDetailOpen(true);
-    try {
-      const order = await orderService.getOrder(orderId);
-      if (requestId === detailRequestId.current) setSelectedOrder(order);
-    } catch (requestError) {
-      if (requestId === detailRequestId.current) {
-        setDetailError(requestError?.response?.data?.message || "Could not load order details.");
-      }
-    } finally {
-      if (requestId === detailRequestId.current) setDetailLoading(false);
+    if (!Number.isSafeInteger(orderId) || orderId < 1) {
+      setDetailError("Invalid order ID.");
+      setDetailLoading(false);
+      return;
     }
+    orderService.getOrder(orderId)
+      .then((order) => {
+        if (requestId === detailRequestId.current) setSelectedOrder(order);
+      })
+      .catch((requestError) => {
+        if (requestId === detailRequestId.current) {
+          setDetailError(requestError?.response?.data?.message || "Could not load order details.");
+        }
+      })
+      .finally(() => {
+        if (requestId === detailRequestId.current) setDetailLoading(false);
+      });
+  }, [routeOrderId]);
+
+  const onStatusUpdated = (order) => {
+    setSelectedOrder(order);
+    setDetailNotice(`Order #${order.orderId} is now ${order.orderStatus}.`);
+    setRefreshKey((value) => value + 1);
+  };
+
+  const onQuickStatusUpdated = (updatedOrder) => {
+    setPageData((current) => current && ({
+      ...current,
+      content: current.content.map((order) => order.orderId === updatedOrder.orderId
+        ? { ...order, orderStatus: updatedOrder.orderStatus }
+        : order),
+    }));
+    setListNotice(`Order #${updatedOrder.orderId} is now ${updatedOrder.orderStatus}.`);
+    setRefreshKey((value) => value + 1);
   };
 
   return (
     <section className="p-4">
       <div className="mb-4">
         <h4 className="fw-700 medium-black mb-1">Order Management</h4>
-        <p className="text-muted fs-13 mb-0">View and find customer orders.</p>
+        <p className="text-muted fs-13 mb-0">View, find and update customer orders.</p>
       </div>
       <AdminListControls
         search={searchInput}
@@ -134,6 +165,7 @@ const AdminOrderManagement = () => {
         sortOptions={sortOptions}
       />
       {error && <div className="alert alert-danger" role="alert">{error}</div>}
+      {listNotice && <div className="alert alert-success" role="status">{listNotice}</div>}
       <div className="admin-card">
         <div className="table-responsive">
           <table className="admin-table">
@@ -151,10 +183,10 @@ const AdminOrderManagement = () => {
                     <td>#{order.orderId}</td>
                     <td>{order.customerName}<small className="d-block text-muted">{order.customerEmail}</small></td>
                     <td>{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "—"}</td>
-                    <td><span className={`badge text-bg-${statusColors[order.orderStatus] || "secondary"}`}>{order.orderStatus}</span></td>
+                    <td><OrderStatusQuickSelect order={order} onUpdated={onQuickStatusUpdated} /></td>
                     <td>{order.itemCount}</td>
                     <td>{money(order.totalCost)}</td>
-                    <td><button type="button" className="btn btn-outline-primary btn-sm" onClick={() => viewOrder(order.orderId)}>Details</button></td>
+                    <td><button type="button" className="btn btn-outline-primary btn-sm" onClick={() => navigate(`/admin/orders/${order.orderId}`)}>Details</button></td>
                   </tr>
                 ))
               ) : (
@@ -189,6 +221,7 @@ const AdminOrderManagement = () => {
             <div className="admin-order-dialog-body">
               {detailLoading && <p className="mb-0">Loading order details...</p>}
               {detailError && <div className="alert alert-danger mb-0" role="alert">{detailError}</div>}
+              {detailNotice && <div className="alert alert-success" role="status">{detailNotice}</div>}
               {selectedOrder && (
                 <>
                   <p className="mb-1"><strong>Customer:</strong> {selectedOrder.customerName} ({selectedOrder.customerEmail})</p>
@@ -201,6 +234,7 @@ const AdminOrderManagement = () => {
                     </div>
                   ))}
                   <div className="d-flex justify-content-between pt-3 fw-700"><span>Total</span><span>{money(selectedOrder.totalCost)}</span></div>
+                  <OrderStatusChanger order={selectedOrder} onUpdated={onStatusUpdated} />
                 </>
               )}
             </div>
