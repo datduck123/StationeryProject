@@ -3,6 +3,8 @@ package fpt.edu.vn.stationery.service;
 import fpt.edu.vn.stationery.dto.response.OrderDetailResponseDTO;
 import fpt.edu.vn.stationery.dto.response.PageDTO;
 import fpt.edu.vn.stationery.entity.Order;
+import fpt.edu.vn.stationery.entity.User;
+import fpt.edu.vn.stationery.event.OrderStatusChangedEvent;
 import fpt.edu.vn.stationery.exception.BadRequestException;
 import fpt.edu.vn.stationery.exception.ResourceNotFoundException;
 import fpt.edu.vn.stationery.mapper.OrderMapper;
@@ -16,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
@@ -34,6 +38,9 @@ class OrderServiceTest {
 
     @Mock
     private OrderMapper orderMapper;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -120,5 +127,56 @@ class OrderServiceTest {
 
         assertThrows(BadRequestException.class,
                 () -> orderService.cancelCustomerOrder(7L, "buyer@example.com"));
+    }
+
+    @Test
+    void adminConfirmationEmitsOrderEvent() {
+        assertAdminTransition("PENDING", "CONFIRMED");
+    }
+
+    @Test
+    void adminShippingUpdateEmitsOrderEvent() {
+        assertAdminTransition("CONFIRMED", "SHIPPING");
+    }
+
+    @Test
+    void adminCancellationEmitsOrderEvent() {
+        assertAdminTransition("PENDING", "CANCELLED");
+    }
+
+    @Test
+    void adminCannotChangeDeliveredOrder() {
+        Order order = order("DELIVERED");
+        when(orderRepository.findForStatusUpdate(7L)).thenReturn(Optional.of(order));
+        assertThrows(BadRequestException.class,
+                () -> orderService.updateAdminOrderStatus(7L, "CANCELLED"));
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    private void assertAdminTransition(String before, String after) {
+        Order order = order(before);
+        when(orderRepository.findForStatusUpdate(7L)).thenReturn(Optional.of(order));
+        when(orderRepository.saveAndFlush(order)).thenReturn(order);
+
+        orderService.updateAdminOrderStatus(7L, after);
+
+        assertEquals(after, order.getOrderStatus());
+        ArgumentCaptor<OrderStatusChangedEvent> event =
+                ArgumentCaptor.forClass(OrderStatusChangedEvent.class);
+        verify(eventPublisher).publishEvent(event.capture());
+        assertEquals(7L, event.getValue().orderId());
+        assertEquals(12L, event.getValue().userId());
+        assertEquals(before, event.getValue().oldStatus());
+        assertEquals(after, event.getValue().newStatus());
+    }
+
+    private Order order(String status) {
+        User user = new User();
+        user.setUserId(12L);
+        Order order = new Order();
+        order.setOrderId(7L);
+        order.setUser(user);
+        order.setOrderStatus(status);
+        return order;
     }
 }

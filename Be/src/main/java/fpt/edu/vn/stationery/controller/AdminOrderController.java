@@ -3,6 +3,7 @@ package fpt.edu.vn.stationery.controller;
 import fpt.edu.vn.stationery.dto.response.OrderDetailResponseDTO;
 import fpt.edu.vn.stationery.dto.response.OrderResponseDTO;
 import fpt.edu.vn.stationery.dto.response.PageDTO;
+import fpt.edu.vn.stationery.dto.request.AdminOrderStatusRequestDTO;
 import fpt.edu.vn.stationery.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/admin/orders")
@@ -38,5 +40,12 @@ public class AdminOrderController {
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderDetailResponseDTO> getOrder(@PathVariable Long orderId) {
         return ResponseEntity.ok(orderService.getOrderForAdmin(orderId));
+    }
+
+    @Operation(summary = "Confirm, advance or cancel an order")
+    @PutMapping("/{orderId}")
+    public ResponseEntity<OrderDetailResponseDTO> updateStatus(
+            @PathVariable Long orderId, @Valid @RequestBody AdminOrderStatusRequestDTO request) {
+        return ResponseEntity.ok(orderService.updateAdminOrderStatus(orderId, request.status()));
     }
 }

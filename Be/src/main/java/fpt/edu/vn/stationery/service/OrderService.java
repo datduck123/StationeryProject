@@ -12,4 +12,5 @@ public interface OrderService {
     PageDTO<OrderResponseDTO> getAllOrders(String status, String keyword, int page, int size,
                                             String sortBy, String sortDir);
     OrderDetailResponseDTO getOrderForAdmin(Long orderId);
+    OrderDetailResponseDTO updateAdminOrderStatus(Long orderId, String status);
 }
