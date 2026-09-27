@@ -341,7 +341,7 @@ export const ProfilePage = () => {
               </div>
 
               <form onSubmit={handleSaveProfile} noValidate>
-                {/* Full Name with User Icon */}
+                {/* Full Name */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">Full Name *</label>
                   <div className="input-block">
