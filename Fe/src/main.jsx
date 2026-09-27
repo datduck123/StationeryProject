@@ -1,4 +1,3 @@
-// Migrated from: index.html lines 21-28, 30-31
 // Global CSS stylesheets imported in exact original cascade order
 import React from "react";
 import ReactDOM from "react-dom/client";
