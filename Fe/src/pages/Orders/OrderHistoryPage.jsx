@@ -32,7 +32,7 @@ const paymentMethodLabel = (method) => ({
 })[method] || (method || "—");
 
 const pageNumbers = (current, total) => {
-  const visible = new Set([0, total - 1, current - 1, current, current + 1]);
+  const visible = new Set([0, 1, 2, total - 1, current - 1, current, current + 1]);
   return [...visible].filter((number) => number >= 0 && number < total).sort((a, b) => a - b);
 };
 
@@ -63,8 +63,8 @@ const OrderHistoryPage = () => {
     return () => { active = false; };
   }, [page, sort, refreshKey]);
 
-  const cancelOrder = async (orderId) => {
-    if (!window.confirm(`Bạn muốn hủy đơn hàng #${orderId}?`)) return;
+  const cancelOrder = async (orderId, orderNumber) => {
+    if (!window.confirm(`Bạn muốn hủy đơn hàng số ${orderNumber}?`)) return;
     setCancelingId(orderId);
     setError("");
     try {
@@ -114,7 +114,7 @@ const OrderHistoryPage = () => {
               <table className="customer-orders-table">
                 <thead>
                   <tr>
-                    <th>Đơn hàng</th>
+                    <th>STT / Ngày đặt</th>
                     <th>Sản phẩm / Đơn giá</th>
                     <th>Trạng thái</th>
                     <th>Thanh toán</th>
@@ -128,10 +128,10 @@ const OrderHistoryPage = () => {
                   {loading ? (
                     <tr><td colSpan="8" className="customer-orders-empty">Đang tải đơn hàng...</td></tr>
                   ) : !error && pageData?.content?.length ? (
-                    pageData.content.map((order) => (
+                    pageData.content.map((order, index) => (
                       <tr key={order.orderId}>
                         <td>
-                          <strong>#{order.orderId}</strong>
+                          <strong>{page * PAGE_SIZE + index + 1}</strong>
                           <small>{order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : "—"}</small>
                         </td>
                         <td className="customer-orders-products">
@@ -160,7 +160,7 @@ const OrderHistoryPage = () => {
                           <div className="customer-orders-actions">
                             <Link className="btn btn-outline-primary btn-sm" to={`/account/orders/${order.orderId}`}>Chi tiết</Link>
                             {order.orderStatus === "PENDING" && (
-                              <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => cancelOrder(order.orderId)} disabled={cancelingId === order.orderId}>
+                              <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => cancelOrder(order.orderId, page * PAGE_SIZE + index + 1)} disabled={cancelingId === order.orderId}>
                                 {cancelingId === order.orderId ? "Đang hủy..." : "Hủy đơn"}
                               </button>
                             )}

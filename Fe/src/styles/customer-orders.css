@@ -135,35 +135,41 @@
 
 .customer-orders-pages {
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 8px;
 }
 
 .customer-orders-page-group {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
 }
 
 .customer-orders-pages button {
-  min-width: 34px;
-  height: 34px;
-  border: 1px solid #dce1e8;
-  border-radius: 7px;
+  min-width: 40px;
+  height: 40px;
+  border: 1px solid #d8e8f8;
+  border-radius: 8px;
   background: #fff;
-  color: #28303d;
+  color: #3184cc;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .customer-orders-pages button.active {
-  border-color: #e7693c;
-  background: #e7693c;
+  border-color: #3f98e5;
+  background: #3f98e5;
   color: #fff;
 }
 
 .customer-orders-pages button:disabled {
-  opacity: 0.45;
+  border-color: transparent;
+  color: #c5d1de;
   cursor: default;
 }
 
 .customer-orders-ellipsis {
-  padding: 0 4px;
+  padding: 0 2px;
+  color: #3184cc;
+  font-size: 18px;
+  font-weight: 700;
 }
