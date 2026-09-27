@@ -32,6 +32,7 @@ const paymentMethodLabel = (method) => ({
 })[method] || (method || "—");
 
 const pageNumbers = (current, total) => {
+  if (total <= 7) return Array.from({ length: total }, (_, index) => index);
   const visible = new Set([0, 1, 2, total - 1, current - 1, current, current + 1]);
   return [...visible].filter((number) => number >= 0 && number < total).sort((a, b) => a - b);
 };
