@@ -4,6 +4,7 @@ import fpt.edu.vn.stationery.dto.response.OrderDetailResponseDTO;
 import fpt.edu.vn.stationery.dto.response.OrderResponseDTO;
 import fpt.edu.vn.stationery.dto.response.PageDTO;
 import fpt.edu.vn.stationery.service.OrderService;
+import fpt.edu.vn.stationery.service.CustomerOrderQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,14 +22,18 @@ import java.security.Principal;
 public class OrderController {
 
     private final OrderService orderService;
+    private final CustomerOrderQueryService customerOrderQueryService;
 
     @Operation(summary = "Get the authenticated customer's order history")
     @GetMapping
     public ResponseEntity<PageDTO<OrderResponseDTO>> getMyOrders(
             Principal principal,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(orderService.getCustomerOrders(principal.getName(), page, size));
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+        return ResponseEntity.ok(customerOrderQueryService.getOrders(
+                principal.getName(), page, size, sortBy, sortDir));
     }
 
     @Operation(summary = "Get an order belonging to the authenticated customer")
