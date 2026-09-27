@@ -22,6 +22,9 @@ public class OrderTableNamingStrategy extends CamelCaseToUnderscoresNamingStrate
             if ("Orders".equalsIgnoreCase(name.getText())) {
                 return Identifier.toIdentifier("Orders", true);
             }
+            if ("Notifications".equalsIgnoreCase(name.getText())) {
+                return Identifier.toIdentifier("Notifications", true);
+            }
         }
         return super.toPhysicalTableName(name, jdbcEnvironment);
     }
