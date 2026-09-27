@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import AdminListControls from "../../components/admin/AdminListControls";
 import AdminPagination from "../../components/admin/AdminPagination";
 import OrderStatusChanger from "../../components/orders/OrderStatusChanger";
+import OrderStatusQuickSelect from "../../components/orders/OrderStatusQuickSelect";
 import orderService from "../../services/orderService";
 
 const PAGE_SIZE = 10;
@@ -23,13 +24,6 @@ const sortOptions = [
   { value: "orderId:desc", label: "Order ID: high to low" },
   { value: "orderId:asc", label: "Order ID: low to high" },
 ];
-const statusColors = {
-  PENDING: "warning",
-  CONFIRMED: "primary",
-  SHIPPING: "info",
-  DELIVERED: "success",
-  CANCELLED: "secondary",
-};
 const money = (amount) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(amount || 0));
 
@@ -51,6 +45,7 @@ const AdminOrderManagement = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [listNotice, setListNotice] = useState("");
   const detailRequestId = useRef(0);
   const closeDetailButton = useRef(null);
 
@@ -138,6 +133,17 @@ const AdminOrderManagement = () => {
     setRefreshKey((value) => value + 1);
   };
 
+  const onQuickStatusUpdated = (updatedOrder) => {
+    setPageData((current) => current && ({
+      ...current,
+      content: current.content.map((order) => order.orderId === updatedOrder.orderId
+        ? { ...order, orderStatus: updatedOrder.orderStatus }
+        : order),
+    }));
+    setListNotice(`Order #${updatedOrder.orderId} is now ${updatedOrder.orderStatus}.`);
+    setRefreshKey((value) => value + 1);
+  };
+
   return (
     <section className="p-4">
       <div className="mb-4">
@@ -159,6 +165,7 @@ const AdminOrderManagement = () => {
         sortOptions={sortOptions}
       />
       {error && <div className="alert alert-danger" role="alert">{error}</div>}
+      {listNotice && <div className="alert alert-success" role="status">{listNotice}</div>}
       <div className="admin-card">
         <div className="table-responsive">
           <table className="admin-table">
@@ -176,7 +183,7 @@ const AdminOrderManagement = () => {
                     <td>#{order.orderId}</td>
                     <td>{order.customerName}<small className="d-block text-muted">{order.customerEmail}</small></td>
                     <td>{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "—"}</td>
-                    <td><span className={`badge text-bg-${statusColors[order.orderStatus] || "secondary"}`}>{order.orderStatus}</span></td>
+                    <td><OrderStatusQuickSelect order={order} onUpdated={onQuickStatusUpdated} /></td>
                     <td>{order.itemCount}</td>
                     <td>{money(order.totalCost)}</td>
                     <td><button type="button" className="btn btn-outline-primary btn-sm" onClick={() => navigate(`/admin/orders/${order.orderId}`)}>Details</button></td>
