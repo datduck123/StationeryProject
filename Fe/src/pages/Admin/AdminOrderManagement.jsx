@@ -182,7 +182,7 @@ const AdminOrderManagement = () => {
         <div className="table-responsive">
           <table className="admin-table">
             <thead>
-              <tr><th>ORDER ID</th><th>CUSTOMER</th><th>DATE</th><th>STATUS</th><th>ITEMS</th><th>TOTAL</th><th>ACTIONS</th></tr>
+              <tr><th>STT</th><th>CUSTOMER</th><th>DATE</th><th>STATUS</th><th>ITEMS</th><th>TOTAL</th><th>ACTIONS</th></tr>
             </thead>
             <tbody>
               {loading ? (
@@ -190,9 +190,9 @@ const AdminOrderManagement = () => {
               ) : error ? (
                 <tr><td colSpan="7" className="text-center py-5">Unable to display orders.</td></tr>
               ) : pageData?.content?.length ? (
-                pageData.content.map((order) => (
+                pageData.content.map((order, index) => (
                   <tr key={order.orderId}>
-                    <td>#{order.orderId}</td>
+                    <td>{page * PAGE_SIZE + index + 1}</td>
                     <td>{order.customerName}<small className="d-block text-muted">{order.customerEmail}</small></td>
                     <td>{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "—"}</td>
                     <td><span className={`badge text-bg-${statusColors[order.orderStatus] || "secondary"}`}>{order.orderStatus}</span></td>
