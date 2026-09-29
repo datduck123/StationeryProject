@@ -2,7 +2,7 @@ import api from "./api";
 
 export const userService = {
   /**
-   * Get current authenticated user profile
+   * Retrieve Current User Profile
    */
   async getProfile() {
     const response = await api.get("/users/me");
@@ -10,7 +10,7 @@ export const userService = {
   },
 
   /**
-   * Update current authenticated user profile
+   * Update Current User Profile
    * @param {{ fullName: string, phone?: string, address?: string }} data
    */
   async updateProfile(data) {
