@@ -9,7 +9,7 @@ import CustomDropdown from "../../components/ui/CustomDropdown";
 import { useCartContext } from "../../providers/CartContext";
 
 export const ShopGridSidebar = () => {
-  const { openCart, openQuickView, openCompare } = useCartContext();
+  const { openCart, openQuickView, openCompare, addToCart } = useCartContext();
   const { t } = useTranslation();
 
   const [openCategories, setOpenCategories] = useState({
@@ -429,19 +429,16 @@ export const ShopGridSidebar = () => {
                             </li>
                           </ul>
                         </div>
-                        <Link
-                          to="/cart.html"
-                          className="cus-btn"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            openCart();
-                          }}
+                        <button
+                          type="button"
+                          className="cus-btn border-0 w-100 text-center"
+                          onClick={() => addToCart(prod.id, 1, true)}
                         >
                           <span className="btn-text">
                             {t("common.addCart")}
                           </span>
-                          <span>{t("common.goToCart")}</span>
-                        </Link>
+                          <span>{t("common.addCart")}</span>
+                        </button>
                       </div>
                       <div className="product-desc">
                         <div>
