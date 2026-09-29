@@ -22,7 +22,11 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
 
     Optional<CartItem> findByUser_UserIdAndProduct_ProductId(Long userId, Long productId);
 
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
     void deleteByUser_UserId(Long userId);
 
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
     void deleteByUser_UserIdAndProduct_ProductId(Long userId, Long productId);
 }
