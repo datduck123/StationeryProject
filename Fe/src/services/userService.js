@@ -19,7 +19,7 @@ export const userService = {
   },
 
   /**
-   * Change current authenticated user password
+   * Change current user password
    * @param {{ currentPassword: string, newPassword: string }} data
    */
   async changePassword(data) {
