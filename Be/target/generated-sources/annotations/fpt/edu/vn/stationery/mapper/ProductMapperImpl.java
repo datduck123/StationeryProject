@@ -14,8 +14,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-09-28T00:33:50+0700",
-    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.100.v20260826-1225, environment: Java 21.0.12.1 (Eclipse Adoptium)"
+    date = "2026-10-01T17:37:26+0700",
+    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 22.0.2 (Oracle Corporation)"
 )
 @Component
 public class ProductMapperImpl implements ProductMapper {
@@ -28,19 +28,19 @@ public class ProductMapperImpl implements ProductMapper {
 
         ProductResponseDTO.ProductResponseDTOBuilder productResponseDTO = ProductResponseDTO.builder();
 
-        productResponseDTO.brand( toBrandSummaryDTO( entity.getBrand() ) );
-        productResponseDTO.category( toCategorySummaryDTO( entity.getCategory() ) );
-        productResponseDTO.createdAt( entity.getCreatedAt() );
-        productResponseDTO.description( entity.getDescription() );
-        productResponseDTO.imageUrl( entity.getImageUrl() );
-        productResponseDTO.name( entity.getName() );
-        productResponseDTO.price( entity.getPrice() );
         productResponseDTO.productId( entity.getProductId() );
         productResponseDTO.sku( entity.getSku() );
-        productResponseDTO.status( entity.getStatus() );
-        productResponseDTO.stockQuantity( entity.getStockQuantity() );
-        productResponseDTO.updatedAt( entity.getUpdatedAt() );
+        productResponseDTO.name( entity.getName() );
+        productResponseDTO.price( entity.getPrice() );
         productResponseDTO.weightKg( entity.getWeightKg() );
+        productResponseDTO.stockQuantity( entity.getStockQuantity() );
+        productResponseDTO.description( entity.getDescription() );
+        productResponseDTO.imageUrl( entity.getImageUrl() );
+        productResponseDTO.category( toCategorySummaryDTO( entity.getCategory() ) );
+        productResponseDTO.brand( toBrandSummaryDTO( entity.getBrand() ) );
+        productResponseDTO.status( entity.getStatus() );
+        productResponseDTO.createdAt( entity.getCreatedAt() );
+        productResponseDTO.updatedAt( entity.getUpdatedAt() );
 
         return productResponseDTO.build();
     }
@@ -95,13 +95,13 @@ public class ProductMapperImpl implements ProductMapper {
 
         Product.ProductBuilder product = Product.builder();
 
-        product.description( request.getDescription() );
+        product.sku( request.getSku() );
         product.name( request.getName() );
         product.price( request.getPrice() );
-        product.sku( request.getSku() );
-        product.status( request.getStatus() );
-        product.stockQuantity( request.getStockQuantity() );
         product.weightKg( request.getWeightKg() );
+        product.stockQuantity( request.getStockQuantity() );
+        product.description( request.getDescription() );
+        product.status( request.getStatus() );
 
         product.imageUrl( request.resolveImageUrl() );
 
@@ -114,13 +114,13 @@ public class ProductMapperImpl implements ProductMapper {
             return;
         }
 
-        entity.setDescription( request.getDescription() );
+        entity.setSku( request.getSku() );
         entity.setName( request.getName() );
         entity.setPrice( request.getPrice() );
-        entity.setSku( request.getSku() );
-        entity.setStatus( request.getStatus() );
-        entity.setStockQuantity( request.getStockQuantity() );
         entity.setWeightKg( request.getWeightKg() );
+        entity.setStockQuantity( request.getStockQuantity() );
+        entity.setDescription( request.getDescription() );
+        entity.setStatus( request.getStatus() );
 
         entity.setImageUrl( request.resolveImageUrl() );
     }

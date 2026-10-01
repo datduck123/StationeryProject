@@ -5,9 +5,11 @@ import {
   adminCreateCategory,
   adminDeleteCategory,
   adminGetCategories,
+  adminGetProducts,
   adminUpdateCategory,
   getProducts,
 } from "../../services/productService";
+import { notifyProductChange } from "../../utils/syncEvents";
 import "../../styles/admin.css";
 
 const FALLBACK_CATEGORIES = [
@@ -120,11 +122,19 @@ export const AdminCategoryManagement = () => {
     try {
       const [catRes, prodRes] = await Promise.allSettled([
         adminGetCategories(),
-        getProducts({ size: 1 }),
+        adminGetProducts({ page: 0, size: 1 }),
       ]);
 
+      // Lấy tất cả sản phẩm kể cả inactive để thống kê chính xác
       if (prodRes.status === "fulfilled" && prodRes.value?.data?.totalElements !== undefined) {
         setTotalProductsCount(prodRes.value.data.totalElements);
+      } else {
+        // Fallback: lấy qua adminGetProducts (bao gồm cả inactive)
+        try {
+          const allProdRes = await adminGetProducts({ page: 0, size: 2000 });
+          const total = allProdRes.data?.totalElements || allProdRes.data?.content?.length || 0;
+          setTotalProductsCount(total);
+        } catch (_) {}
       }
 
       if (catRes.status === "fulfilled") {
@@ -180,48 +190,71 @@ export const AdminCategoryManagement = () => {
     setIsEditModalOpen(true);
   };
 
-  // Validate form (slug is auto-generated, only name required)
-  const validateForm = () => {
+  // Validate form
+  const validateForm = (isEdit = false) => {
     const errors = {};
-    if (!formName.trim()) {
+    const nameVal = formName.trim();
+
+    if (!nameVal) {
       errors.name = "Tên danh mục không được để trống.";
+    } else if (nameVal.length < 5) {
+      errors.name = "Tên danh mục phải có ít nhất 5 ký tự.";
+    } else if (nameVal.length > 50) {
+      errors.name = "Tên danh mục không được vượt quá 50 ký tự.";
+    } else if (/[^a-zA-Z\sÀ-ỹà-ỹĐđ]/.test(nameVal)) {
+      errors.name = "Tên danh mục chỉ được chứa chữ cái và khoảng trắng (không có số hoặc ký tự đặc biệt).";
+    } else {
+      // Bắt trùng tên danh mục (không phân biệt hoa/thường)
+      const currentId = isEdit && categoryToEdit ? (categoryToEdit.categoryId || categoryToEdit.id) : null;
+      const isDuplicate = categories.some((c) => {
+        const cId = c.categoryId || c.id;
+        if (isEdit && cId === currentId) return false;
+        return (c.name || "").trim().toLowerCase() === nameVal.toLowerCase();
+      });
+      if (isDuplicate) {
+        errors.name = "Tên danh mục đã tồn tại trong hệ thống. Vui lòng chọn tên khác.";
+      }
     }
-    setFormErrors(errors);
-    if (Object.keys(errors).length > 0) {
-      showToast(Object.values(errors)[0], "error");
+
+    const errorKeys = Object.keys(errors);
+    if (errorKeys.length === 1) {
+      // Chỉ có 1 lỗi duy nhất: Không hiển thị trong modal, chỉ hiển thị pop up bên góc trên phải trong 8s
+      setFormErrors({});
+      showToast(errors[errorKeys[0]], "error", 8000);
+      return false;
+    } else if (errorKeys.length > 1) {
+      // Nhiều lỗi: Hiển thị lỗi bên trong modal và báo pop up trong 8s
+      setFormErrors(errors);
+      showToast("Vui lòng kiểm tra lại các trường thông tin không hợp lệ trong biểu mẫu.", "error", 8000);
+      return false;
     }
-    return Object.keys(errors).length === 0;
+
+    setFormErrors({});
+    return true;
   };
 
   // Save new category
   const handleSaveAdd = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm(false)) return;
 
     setActionLoading(true);
     try {
       await adminCreateCategory({
         name: formName.trim(),
         description: formDescription.trim(),
+        status: formStatus,
       });
       setIsAddModalOpen(false);
       showToast(`Danh mục "${formName.trim()}" đã được tạo thành công!`, "success");
       fetchCategories();
+      notifyProductChange();
     } catch (err) {
-      console.warn("API add category failed, adding locally:", err);
-      const newCat = {
-        categoryId: Date.now(),
-        id: Date.now(),
-        name: formName.trim(),
-        slug: formSlug.trim(),
-        description: formDescription.trim() || "No description provided.",
-        productCount: 0,
-        status: formStatus,
-        createdAt: new Date().toISOString().split("T")[0],
-      };
-      setCategories((prev) => [...prev, newCat]);
-      setIsAddModalOpen(false);
-      showToast(`Danh mục "${newCat.name}" đã được tạo thành công!`, "success");
+      console.error("API add category failed:", err);
+      showToast(
+        err.response?.data?.message || "Tạo danh mục thất bại. Tên danh mục có thể đã tồn tại.",
+        "error"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -230,7 +263,7 @@ export const AdminCategoryManagement = () => {
   // Save edited category
   const handleSaveEdit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm(true)) return;
 
     setActionLoading(true);
     const catId = categoryToEdit.categoryId || categoryToEdit.id;
@@ -238,47 +271,57 @@ export const AdminCategoryManagement = () => {
       await adminUpdateCategory(catId, {
         name: formName.trim(),
         description: formDescription.trim(),
+        status: formStatus,
       });
       setIsEditModalOpen(false);
       showToast(`Cập nhật danh mục "${formName.trim()}" thành công!`, "success");
       fetchCategories();
+      notifyProductChange();
     } catch (err) {
-      console.warn("API update category failed, updating locally:", err);
-      setCategories((prev) =>
-        prev.map((cat) =>
-          (cat.categoryId || cat.id) === catId
-            ? {
-                ...cat,
-                name: formName.trim(),
-                slug: formSlug.trim(),
-                description: formDescription.trim(),
-                status: formStatus,
-              }
-            : cat
-        )
-      );
-      setIsEditModalOpen(false);
-      showToast(`Cập nhật danh mục "${formName.trim()}" thành công!`, "success");
+      console.error("API update category failed:", err);
+      showToast(err.response?.data?.message || "Cập nhật danh mục thất bại.", "error");
     } finally {
       setActionLoading(false);
     }
   };
 
   // Toggle status
-  const handleToggleStatus = (cat) => {
+  const handleToggleStatus = async (cat) => {
     const nextStatus = cat.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
     const catId = cat.categoryId || cat.id;
-    setCategories((prev) =>
-      prev.map((c) =>
-        (c.categoryId || c.id) === catId ? { ...c, status: nextStatus } : c
-      )
-    );
-    showToast(`Trạng thái danh mục "${cat.name}" đã chuyển sang ${nextStatus}.`, "success");
+    try {
+      await adminUpdateCategory(catId, {
+        name: cat.name,
+        description: cat.description || "",
+        status: nextStatus,
+      });
+      setCategories((prev) =>
+        prev.map((c) =>
+          (c.categoryId || c.id) === catId ? { ...c, status: nextStatus } : c
+        )
+      );
+      showToast(`Trạng thái danh mục "${cat.name}" đã chuyển sang ${nextStatus}.`, "success");
+      notifyProductChange();
+    } catch (err) {
+      console.error("Toggle status failed:", err);
+      showToast(err.response?.data?.message || "Không thể thay đổi trạng thái danh mục.", "error");
+    }
   };
 
   // Delete category
   const handleDeleteConfirm = async () => {
     if (!categoryToDelete) return;
+
+    // Chặn xoá nếu category đang ACTIVE
+    if (categoryToDelete.status === "ACTIVE") {
+      setIsDeleteConfirmOpen(false);
+      showToast(
+        `Không thể xoá danh mục "${categoryToDelete.name}" vì đang ở trạng thái ACTIVE. Hãy chuyển sang INACTIVE trước khi xoá.`,
+        "error"
+      );
+      return;
+    }
+
     setActionLoading(true);
     const catId = categoryToDelete.categoryId || categoryToDelete.id;
     try {
@@ -287,14 +330,16 @@ export const AdminCategoryManagement = () => {
       showToast(`Đã xoá danh mục "${categoryToDelete.name}".`, "success");
       setCategoryToDelete(null);
       fetchCategories();
+      notifyProductChange();
     } catch (err) {
-      console.warn("API delete category failed, deleting locally:", err);
-      setCategories((prev) =>
-        prev.filter((c) => (c.categoryId || c.id) !== catId)
-      );
+      console.error("API delete category failed:", err);
       setIsDeleteConfirmOpen(false);
-      showToast(`Đã xoá danh mục "${categoryToDelete.name}".`, "success");
       setCategoryToDelete(null);
+      showToast(
+        err.response?.data?.message ||
+        "Không thể xoá danh mục vì danh mục này đang chứa sản phẩm hoặc có lỗi xảy ra.",
+        "error"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -329,6 +374,14 @@ export const AdminCategoryManagement = () => {
   // Paginated slice
   const totalElements = filteredCategories.length;
   const totalPages = Math.ceil(totalElements / pageSize) || 1;
+
+  // Auto adjust page when page exceeds totalPages (e.g. after deletion or filtering)
+  useEffect(() => {
+    if (page >= totalPages && totalPages > 0) {
+      setPage(Math.max(0, totalPages - 1));
+    }
+  }, [totalPages, page]);
+
   const paginatedCategories = useMemo(() => {
     const start = page * pageSize;
     return filteredCategories.slice(start, start + pageSize);
@@ -769,7 +822,7 @@ export const AdminCategoryManagement = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveAdd}>
+            <form noValidate onSubmit={handleSaveAdd}>
               <div style={{ padding: "20px 24px" }}>
                 <div className="mb-3">
                   <label className="form-label" style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}>
@@ -783,7 +836,7 @@ export const AdminCategoryManagement = () => {
                     onChange={handleNameChange}
                     style={{ borderRadius: "8px", fontSize: "13.5px" }}
                   />
-                  {formErrors.name && <div className="invalid-feedback">{formErrors.name}</div>}
+                  {formErrors.name && <div className="invalid-feedback d-block">{formErrors.name}</div>}
                 </div>
 
 
@@ -952,7 +1005,7 @@ export const AdminCategoryManagement = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit}>
+            <form noValidate onSubmit={handleSaveEdit}>
               <div style={{ padding: "20px 24px" }}>
                 <div className="mb-3">
                   <label className="form-label" style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}>
@@ -965,7 +1018,7 @@ export const AdminCategoryManagement = () => {
                     onChange={(e) => setFormName(e.target.value)}
                     style={{ borderRadius: "8px", fontSize: "13.5px" }}
                   />
-                  {formErrors.name && <div className="invalid-feedback">{formErrors.name}</div>}
+                  {formErrors.name && <div className="invalid-feedback d-block">{formErrors.name}</div>}
                 </div>
 
 

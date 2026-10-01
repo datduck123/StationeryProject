@@ -9,6 +9,7 @@ import PriceSlider from "../../components/ui/PriceSlider";
 import CustomDropdown from "../../components/ui/CustomDropdown";
 import { useCartContext } from "../../providers/CartContext";
 import { getProducts, getCategories, getBrands, getProductImage } from "../../services/productService";
+import { onProductChange } from "../../utils/syncEvents";
 
 const SORT_OPTIONS = [
   { label: "Mặc định", value: "" },
@@ -18,7 +19,7 @@ const SORT_OPTIONS = [
   { label: "Tên Z → A", value: "name,desc" },
 ];
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 12;
 
 const formatCurrency = (amount) => {
   if (amount == null) return "";
@@ -71,37 +72,38 @@ export const ShopGridSidebar = () => {
   const [error, setError] = useState(null);
   const [sidebarLoading, setSidebarLoading] = useState(true);
 
-  // ── Fetch sidebar data (categories + brands) once ────────────────────────
-  useEffect(() => {
-    const fetchSidebarData = async () => {
-      try {
-        setSidebarLoading(true);
-        const [catRes, brandRes] = await Promise.all([
-          getCategories(),
-          getBrands(),
-        ]);
-        const rawCats = catRes.data?.data ?? catRes.data ?? [];
-        const rawBrands = brandRes.data?.data ?? brandRes.data ?? [];
-        setCategories(
-          rawCats.map((c) => ({
-            ...c,
-            id: c.categoryId ?? c.id,
-          }))
-        );
-        setBrands(
-          rawBrands.map((b) => ({
-            ...b,
-            id: b.brandId ?? b.id,
-          }))
-        );
-      } catch (err) {
-        console.warn("Could not load categories/brands:", err);
-      } finally {
-        setSidebarLoading(false);
-      }
-    };
-    fetchSidebarData();
+  // ── Fetch sidebar data (categories + brands) ─────────────────────────────
+  const fetchSidebarData = useCallback(async () => {
+    try {
+      setSidebarLoading(true);
+      const [catRes, brandRes] = await Promise.all([
+        getCategories(),
+        getBrands(),
+      ]);
+      const rawCats = catRes.data?.data ?? catRes.data ?? [];
+      const rawBrands = brandRes.data?.data ?? brandRes.data ?? [];
+      setCategories(
+        rawCats.map((c) => ({
+          ...c,
+          id: c.categoryId ?? c.id,
+        }))
+      );
+      setBrands(
+        rawBrands.map((b) => ({
+          ...b,
+          id: b.brandId ?? b.id,
+        }))
+      );
+    } catch (err) {
+      console.warn("Could not load categories/brands:", err);
+    } finally {
+      setSidebarLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchSidebarData();
+  }, [fetchSidebarData]);
 
   // ── Fetch products whenever filters / page change ────────────────────────
   const fetchProducts = useCallback(async () => {
@@ -122,9 +124,17 @@ export const ShopGridSidebar = () => {
       const data = res.data;
       // Spring Page response shape: { content, totalPages, totalElements, ... }
       if (data && Array.isArray(data.content)) {
-        setProducts(data.content);
-        setTotalPages(data.totalPages ?? 1);
+        const newTotalPages = data.totalPages ?? 1;
+        setTotalPages(newTotalPages);
         setTotalElements(data.totalElements ?? data.content.length);
+
+        // Nếu trang hiện tại rỗng do sản phẩm vừa bị chuyển sang INACTIVE/xoá, tự động nhảy về trang trước
+        if (data.content.length === 0 && currentPage > 0 && currentPage >= newTotalPages) {
+          setCurrentPage(Math.max(0, newTotalPages - 1));
+          return;
+        }
+
+        setProducts(data.content);
       } else if (Array.isArray(data)) {
         setProducts(data);
         setTotalPages(1);
@@ -141,6 +151,13 @@ export const ShopGridSidebar = () => {
     }
   }, [currentPage, keyword, selectedCategoryId, selectedBrandId, minPrice, maxPrice, sortValue]);
 
+  // ── Auto-adjust page if current page exceeds total pages ─────────────────
+  useEffect(() => {
+    if (currentPage >= totalPages && totalPages > 0) {
+      setCurrentPage(Math.max(0, totalPages - 1));
+    }
+  }, [totalPages, currentPage]);
+
   // ── Apply client-side stock filter after fetch ────────────────────────────
   useEffect(() => {
     if (!stockFilter) {
@@ -155,6 +172,15 @@ export const ShopGridSidebar = () => {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  // ── Real-time synchronization with Admin changes (cross-tab & in-tab) ─────
+  useEffect(() => {
+    const unsubscribe = onProductChange(() => {
+      fetchProducts();
+      fetchSidebarData();
+    });
+    return unsubscribe;
+  }, [fetchProducts, fetchSidebarData]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleSearchSubmit = (e) => {
@@ -476,60 +502,118 @@ export const ShopGridSidebar = () => {
   const renderPagination = () => {
     if (totalPages <= 1) return null;
 
-    const pages = [];
     const maxVisible = 5;
     let start = Math.max(0, currentPage - Math.floor(maxVisible / 2));
     let end = Math.min(totalPages - 1, start + maxVisible - 1);
     if (end - start < maxVisible - 1) {
       start = Math.max(0, end - maxVisible + 1);
     }
+    const pages = [];
+    for (let i = start; i <= end; i++) pages.push(i);
 
-    for (let i = start; i <= end; i++) {
-      pages.push(i);
-    }
+    const btnBase = {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "40px",
+      height: "40px",
+      borderRadius: "50%",
+      border: "1.5px solid #e5e7eb",
+      backgroundColor: "#fff",
+      color: "#374151",
+      fontSize: "14px",
+      fontWeight: "600",
+      cursor: "pointer",
+      transition: "all 0.2s ease",
+      textDecoration: "none",
+    };
+
+    const btnActive = {
+      ...btnBase,
+      backgroundColor: "#e9613f",
+      border: "1.5px solid #e9613f",
+      color: "#fff",
+      boxShadow: "0 4px 12px rgba(233,97,63,0.35)",
+    };
+
+    const btnNav = {
+      ...btnBase,
+      width: "40px",
+      fontSize: "16px",
+      color: "#6b7280",
+    };
+
+    const btnNavDisabled = {
+      ...btnNav,
+      opacity: 0.35,
+      cursor: "not-allowed",
+    };
 
     return (
-      <div className="pagination-wrapper mb-32">
-        <ul className="pagination justify-content-center">
-          <li className={`page-item ${currentPage === 0 ? "disabled" : ""}`}>
-            <a
-              className="page-link"
-              href="#prev"
-              onClick={(e) => {
-                e.preventDefault();
-                handlePageChange(currentPage - 1);
-              }}
-            >
-              Prev
-            </a>
-          </li>
+      <div style={{ textAlign: "center", paddingBottom: "16px", marginTop: "16px" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          {/* Prev */}
+          <button
+            type="button"
+            style={currentPage === 0 ? btnNavDisabled : btnNav}
+            disabled={currentPage === 0}
+            onClick={() => handlePageChange(currentPage - 1)}
+            onMouseEnter={(e) => { if (currentPage !== 0) e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#6b7280"; }}
+            title="Trang trước"
+          >
+            &#8592;
+          </button>
+
+          {/* First page + ellipsis */}
+          {start > 0 && (
+            <>
+              <button type="button" style={btnBase} onClick={() => handlePageChange(0)}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#374151"; }}
+              >1</button>
+              {start > 1 && <span style={{ color: "#9ca3af", fontSize: "14px" }}>…</span>}
+            </>
+          )}
+
+          {/* Numbered pages */}
           {pages.map((p) => (
-            <li key={p} className={`page-item ${p === currentPage ? "active" : ""}`}>
-              <a
-                className="page-link"
-                href={`#page${p + 1}`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  handlePageChange(p);
-                }}
-              >
-                {p + 1}
-              </a>
-            </li>
-          ))}
-          <li className={`page-item ${currentPage >= totalPages - 1 ? "disabled" : ""}`}>
-            <a
-              className="page-link"
-              href="#next"
-              onClick={(e) => {
-                e.preventDefault();
-                handlePageChange(currentPage + 1);
-              }}
+            <button
+              key={p}
+              type="button"
+              style={p === currentPage ? btnActive : btnBase}
+              onClick={() => handlePageChange(p)}
+              onMouseEnter={(e) => { if (p !== currentPage) { e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; } }}
+              onMouseLeave={(e) => { if (p !== currentPage) { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#374151"; } }}
             >
-              Next
-            </a>
-          </li>
-        </ul>
+              {p + 1}
+            </button>
+          ))}
+
+          {/* Ellipsis + last page */}
+          {end < totalPages - 1 && (
+            <>
+              {end < totalPages - 2 && <span style={{ color: "#9ca3af", fontSize: "14px" }}>…</span>}
+              <button type="button" style={btnBase} onClick={() => handlePageChange(totalPages - 1)}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#374151"; }}
+              >{totalPages}</button>
+            </>
+          )}
+
+          {/* Next */}
+          <button
+            type="button"
+            style={currentPage >= totalPages - 1 ? btnNavDisabled : btnNav}
+            disabled={currentPage >= totalPages - 1}
+            onClick={() => handlePageChange(currentPage + 1)}
+            onMouseEnter={(e) => { if (currentPage < totalPages - 1) { e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; } }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#6b7280"; }}
+            title="Trang sau"
+          >
+            &#8594;
+          </button>
+        </div>
       </div>
     );
   };

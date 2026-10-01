@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import { useToast } from "../../providers/ToastContext";
 import {
@@ -12,6 +12,7 @@ import {
   getProductImage,
   uploadProductImage,
 } from "../../services/productService";
+import { notifyProductChange } from "../../utils/syncEvents";
 import "../../styles/admin.css";
 
 export const AdminProductManagement = () => {
@@ -23,9 +24,9 @@ export const AdminProductManagement = () => {
   const [brands, setBrands] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Pagination & Filtering state (12 products per page as requested)
+  // Pagination & Filtering state (10 products per page as requested)
   const [page, setPage] = useState(0);
-  const [size] = useState(12);
+  const [size] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,6 +34,56 @@ export const AdminProductManagement = () => {
   const [selectedBrand, setSelectedBrand] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("createdAt,desc");
+
+  // Summary statistics state
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    outOfStock: 0,
+  });
+
+  const fetchStats = async () => {
+    try {
+      // Gọi song song: tổng, active, inactive — dùng size:1 để chỉ lấy totalElements
+      const [totalRes, activeRes, inactiveRes, allStockRes] = await Promise.allSettled([
+        adminGetProducts({ page: 0, size: 1 }),                        // Tổng tất cả
+        adminGetProducts({ page: 0, size: 1, status: "ACTIVE" }),      // Chỉ ACTIVE
+        adminGetProducts({ page: 0, size: 1, status: "INACTIVE" }),    // Chỉ INACTIVE
+        adminGetProducts({ page: 0, size: 2000 }),                     // Fetch all để đếm outOfStock
+      ]);
+
+      const total =
+        totalRes.status === "fulfilled"
+          ? (totalRes.value.data?.totalElements ?? 0)
+          : 0;
+
+      const active =
+        activeRes.status === "fulfilled"
+          ? (activeRes.value.data?.totalElements ?? 0)
+          : 0;
+
+      const inactive =
+        inactiveRes.status === "fulfilled"
+          ? (inactiveRes.value.data?.totalElements ?? 0)
+          : 0;
+
+      // Đếm hết hàng từ toàn bộ danh sách content
+      let outOfStock = 0;
+      if (allStockRes.status === "fulfilled") {
+        const allContent = allStockRes.value.data?.content || [];
+        allContent.forEach((p) => {
+          const stockNum = p.stockQuantity ?? p.stock_quantity ?? p.stock ?? 0;
+          if (stockNum === 0) outOfStock++;
+        });
+      }
+
+      setStats({ total, active, inactive, outOfStock });
+    } catch (err) {
+      console.warn("Could not fetch product stats:", err);
+    }
+  };
+
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -68,7 +119,7 @@ export const AdminProductManagement = () => {
   // Quick Stock form state
   const [stockToUpdate, setStockToUpdate] = useState(0);
 
-  // Fetch categories and brands on mount
+  // Fetch categories, brands and stats on mount
   useEffect(() => {
     const fetchMeta = async () => {
       try {
@@ -85,6 +136,7 @@ export const AdminProductManagement = () => {
       }
     };
     fetchMeta();
+    fetchStats();
   }, []);
 
   // Fetch product list
@@ -99,12 +151,21 @@ export const AdminProductManagement = () => {
       if (searchQuery.trim()) params.keyword = searchQuery.trim();
       if (selectedCategory) params.categoryId = selectedCategory;
       if (selectedBrand) params.brandId = selectedBrand;
+      // Truyền status filter lên backend để phân trang chính xác
+      if (statusFilter && statusFilter !== "ALL") params.status = statusFilter;
 
       const res = await adminGetProducts(params);
       const data = res.data;
-      setProducts(data.content || []);
-      setTotalPages(data.totalPages || 1);
+      const newTotalPages = data.totalPages || 1;
+      setTotalPages(newTotalPages);
       setTotalElements(data.totalElements || 0);
+
+      if (page > 0 && (data.content || []).length === 0 && page >= newTotalPages) {
+        setPage(Math.max(0, newTotalPages - 1));
+        return;
+      }
+
+      setProducts(data.content || []);
     } catch (err) {
       console.error("Failed to fetch products:", err);
       showToast("Không thể tải danh sách sản phẩm. Vui lòng thử lại!", "error");
@@ -114,8 +175,21 @@ export const AdminProductManagement = () => {
   };
 
   useEffect(() => {
+    setPage(0);
     fetchProductList();
-  }, [page, size, selectedCategory, selectedBrand, sortBy]);
+  }, [selectedCategory, selectedBrand, sortBy, statusFilter]);
+
+  // Riêng page không reset về 0
+  useEffect(() => {
+    fetchProductList();
+  }, [page]);
+
+  // Tự động điều chỉnh trang nếu trang hiện tại vượt quá tổng số trang sau khi xoá/lọc
+  useEffect(() => {
+    if (page >= totalPages && totalPages > 0) {
+      setPage(Math.max(0, totalPages - 1));
+    }
+  }, [totalPages, page]);
 
   // Debounced search
   useEffect(() => {
@@ -126,11 +200,8 @@ export const AdminProductManagement = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Filter products by status
-  const filteredProducts = useMemo(() => {
-    if (statusFilter === "ALL") return products;
-    return products.filter((p) => p.status === statusFilter);
-  }, [products, statusFilter]);
+  // products đã được filter server-side theo statusFilter, không cần filter lại client-side
+  const filteredProducts = products;
 
   // Reset form
   const resetForm = () => {
@@ -168,7 +239,7 @@ export const AdminProductManagement = () => {
     setFormCategoryId(String(p.category?.categoryId || categories[0]?.categoryId || ""));
     setFormBrandId(String(p.brand?.brandId || brands[0]?.brandId || ""));
     setFormImageUrl(p.imageUrl || "");
-    setImagePreview(getProductImage(p) || p.imageUrl || "");
+    setImagePreview(p.imageUrl ? (getProductImage(p) || p.imageUrl) : "");
     setFormDescription(p.description || "");
     setFormStatus(p.status || "ACTIVE");
     setFormErrors({});
@@ -223,17 +294,57 @@ export const AdminProductManagement = () => {
   // Validate form
   const validateForm = () => {
     const errs = {};
-    if (!formName.trim()) errs.name = "Tên sản phẩm không được để trống.";
-    // SKU is optional - auto-generated by backend if empty
-    if (formPrice === "" || isNaN(formPrice) || Number(formPrice) < 0) {
-      errs.price = "Giá sản phẩm phải lớn hơn hoặc bằng 0.";
+
+    // --- Tên sản phẩm ---
+    const nameVal = formName.trim();
+    if (!nameVal) {
+      errs.name = "Tên sản phẩm không được để trống.";
+    } else if (nameVal.length < 5) {
+      errs.name = "Tên sản phẩm phải có ít nhất 5 ký tự.";
+    } else if (nameVal.length > 50) {
+      errs.name = "Tên sản phẩm không được vượt quá 50 ký tự.";
+    } else if (/[^a-zA-Z0-9\sÀ-ỹà-ỹĐđ]/.test(nameVal)) {
+      errs.name = "Tên sản phẩm chỉ được chứa chữ cái, chữ số và khoảng trắng (không có ký tự đặc biệt).";
     }
-    if (formStock === "" || isNaN(formStock) || Number(formStock) < 0) {
-      errs.stock = "Số lượng tồn kho phải lớn hơn hoặc bằng 0.";
+
+    // --- CODE (SKU) - tuỳ chọn, nếu nhập phải đúng chuẩn ---
+    const skuVal = formSku.trim();
+    if (skuVal) {
+      // Chuẩn: PREFIX-SUFFIX, prefix chỉ chữ/số, suffix chỉ chữ/số và không quá 10 ký tự
+      const skuRegex = /^[A-Za-z0-9]+-[A-Za-z0-9]{1,10}$/;
+      if (!skuRegex.test(skuVal)) {
+        errs.sku = "CODE phải theo chuẩn 'PREFIX-SUFFIX' (VD: SKU-123, SKU-LT14). Phần sau dấu '-' tối đa 10 ký tự, không chứa ký tự đặc biệt.";
+      }
     }
-    if (formWeight === "" || isNaN(formWeight) || Number(formWeight) <= 0 || Number(formWeight) > 9999) {
-      errs.weight = "Trọng lượng phải lớn hơn 0 và không quá 9999 kg.";
+
+    // --- Giá ---
+    if (formPrice === "" || isNaN(formPrice)) {
+      errs.price = "Giá sản phẩm không được để trống.";
+    } else if (Number(formPrice) < 5000) {
+      errs.price = "Giá sản phẩm tối thiểu là 5.000 VND.";
+    } else if (Number(formPrice) > 1000000) {
+      errs.price = "Giá sản phẩm tối đa là 1.000.000 VND.";
     }
+
+    // --- Tồn kho ---
+    if (formStock === "" || isNaN(formStock)) {
+      errs.stock = "Số lượng tồn kho không được để trống.";
+    } else if (Number(formStock) < 0) {
+      errs.stock = "Số lượng tồn kho không được âm.";
+    } else if (Number(formStock) > 10000) {
+      errs.stock = "Số lượng tồn kho tối đa là 10.000 sản phẩm.";
+    }
+
+    // --- Trọng lượng ---
+    if (formWeight === "" || isNaN(formWeight)) {
+      errs.weight = "Trọng lượng không được để trống.";
+    } else if (Number(formWeight) <= 0) {
+      errs.weight = "Trọng lượng phải lớn hơn 0.";
+    } else if (Number(formWeight) > 10) {
+      errs.weight = "Trọng lượng tối đa là 10 kg.";
+    }
+
+    // --- Danh mục & Thương hiệu ---
     if (!formCategoryId || Number(formCategoryId) <= 0) {
       errs.categoryId = "Vui lòng chọn danh mục hợp lệ.";
     }
@@ -241,11 +352,25 @@ export const AdminProductManagement = () => {
       errs.brandId = "Vui lòng chọn thương hiệu hợp lệ.";
     }
 
-    setFormErrors(errs);
-    if (Object.keys(errs).length > 0) {
-      showToast(Object.values(errs)[0], "error");
+    const errorKeys = Object.keys(errs);
+    if (errorKeys.length === 1) {
+      // Chỉ có 1 lỗi: Không hiển thị lỗi trong modal, chỉ hiển thị pop up bên góc trên phải trong 8s
+      setFormErrors({});
+      showToast(errs[errorKeys[0]], "error", 8000);
+      return false;
+    } else if (errorKeys.length > 1) {
+      // Nhiều trường phạm lỗi: Hiển thị lỗi bên trong modal để người dùng dễ chỉnh sửa và báo pop up trong 8s
+      setFormErrors(errs);
+      showToast(
+        `Có ${errorKeys.length} trường thông tin chưa hợp lệ. Vui lòng kiểm tra lại biểu mẫu.`,
+        "error",
+        8000
+      );
+      return false;
     }
-    return Object.keys(errs).length === 0;
+
+    setFormErrors({});
+    return true;
   };
 
   // Handle Save (Add)
@@ -272,6 +397,8 @@ export const AdminProductManagement = () => {
       setIsAddModalOpen(false);
       showToast(`Đã thêm sản phẩm "${payload.name}" thành công!`, "success");
       fetchProductList();
+      fetchStats();
+      notifyProductChange();
     } catch (err) {
       console.error("Failed to create product:", err);
       const msg =
@@ -310,6 +437,8 @@ export const AdminProductManagement = () => {
       setIsEditModalOpen(false);
       showToast(`Cập nhật sản phẩm "${payload.name}" thành công!`, "success");
       fetchProductList();
+      fetchStats();
+      notifyProductChange();
     } catch (err) {
       console.error("Failed to update product:", err);
       const msg = err.response?.data?.message || "Cập nhật sản phẩm thất bại.";
@@ -337,6 +466,8 @@ export const AdminProductManagement = () => {
         "success"
       );
       fetchProductList();
+      fetchStats();
+      notifyProductChange();
     } catch (err) {
       console.error("Failed to update stock:", err);
       showToast(err.response?.data?.message || "Cập nhật tồn kho thất bại.", "error");
@@ -348,6 +479,17 @@ export const AdminProductManagement = () => {
   // Handle Delete
   const handleConfirmDelete = async () => {
     if (!productToDelete) return;
+
+    // Chặn xoá nếu sản phẩm đang ACTIVE
+    if (productToDelete.status === "ACTIVE") {
+      setIsDeleteConfirmOpen(false);
+      showToast(
+        `Không thể xoá sản phẩm "${productToDelete.name}" vì đang ở trạng thái ACTIVE. Hãy chuyển sang INACTIVE trước khi xoá.`,
+        "error"
+      );
+      return;
+    }
+
     setActionLoading(true);
     try {
       const id = productToDelete.productId || productToDelete.id;
@@ -355,12 +497,14 @@ export const AdminProductManagement = () => {
       setIsDeleteConfirmOpen(false);
       showToast(`Đã xoá sản phẩm "${productToDelete.name}".`, "success");
       fetchProductList();
+      fetchStats();
+      notifyProductChange();
     } catch (err) {
       console.error("Failed to delete product:", err);
       setIsDeleteConfirmOpen(false);
       showToast(
         err.response?.data?.message ||
-          "Không thể xoá sản phẩm vì đã có đơn hàng hoặc giỏ hàng liên kết.",
+        "Không thể xoá sản phẩm vì đã có đơn hàng hoặc giỏ hàng liên kết.",
         "error"
       );
     } finally {
@@ -394,6 +538,96 @@ export const AdminProductManagement = () => {
         </button>
       </div>
 
+      {/* Top Banner Stats (Professional Cards with Icons - matching Category Management) */}
+      <div className="row g-3 mb-4">
+        {/* Total Products */}
+        <div className="col-xl-3 col-sm-6">
+          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+            <div>
+              <span className="text-muted fs-12 fw-600 text-uppercase">
+                Tổng sản phẩm
+              </span>
+              <h3 className="mb-0 fw-700 mt-1">{stats.total}</h3>
+            </div>
+            <div
+              className="d-flex align-items-center justify-content-center rounded-3"
+              style={{
+                width: "48px",
+                height: "48px",
+                backgroundColor: "rgba(233, 97, 63, 0.12)",
+                color: "#e9613f",
+              }}
+            >
+              <i className="fa-solid fa-boxes-stacked fs-20"></i>
+            </div>
+          </div>
+        </div>
+
+        {/* Active Products */}
+        <div className="col-xl-3 col-sm-6">
+          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+            <div>
+              <span className="text-muted fs-12 fw-600 text-uppercase">
+                Đang kinh doanh
+              </span>
+              <h3 className="mb-0 fw-700 mt-1 text-success">{stats.active}</h3>
+            </div>
+            <div
+              className="d-flex align-items-center justify-content-center rounded-3 bg-success-subtle text-success"
+              style={{ width: "48px", height: "48px" }}
+            >
+              <i className="fa-solid fa-circle-check fs-20"></i>
+            </div>
+          </div>
+        </div>
+
+        {/* Out of stock */}
+        <div className="col-xl-3 col-sm-6">
+          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+            <div>
+              <span className="text-muted fs-12 fw-600 text-uppercase">
+                Hết hàng
+              </span>
+              <h3 className="mb-0 fw-700 mt-1" style={{ color: "#f59e0b" }}>{stats.outOfStock}</h3>
+            </div>
+            <div
+              className="d-flex align-items-center justify-content-center rounded-3"
+              style={{
+                width: "48px",
+                height: "48px",
+                backgroundColor: "rgba(245, 158, 11, 0.12)",
+                color: "#f59e0b",
+              }}
+            >
+              <i className="fa-solid fa-triangle-exclamation fs-20"></i>
+            </div>
+          </div>
+        </div>
+
+        {/* Inactive Products */}
+        <div className="col-xl-3 col-sm-6">
+          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+            <div>
+              <span className="text-muted fs-12 fw-600 text-uppercase">
+                Tạm ngưng / Đã ẩn
+              </span>
+              <h3 className="mb-0 fw-700 mt-1" style={{ color: "#ef4444" }}>{stats.inactive}</h3>
+            </div>
+            <div
+              className="d-flex align-items-center justify-content-center rounded-3"
+              style={{
+                width: "48px",
+                height: "48px",
+                backgroundColor: "rgba(239, 68, 68, 0.12)",
+                color: "#ef4444",
+              }}
+            >
+              <i className="fa-solid fa-eye-slash fs-20"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* TOOLBAR CARD (Clean horizontal layout, uniform search, filters, and sort like User Management) */}
       <div className="admin-card mb-4">
         <div className="d-flex flex-wrap align-items-center gap-3">
@@ -402,7 +636,7 @@ export const AdminProductManagement = () => {
             <i className="fa-solid fa-magnifying-glass text-muted fs-13"></i>
             <input
               type="text"
-              placeholder="Search by name, SKU..."
+              placeholder="Search by name, CODE..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -438,7 +672,7 @@ export const AdminProductManagement = () => {
           {/* Brand Filter */}
           <select
             className="admin-select-sm"
-            style={{ width: "150px" }}
+            style={{ width: "160px" }}
             value={selectedBrand}
             onChange={(e) => {
               setSelectedBrand(e.target.value);
@@ -495,8 +729,9 @@ export const AdminProductManagement = () => {
               <tr>
                 <th style={{ width: "60px" }}>STT</th>
                 <th>PRODUCT</th>
-                <th style={{ width: "130px" }}>SKU</th>
-                <th>CATEGORY / BRAND</th>
+                <th style={{ width: "130px" }}>CODE</th>
+                <th>CATEGORY</th>
+                <th>BRAND</th>
                 <th>PRICE</th>
                 <th>WEIGHT</th>
                 <th className="text-center">STOCK</th>
@@ -507,7 +742,7 @@ export const AdminProductManagement = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-5">
+                  <td colSpan="10" className="text-center py-5">
                     <div className="spinner-border color-primary" role="status"></div>
                     <p className="mt-2 text-muted fs-14">Loading product inventory...</p>
                   </td>
@@ -556,7 +791,7 @@ export const AdminProductManagement = () => {
                         </div>
                       </td>
 
-                      {/* SKU */}
+                      {/* CODE */}
                       <td>
                         <span
                           className="font-monospace fw-600 px-2 py-1 rounded"
@@ -572,16 +807,18 @@ export const AdminProductManagement = () => {
                         </span>
                       </td>
 
-                      {/* Category & Brand */}
+                      {/* Category */}
                       <td>
-                        <div>
-                          <span className="badge bg-light text-dark border me-1 fs-11">
-                            {p.category?.name || "General"}
-                          </span>
-                          <span className="text-muted fs-12">
-                            {p.brand?.name || "—"}
-                          </span>
-                        </div>
+                        <span className="badge bg-light text-dark border fs-12">
+                          {p.category?.name || "General"}
+                        </span>
+                      </td>
+
+                      {/* Brand */}
+                      <td>
+                        <span className="text-muted fs-13 fw-500">
+                          {p.brand?.name || "—"}
+                        </span>
                       </td>
 
                       {/* Price */}
@@ -603,13 +840,12 @@ export const AdminProductManagement = () => {
                       <td className="text-center">
                         <button
                           type="button"
-                          className={`badge border-0 cursor-pointer ${
-                            stockNum === 0
+                          className={`badge border-0 cursor-pointer ${stockNum === 0
                               ? "bg-danger text-white"
                               : stockNum < 10
-                              ? "bg-warning text-dark"
-                              : "bg-light text-dark border"
-                          }`}
+                                ? "bg-warning text-dark"
+                                : "bg-light text-dark border"
+                            }`}
                           style={{ fontSize: "12px", padding: "6px 10px", cursor: "pointer" }}
                           onClick={() => openStockModal(p)}
                           title="Click to quick update stock"
@@ -621,11 +857,10 @@ export const AdminProductManagement = () => {
                       {/* Status */}
                       <td>
                         <span
-                          className={`admin-badge ${
-                            p.status === "ACTIVE"
+                          className={`admin-badge ${p.status === "ACTIVE"
                               ? "user-status-active"
                               : "user-status-blocked"
-                          }`}
+                            }`}
                         >
                           {p.status || "ACTIVE"}
                         </span>
@@ -663,7 +898,7 @@ export const AdminProductManagement = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="9" className="text-center py-5 text-muted">
+                  <td colSpan="10" className="text-center py-5 text-muted">
                     <i className="fa-solid fa-box-open fa-2x mb-3 d-block text-muted"></i>
                     No products found matching your search.
                   </td>
@@ -673,7 +908,7 @@ export const AdminProductManagement = () => {
           </table>
         </div>
 
-        {/* PAGINATION BAR (Synchronized with User Management - 12 records max per page) */}
+        {/* PAGINATION BAR (Synchronized with User Management - 10 records max per page) */}
         <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 gap-2">
           <span className="text-muted fs-13">
             Showing{" "}
@@ -699,11 +934,10 @@ export const AdminProductManagement = () => {
                 <button
                   key={pageNum}
                   type="button"
-                  className={`btn ${
-                    pageNum === page
+                  className={`btn ${pageNum === page
                       ? "btn-dark bg-color-primary border-0 fw-700 text-white"
                       : "btn-light border"
-                  }`}
+                    }`}
                   style={pageNum === page ? { backgroundColor: "#e9613f" } : {}}
                   onClick={() => setPage(pageNum)}
                 >
@@ -841,6 +1075,7 @@ export const AdminProductManagement = () => {
 
             {/* Scrollable Body */}
             <form
+              noValidate
               onSubmit={isAddModalOpen ? handleSaveAdd : handleSaveEdit}
               style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden" }}
             >
@@ -863,11 +1098,11 @@ export const AdminProductManagement = () => {
                         onChange={(e) => setFormName(e.target.value)}
                         style={{ borderRadius: "8px", fontSize: "13.5px" }}
                       />
-                      {formErrors.name && <div className="invalid-feedback">{formErrors.name}</div>}
+                      {formErrors.name && <div className="invalid-feedback d-block">{formErrors.name}</div>}
                     </div>
                     <div className="col-md-4">
                       <label className="form-label" style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}>
-                        SKU Code <span className="text-muted fw-400">(tùy chọn)</span>
+                        CODE <span className="text-muted fw-400"></span>
                       </label>
                       <input
                         type="text"
@@ -877,7 +1112,7 @@ export const AdminProductManagement = () => {
                         onChange={(e) => setFormSku(e.target.value.toUpperCase())}
                         style={{ borderRadius: "8px", fontSize: "13.5px", fontFamily: "monospace" }}
                       />
-                      {formErrors.sku && <div className="invalid-feedback">{formErrors.sku}</div>}
+                      {formErrors.sku && <div className="invalid-feedback d-block">{formErrors.sku}</div>}
                     </div>
                   </div>
                 </div>
@@ -907,7 +1142,7 @@ export const AdminProductManagement = () => {
                           </option>
                         ))}
                       </select>
-                      {formErrors.categoryId && <div className="invalid-feedback">{formErrors.categoryId}</div>}
+                      {formErrors.categoryId && <div className="invalid-feedback d-block">{formErrors.categoryId}</div>}
                     </div>
                     <div className="col-sm-6">
                       <label className="form-label" style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}>
@@ -926,7 +1161,7 @@ export const AdminProductManagement = () => {
                           </option>
                         ))}
                       </select>
-                      {formErrors.brandId && <div className="invalid-feedback">{formErrors.brandId}</div>}
+                      {formErrors.brandId && <div className="invalid-feedback d-block">{formErrors.brandId}</div>}
                     </div>
                   </div>
                 </div>
@@ -963,13 +1198,14 @@ export const AdminProductManagement = () => {
                       <input
                         type="number"
                         min="0"
+                        max="10000"
                         className={`form-control ${formErrors.stock ? "is-invalid" : ""}`}
                         placeholder="100"
                         value={formStock}
                         onChange={(e) => setFormStock(e.target.value)}
                         style={{ borderRadius: "8px", fontSize: "13.5px" }}
                       />
-                      {formErrors.stock && <div className="invalid-feedback">{formErrors.stock}</div>}
+                      {formErrors.stock && <div className="invalid-feedback d-block">{formErrors.stock}</div>}
                     </div>
 
                     {/* Weight (DB Column weight_kg) */}
@@ -981,14 +1217,14 @@ export const AdminProductManagement = () => {
                         type="number"
                         step="0.001"
                         min="0.001"
-                        max="9999"
+                        max="10"
                         className={`form-control ${formErrors.weight ? "is-invalid" : ""}`}
                         placeholder="0.1"
                         value={formWeight}
                         onChange={(e) => setFormWeight(e.target.value)}
                         style={{ borderRadius: "8px", fontSize: "13.5px" }}
                       />
-                      {formErrors.weight && <div className="invalid-feedback">{formErrors.weight}</div>}
+                      {formErrors.weight && <div className="invalid-feedback d-block">{formErrors.weight}</div>}
                     </div>
 
                     <div className="col-sm-3">
@@ -1030,58 +1266,57 @@ export const AdminProductManagement = () => {
                         style={{ display: "none" }}
                       />
 
-                      <div
-                        style={{
-                          border: "2px dashed #d1d5db",
-                          borderRadius: "12px",
-                          padding: "16px 20px",
-                          backgroundColor: "#fafbfc",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: "16px",
-                          flexWrap: "wrap",
-                        }}
-                      >
-                        <div className="d-flex align-items-center gap-3">
-                          <img
-                            src={imagePreview || formImageUrl || "/assets/media/products/product-1.png"}
-                            alt="Preview"
+                      {!(imagePreview || formImageUrl) ? (
+                        /* Empty state: large clickable dropzone with cloud-arrow-up icon */
+                        <div
+                          onClick={() => !isUploadingImage && fileInputRef.current?.click()}
+                          style={{
+                            border: "2px dashed #cbd5e1",
+                            borderRadius: "14px",
+                            padding: "36px 20px",
+                            backgroundColor: "#f8fafc",
+                            textAlign: "center",
+                            cursor: isUploadingImage ? "not-allowed" : "pointer",
+                            transition: "all 0.2s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isUploadingImage) {
+                              e.currentTarget.style.borderColor = "#e9613f";
+                              e.currentTarget.style.backgroundColor = "rgba(233,97,63,0.02)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isUploadingImage) {
+                              e.currentTarget.style.borderColor = "#cbd5e1";
+                              e.currentTarget.style.backgroundColor = "#f8fafc";
+                            }
+                          }}
+                        >
+                          <div
                             style={{
-                              width: "64px",
-                              height: "64px",
-                              borderRadius: "10px",
-                              objectFit: "cover",
-                              border: "1px solid #e2e8f0",
-                              backgroundColor: "#fff",
+                              width: "60px",
+                              height: "60px",
+                              borderRadius: "50%",
+                              backgroundColor: "rgba(233, 97, 63, 0.1)",
+                              color: "#e9613f",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              marginBottom: "12px",
                             }}
-                            onError={(e) => {
-                              e.target.src = "/assets/media/products/product-1.png";
-                            }}
-                          />
-                          <div>
-                            <div className="fw-600 fs-13 text-dark">
-                              {formImageUrl
-                                ? "Đã chọn ảnh thành công"
-                                : "Chưa có ảnh nào được tải lên"}
-                            </div>
-                            <span className="text-muted fs-12">
-                              Định dạng hỗ trợ: JPG, PNG, WEBP, GIF (Tối đa 5MB)
-                            </span>
-                            {formImageUrl && (
-                              <div className="fs-11 text-truncate text-primary mt-1" style={{ maxWidth: "300px" }}>
-                                {formImageUrl}
-                              </div>
-                            )}
+                          >
+                            <i className="fa-solid fa-cloud-arrow-up fs-24"></i>
                           </div>
-                        </div>
-
-                        <div className="d-flex align-items-center gap-2">
+                          <div className="fw-700 fs-14 text-dark mb-1">
+                            Nhấp vào đây để tải hình ảnh từ máy tính
+                          </div>
+                          <div className="text-muted fs-12 mb-3">
+                            Hỗ trợ định dạng: PNG, JPG, JPEG, WEBP, GIF (Dung lượng tối đa 5MB)
+                          </div>
                           <button
                             type="button"
-                            className="btn btn-sm btn-outline-primary rounded-3 px-3 py-2 fw-600"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isUploadingImage || actionLoading}
+                            className="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-600"
+                            disabled={isUploadingImage}
                           >
                             {isUploadingImage ? (
                               <>
@@ -1090,12 +1325,82 @@ export const AdminProductManagement = () => {
                               </>
                             ) : (
                               <>
-                                <i className="fa-solid fa-cloud-arrow-up me-1"></i>
-                                Chọn file từ máy
+                                <i className="fa-solid fa-folder-open me-1"></i>
+                                Duyệt tệp từ thiết bị
                               </>
                             )}
                           </button>
-                          {formImageUrl && (
+                        </div>
+                      ) : (
+                        /* Uploaded / Selected image preview */
+                        <div
+                          style={{
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "14px",
+                            padding: "16px 20px",
+                            backgroundColor: "#fff",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: "16px",
+                            flexWrap: "wrap",
+                          }}
+                        >
+                          <div className="d-flex align-items-center gap-3">
+                            <img
+                              src={imagePreview || formImageUrl}
+                              alt="Product Preview"
+                              style={{
+                                width: "70px",
+                                height: "70px",
+                                borderRadius: "10px",
+                                objectFit: "cover",
+                                border: "1px solid #edf2f7",
+                                backgroundColor: "#f8f9fa",
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                              }}
+                            />
+                            <div>
+                              <div className="d-flex align-items-center gap-2">
+                                <span className="badge bg-success-subtle text-success fs-11 fw-600">
+                                  <i className="fa-solid fa-circle-check me-1"></i>
+                                  Ảnh đã được tải lên
+                                </span>
+                              </div>
+                              <div
+                                className="fs-12 text-truncate text-secondary mt-1"
+                                style={{ maxWidth: "320px", fontFamily: "monospace" }}
+                              >
+                                {formImageUrl || "Hình ảnh đã chọn"}
+                              </div>
+                              <span className="text-muted fs-11">
+                                Nhấp vào "Đổi ảnh khác" nếu muốn thay đổi
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="d-flex align-items-center gap-2">
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-secondary rounded-3 px-3 py-2 fw-600"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={isUploadingImage || actionLoading}
+                            >
+                              {isUploadingImage ? (
+                                <>
+                                  <span className="spinner-border spinner-border-sm me-2" role="status" />
+                                  Đang tải lên...
+                                </>
+                              ) : (
+                                <>
+                                  <i className="fa-solid fa-arrow-rotate-right me-1"></i>
+                                  Đổi ảnh khác
+                                </>
+                              )}
+                            </button>
                             <button
                               type="button"
                               className="btn btn-sm btn-light border text-danger rounded-3 p-2"
@@ -1108,9 +1413,9 @@ export const AdminProductManagement = () => {
                             >
                               <i className="fa-regular fa-trash-can"></i>
                             </button>
-                          )}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
 
                     <div className="col-12">
@@ -1306,11 +1611,10 @@ export const AdminProductManagement = () => {
                 <div className="flex-grow-1">
                   <div className="d-flex align-items-center gap-2 flex-wrap mb-1">
                     <span
-                      className={`admin-badge ${
-                        selectedProductDetail.status === "ACTIVE"
+                      className={`admin-badge ${selectedProductDetail.status === "ACTIVE"
                           ? "user-status-active"
                           : "user-status-blocked"
-                      }`}
+                        }`}
                     >
                       {selectedProductDetail.status || "ACTIVE"}
                     </span>
@@ -1379,8 +1683,8 @@ export const AdminProductManagement = () => {
                       {selectedProductDetail.updatedAt
                         ? new Date(selectedProductDetail.updatedAt).toLocaleString("vi-VN")
                         : selectedProductDetail.createdAt
-                        ? new Date(selectedProductDetail.createdAt).toLocaleString("vi-VN")
-                        : "—"}
+                          ? new Date(selectedProductDetail.createdAt).toLocaleString("vi-VN")
+                          : "—"}
                     </span>
                   </div>
                 </div>
@@ -1497,7 +1801,7 @@ export const AdminProductManagement = () => {
               ></button>
             </div>
 
-            <form onSubmit={handleSaveStock}>
+            <form noValidate onSubmit={handleSaveStock}>
               <div className="p-4" style={{ backgroundColor: "#ffffff" }}>
                 <div className="d-flex align-items-center gap-3 mb-3 p-3 bg-light rounded-3 border">
                   <img

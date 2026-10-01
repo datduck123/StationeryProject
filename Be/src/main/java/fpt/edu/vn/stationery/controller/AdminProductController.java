@@ -28,7 +28,7 @@ public class AdminProductController {
     @GetMapping
     public ResponseEntity<fpt.edu.vn.stationery.dto.response.PageDTO<ProductResponseDTO>> getAllProductsAdmin(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Long brandId,

@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-09-28T00:33:50+0700",
-    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.100.v20260826-1225, environment: Java 21.0.12.1 (Eclipse Adoptium)"
+    date = "2026-10-01T17:37:26+0700",
+    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 22.0.2 (Oracle Corporation)"
 )
 @Component
 public class CategoryMapperImpl implements CategoryMapper {
@@ -22,8 +22,8 @@ public class CategoryMapperImpl implements CategoryMapper {
 
         Category.CategoryBuilder category = Category.builder();
 
-        category.description( dto.getDescription() );
         category.name( dto.getName() );
+        category.description( dto.getDescription() );
         category.status( dto.getStatus() );
 
         return category.build();
@@ -38,10 +38,10 @@ public class CategoryMapperImpl implements CategoryMapper {
         CategoryResponseDTO.CategoryResponseDTOBuilder categoryResponseDTO = CategoryResponseDTO.builder();
 
         categoryResponseDTO.categoryId( entity.getCategoryId() );
-        categoryResponseDTO.createdAt( entity.getCreatedAt() );
-        categoryResponseDTO.description( entity.getDescription() );
         categoryResponseDTO.name( entity.getName() );
+        categoryResponseDTO.description( entity.getDescription() );
         categoryResponseDTO.status( entity.getStatus() );
+        categoryResponseDTO.createdAt( entity.getCreatedAt() );
         categoryResponseDTO.updatedAt( entity.getUpdatedAt() );
 
         return categoryResponseDTO.build();
@@ -53,8 +53,8 @@ public class CategoryMapperImpl implements CategoryMapper {
             return;
         }
 
-        entity.setDescription( dto.getDescription() );
         entity.setName( dto.getName() );
+        entity.setDescription( dto.getDescription() );
         entity.setStatus( dto.getStatus() );
     }
 }
