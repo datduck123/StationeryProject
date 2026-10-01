@@ -4,6 +4,7 @@ import fpt.edu.vn.stationery.dto.request.AdminUpdateUserRequestDTO;
 import fpt.edu.vn.stationery.dto.request.CreateUserByAdminRequestDTO;
 import fpt.edu.vn.stationery.dto.response.PageDTO;
 import fpt.edu.vn.stationery.dto.response.UserResponseDTO;
+import fpt.edu.vn.stationery.dto.response.UserStatsResponseDTO;
 import fpt.edu.vn.stationery.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -45,6 +46,12 @@ public class AdminController {
         return ResponseEntity.ok(userService.getUsersWithPagination(
                 page, size, sortBy, sortDir, keyword, status, role
         ));
+    }
+
+    @Operation(summary = "Get user statistics (total, active, inactive, blocked)")
+    @GetMapping("/users/stats")
+    public ResponseEntity<UserStatsResponseDTO> getUserStats() {
+        return ResponseEntity.ok(userService.getUserStats());
     }
 
     @Operation(summary = "Get user details by ID")
