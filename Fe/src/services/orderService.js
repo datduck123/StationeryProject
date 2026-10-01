@@ -25,6 +25,11 @@ const orderService = {
     const response = await api.get(`/admin/orders/${orderId}`);
     return response.data;
   },
+
+  async updateOrderStatus(orderId, status) {
+    const response = await api.put(`/admin/orders/${orderId}`, { status });
+    return response.data;
+  },
 };
 
 export default orderService;

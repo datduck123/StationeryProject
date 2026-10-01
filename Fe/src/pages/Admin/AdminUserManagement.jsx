@@ -648,7 +648,7 @@ export const AdminUserManagement = () => {
           </table>
         </div>
 
-        {/* PAGINATION BAR (< 1 2 3 > default 10 records without show selector) */}
+        {/* PAGINATION BAR */}
         <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 gap-2">
           <span className="text-muted fs-13">
             Showing{" "}

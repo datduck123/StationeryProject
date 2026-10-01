@@ -42,7 +42,7 @@ export const authService = {
     try {
       await api.post("/auth/logout");
     } catch {
-      // ignore network errors on logout
+      error("Logout failed, but clearing local storage anyway.");
     } finally {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);

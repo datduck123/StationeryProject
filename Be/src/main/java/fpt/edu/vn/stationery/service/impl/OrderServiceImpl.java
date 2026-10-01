@@ -4,6 +4,7 @@ import fpt.edu.vn.stationery.dto.response.OrderDetailResponseDTO;
 import fpt.edu.vn.stationery.dto.response.OrderResponseDTO;
 import fpt.edu.vn.stationery.dto.response.PageDTO;
 import fpt.edu.vn.stationery.entity.Order;
+import fpt.edu.vn.stationery.event.OrderStatusChangedEvent;
 import fpt.edu.vn.stationery.exception.BadRequestException;
 import fpt.edu.vn.stationery.exception.ResourceNotFoundException;
 import fpt.edu.vn.stationery.mapper.OrderMapper;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -33,6 +35,7 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public PageDTO<OrderResponseDTO> getCustomerOrders(String email, int page, int size) {
@@ -109,6 +112,35 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findWithOrderItemsByOrderId(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
         return orderMapper.toDetailResponse(order);
+    }
+
+    @Override
+    @Transactional
+    public OrderDetailResponseDTO updateAdminOrderStatus(Long orderId, String requestedStatus) {
+        if (!StringUtils.hasText(requestedStatus)) {
+            throw new BadRequestException("Order status is required");
+        }
+        String next = requestedStatus.trim().toUpperCase();
+        Order order = orderRepository.findForStatusUpdate(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        String previous = order.getOrderStatus();
+        if (!isAllowedTransition(previous, next)) {
+            throw new BadRequestException("Cannot change order status from " + previous + " to " + next);
+        }
+        order.setOrderStatus(next);
+        orderRepository.saveAndFlush(order);
+        eventPublisher.publishEvent(new OrderStatusChangedEvent(
+                order.getOrderId(), previous, next, order.getUser().getUserId()));
+        return orderMapper.toDetailResponse(order);
+    }
+
+    private boolean isAllowedTransition(String previous, String next) {
+        return switch (previous) {
+            case "PENDING" -> "CONFIRMED".equals(next) || "CANCELLED".equals(next);
+            case "CONFIRMED" -> "SHIPPING".equals(next) || "CANCELLED".equals(next);
+            case "SHIPPING" -> "DELIVERED".equals(next);
+            default -> false;
+        };
     }
 
     private Pageable pageable(int page, int size) {
