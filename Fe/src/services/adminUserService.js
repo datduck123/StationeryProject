@@ -2,6 +2,14 @@ import api from "./api";
 
 export const adminUserService = {
   /**
+   * Get user statistics (total, active, inactive, blocked)
+   */
+  async getUserStats() {
+    const response = await api.get("/admin/users/stats");
+    return response.data;
+  },
+
+  /**
    * Get users with pagination, sorting, and filtering
    * @param {{ page?: number, size?: number, sortBy?: string, sortDir?: string, keyword?: string, status?: string, role?: string }} params
    */

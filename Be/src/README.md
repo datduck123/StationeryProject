@@ -3,7 +3,7 @@
 Spring Boot REST API with JWT Authentication
 
 ## Tech Stack
-- Java 17
+- Java 21
 - Spring Boot 3.2
 - Spring Security + JWT (jjwt 0.11.5)
 - Spring Data JPA + MySQL

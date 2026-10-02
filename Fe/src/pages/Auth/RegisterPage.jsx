@@ -372,7 +372,7 @@ export const RegisterPage = () => {
                               Sending OTP...
                             </span>
                           ) : (
-                            "Continue (Send OTP)"
+                            "Sign Up"
                           )}
                         </button>
                       </div>
