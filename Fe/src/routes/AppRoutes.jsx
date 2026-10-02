@@ -4,6 +4,7 @@ import MainLayout from "../layouts/MainLayout";
 import AdminBrandManagement from "../pages/Admin/AdminBrandManagement";
 import AdminCategoryManagement from "../pages/Admin/AdminCategoryManagement";
 import AdminDashboard from "../pages/Admin/AdminDashboard";
+import AdminOrderManagement from "../pages/Admin/AdminOrderManagement";
 import AdminProductManagement from "../pages/Admin/AdminProductManagement";
 import AdminUserManagement from "../pages/Admin/AdminUserManagement";
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
