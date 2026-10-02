@@ -8,6 +8,7 @@ export const CartProvider = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [compareList, setCompareList] = useState([]);
 
   const openCart = (e) => {
     if (e) e.preventDefault();
@@ -31,19 +32,7 @@ export const CartProvider = ({ children }) => {
 
   const openQuickView = (product, e) => {
     if (e) e.preventDefault();
-    setQuickViewProduct(
-      product || {
-        title: "Hardcover Notebook",
-        price: "$180.00",
-        oldPrice: "$200.00",
-        image: "/assets/media/products/large-image-1.png",
-        rating: "★★★★★",
-        reviews: "(02 Customer Reviews)",
-        stock: "40 in stock, ready to ship",
-        sku: "AF-001-KT",
-        category: "Notebook",
-      },
-    );
+    setQuickViewProduct(product);
   };
 
   const closeQuickView = (e) => {
@@ -51,9 +40,39 @@ export const CartProvider = ({ children }) => {
     setQuickViewProduct(null);
   };
 
-  const openCompare = (e) => {
-    if (e) e.preventDefault();
+  const openCompare = (product, e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (product) {
+      setCompareList((prev) => {
+        const prodId = product.id || product.productId;
+        if (prev.some((p) => (p.id || p.productId) === prodId)) {
+          return prev;
+        }
+        if (prev.length >= 2) {
+          return [prev[0], product];
+        }
+        return [...prev, product];
+      });
+    }
     setIsCompareOpen(true);
+  };
+
+  const addCompareProduct = (product) => {
+    if (!product) return;
+    setCompareList((prev) => {
+      const prodId = product.id || product.productId;
+      if (prev.some((p) => (p.id || p.productId) === prodId)) {
+        return prev;
+      }
+      if (prev.length >= 2) {
+        return [prev[0], product];
+      }
+      return [...prev, product];
+    });
+  };
+
+  const removeCompareProduct = (productId) => {
+    setCompareList((prev) => prev.filter((p) => (p.id || p.productId) !== productId));
   };
 
   const closeCompare = (e) => {
@@ -85,6 +104,9 @@ export const CartProvider = ({ children }) => {
         isCompareOpen,
         openCompare,
         closeCompare,
+        compareList,
+        addCompareProduct,
+        removeCompareProduct,
       }}
     >
       {children}

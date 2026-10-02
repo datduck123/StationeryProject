@@ -4,7 +4,7 @@ import MainLayout from "../layouts/MainLayout";
 import AdminBrandManagement from "../pages/Admin/AdminBrandManagement";
 import AdminCategoryManagement from "../pages/Admin/AdminCategoryManagement";
 import AdminDashboard from "../pages/Admin/AdminDashboard";
-import AdminOrderManagement from "../pages/Admin/AdminOrderManagement";
+import AdminProductManagement from "../pages/Admin/AdminProductManagement";
 import AdminUserManagement from "../pages/Admin/AdminUserManagement";
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 import LoginPage from "../pages/Auth/LoginPage";
@@ -34,6 +34,7 @@ export const AppRoutes = () => {
       >
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUserManagement />} />
+        <Route path="/admin/products" element={<AdminProductManagement />} />
         <Route path="/admin/categories" element={<AdminCategoryManagement />} />
         <Route path="/admin/brands" element={<AdminBrandManagement />} />
         <Route path="/admin/orders" element={<AdminOrderManagement />} />
@@ -43,16 +44,17 @@ export const AppRoutes = () => {
       {/* Public and Customer routes in MainLayout */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/index.html" element={<Home />} />
+        <Route path="/index.html" element={<Navigate to="/" replace />} />
         <Route path="/shop" element={<ShopGridSidebar />} />
-        <Route path="/shop-grid.html" element={<ShopGridSidebar />} />
-        <Route path="/shop-grid-sidebar.html" element={<ShopGridSidebar />} />
+        <Route path="/shop-grid.html" element={<Navigate to="/shop" replace />} />
+        <Route path="/shop-grid-sidebar.html" element={<Navigate to="/shop" replace />} />
         <Route path="/product-detail" element={<ProductDetail />} />
-        <Route path="/product-detail.html" element={<ProductDetail />} />
+        <Route path="/product-detail.html" element={<Navigate to="/product-detail" replace />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
-        <Route path="/cart.html" element={<Cart />} />
+        <Route path="/cart.html" element={<Navigate to="/cart" replace />} />
         <Route path="/checkout" element={<Checkout />} />
-        <Route path="/checkout.html" element={<Checkout />} />
+        <Route path="/checkout.html" element={<Navigate to="/checkout" replace />} />
 
         <Route
           path="/account/orders"

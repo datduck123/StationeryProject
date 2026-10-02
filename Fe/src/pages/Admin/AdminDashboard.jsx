@@ -322,7 +322,7 @@ export const AdminDashboard = () => {
 
         <div className="col-md-3 col-sm-6">
           <Link
-            to="/shop"
+            to="/admin/products"
             className="text-decoration-none card border-0 shadow-sm rounded-3 p-3 bg-white h-100 hover-card"
           >
             <div className="d-flex align-items-center gap-3">
@@ -333,8 +333,8 @@ export const AdminDashboard = () => {
                 <i className="fa-solid fa-boxes-stacked fs-20"></i>
               </div>
               <div>
-                <h6 className="fw-700 medium-black mb-1">Product Catalog</h6>
-                <span className="fs-12 text-muted">Live shopfront items</span>
+                <h6 className="fw-700 medium-black mb-1">Product Inventory</h6>
+                <span className="fs-12 text-muted">Manage catalog & stock</span>
               </div>
             </div>
           </Link>

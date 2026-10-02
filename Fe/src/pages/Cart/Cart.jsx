@@ -270,7 +270,7 @@ export const Cart = () => {
               </div>
 
               <div className="table-bottom-row bg-white">
-                <Link to="/shop-grid-sidebar.html" className="cus-btn">
+                <Link to="/shop" className="cus-btn">
                   <span className="text-btn">{t("common.goToShop")}</span>
                   <span>{t("common.goToShop")}</span>
                 </Link>

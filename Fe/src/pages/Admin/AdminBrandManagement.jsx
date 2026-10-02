@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import { notifyProductChange } from "../../utils/syncEvents";
 import "../../styles/admin.css";
 
 const INITIAL_BRANDS = [
@@ -146,8 +147,19 @@ export const AdminBrandManagement = () => {
     if (!formCountry.trim()) {
       errors.country = "Country of origin is required.";
     }
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
+    const errorKeys = Object.keys(errors);
+    if (errorKeys.length === 1) {
+      setFormErrors({});
+      showToast(errors[errorKeys[0]], "error", 8000);
+      return false;
+    } else if (errorKeys.length > 1) {
+      setFormErrors(errors);
+      showToast("Vui lòng kiểm tra lại các trường thông tin không hợp lệ.", "error", 8000);
+      return false;
+    }
+
+    setFormErrors({});
+    return true;
   };
 
   // Handle Add
@@ -169,6 +181,7 @@ export const AdminBrandManagement = () => {
     setBrands((prev) => [newBrand, ...prev]);
     setIsAddModalOpen(false);
     setSuccessMsg(`Brand "${newBrand.name}" was added successfully!`);
+    notifyProductChange();
     setTimeout(() => setSuccessMsg(""), 4000);
   };
 
@@ -197,6 +210,7 @@ export const AdminBrandManagement = () => {
 
     setIsEditModalOpen(false);
     setSuccessMsg(`Brand "${formName.trim()}" updated successfully!`);
+    notifyProductChange();
     setTimeout(() => setSuccessMsg(""), 4000);
   };
 
@@ -207,6 +221,7 @@ export const AdminBrandManagement = () => {
       prev.map((b) => (b.id === brand.id ? { ...b, status: nextStatus } : b)),
     );
     setSuccessMsg(`Status of "${brand.name}" changed to ${nextStatus}.`);
+    notifyProductChange();
     setTimeout(() => setSuccessMsg(""), 3000);
   };
 
@@ -217,6 +232,7 @@ export const AdminBrandManagement = () => {
     setIsDeleteConfirmOpen(false);
     setSuccessMsg(`Brand "${brandToDelete.name}" deleted.`);
     setBrandToDelete(null);
+    notifyProductChange();
     setTimeout(() => setSuccessMsg(""), 4000);
   };
 
@@ -562,7 +578,7 @@ export const AdminBrandManagement = () => {
                   onClick={() => setIsAddModalOpen(false)}
                 ></button>
               </div>
-              <form onSubmit={handleSaveAdd}>
+              <form noValidate onSubmit={handleSaveAdd}>
                 <div className="modal-body p-4">
                   <div className="mb-3">
                     <label className="form-label fw-600 fs-13 medium-black">
@@ -689,7 +705,7 @@ export const AdminBrandManagement = () => {
                   onClick={() => setIsEditModalOpen(false)}
                 ></button>
               </div>
-              <form onSubmit={handleSaveEdit}>
+              <form noValidate onSubmit={handleSaveEdit}>
                 <div className="modal-body p-4">
                   <div className="mb-3">
                     <label className="form-label fw-600 fs-13 medium-black">

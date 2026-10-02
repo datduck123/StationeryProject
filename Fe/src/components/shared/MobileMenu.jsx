@@ -47,12 +47,12 @@ export const MobileMenu = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/shop-grid-sidebar.html" onClick={closeMobileMenu}>
+                <Link to="/shop" onClick={closeMobileMenu}>
                   {t("header.categories")}
                 </Link>
               </li>
               <li className={`dropdown ${expandedSubMenu ? "expanded" : ""}`}>
-                <Link to="/shop-grid-sidebar.html" onClick={closeMobileMenu}>
+                <Link to="/shop" onClick={closeMobileMenu}>
                   {t("header.shop")}
                 </Link>
                 <button
@@ -74,31 +74,26 @@ export const MobileMenu = () => {
                 >
                   <li>
                     <Link
-                      to="/shop-grid-sidebar.html"
+                      to="/shop"
                       onClick={closeMobileMenu}
                     >
                       {t("header.shopGrid")}
                     </Link>
                   </li>
                   <li>
-                    <Link to="/product-detail.html" onClick={closeMobileMenu}>
-                      {t("header.productDetail")}
-                    </Link>
-                  </li>
-                  <li>
-                    <Link to="/cart.html" onClick={closeMobileMenu}>
+                    <Link to="/cart" onClick={closeMobileMenu}>
                       {t("header.cart")}
                     </Link>
                   </li>
                   <li>
-                    <Link to="/checkout.html" onClick={closeMobileMenu}>
+                    <Link to="/checkout" onClick={closeMobileMenu}>
                       {t("header.checkout")}
                     </Link>
                   </li>
                 </ul>
               </li>
               <li>
-                <Link to="/shop-grid-sidebar.html" onClick={closeMobileMenu}>
+                <Link to="/shop" onClick={closeMobileMenu}>
                   {t("header.brands")}
                 </Link>
               </li>
