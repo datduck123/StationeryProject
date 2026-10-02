@@ -135,7 +135,7 @@ public class CartCalculationServiceImpl implements CartCalculationService {
                 continue;
             }
 
-            int currentStock = product.getStock() != null ? Math.max(0, product.getStock()) : 0;
+            int currentStock = product.getStockQuantity() != null ? Math.max(0, product.getStockQuantity()) : 0;
             boolean isInactive = product.getStatus() != ProductStatus.ACTIVE;
             BigDecimal unitPrice = product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO;
             BigDecimal unitWeight = DEFAULT_UNIT_WEIGHT_KG;

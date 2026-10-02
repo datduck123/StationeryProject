@@ -53,7 +53,7 @@ class CartCalculationServiceTest {
                 .name("Thiên Long Ballpoint Pen")
                 .sku("TL-PEN-01")
                 .price(BigDecimal.valueOf(10.00))
-                .stock(20)
+                .stockQuantity(20)
                 .status(ProductStatus.ACTIVE)
                 .build();
 
@@ -62,7 +62,7 @@ class CartCalculationServiceTest {
                 .name("Campus Notebook 200p")
                 .sku("NB-CAMPUS-02")
                 .price(BigDecimal.valueOf(25.00))
-                .stock(5)
+                .stockQuantity(5)
                 .status(ProductStatus.ACTIVE)
                 .build();
     }
@@ -128,7 +128,7 @@ class CartCalculationServiceTest {
     @Test
     @DisplayName("Sản phẩm hết hàng: tự động chuyển số lượng về 0 và đánh dấu không khả dụng")
     void calculate_whenProductOutOfStock_shouldSetQuantityZeroAndUnavailable() {
-        product2.setStock(0);
+        product2.setStockQuantity(0);
         when(productRepository.findAllById(anySet())).thenReturn(List.of(product2));
 
         CartCalculationRequestDTO request = CartCalculationRequestDTO.builder()
@@ -214,7 +214,7 @@ class CartCalculationServiceTest {
     @Test
     @DisplayName("Hàm chung Checkout: ném ngoại lệ CartStockConflictException nếu kho thay đổi")
     void validateAndCalculateForCheckout_whenStockChanged_shouldThrowConflictException() {
-        product2.setStock(3);
+        product2.setStockQuantity(3);
         when(productRepository.findAllById(anySet())).thenReturn(List.of(product2));
 
         CartCalculationRequestDTO request = CartCalculationRequestDTO.builder()

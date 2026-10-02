@@ -57,7 +57,7 @@ public class CartServiceImpl implements CartService {
             throw new BadRequestException("Sản phẩm hiện đang ngừng kinh doanh");
         }
 
-        int availableStock = product.getStock() != null ? product.getStock() : 0;
+        int availableStock = product.getStockQuantity() != null ? product.getStockQuantity() : 0;
         if (availableStock <= 0) {
             throw new BadRequestException("Sản phẩm đã hết hàng trong kho");
         }
@@ -110,7 +110,7 @@ public class CartServiceImpl implements CartService {
             throw new BadRequestException("Sản phẩm hiện đang ngừng kinh doanh");
         }
 
-        int availableStock = product.getStock() != null ? product.getStock() : 0;
+        int availableStock = product.getStockQuantity() != null ? product.getStockQuantity() : 0;
         if (quantity > availableStock) {
             throw new BadRequestException("Số lượng yêu cầu (" + quantity + ") vượt quá tồn kho hiện có (" + availableStock + ")");
         }

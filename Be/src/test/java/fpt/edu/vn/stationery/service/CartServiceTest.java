@@ -62,7 +62,7 @@ class CartServiceTest {
                 .name("Thiên Long Gel Pen")
                 .sku("TL-GEL-01")
                 .price(BigDecimal.valueOf(12.50))
-                .stock(10)
+                .stockQuantity(10)
                 .status(ProductStatus.ACTIVE)
                 .build();
 
@@ -120,7 +120,7 @@ class CartServiceTest {
     @Test
     @DisplayName("Báo lỗi khi thêm sản phẩm đã hết hàng trong kho (stock = 0)")
     void addToCart_ThrowsBadRequest_WhenStockZero() {
-        activeProduct.setStock(0);
+        activeProduct.setStockQuantity(0);
 
         CartItemInputDTO request = CartItemInputDTO.builder()
                 .productId(100L)
