@@ -14,7 +14,6 @@ const OrderDetailPage = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [canceling, setCanceling] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -34,19 +33,6 @@ const OrderDetailPage = () => {
       active = false;
     };
   }, [id]);
-
-  const cancelOrder = async () => {
-    if (!window.confirm("Cancel this order?")) return;
-    setCanceling(true);
-    setError("");
-    try {
-      setOrder(await orderService.cancelMyOrder(id));
-    } catch (requestError) {
-      setError(requestError?.response?.data?.message || "Could not cancel this order.");
-    } finally {
-      setCanceling(false);
-    }
-  };
 
   return (
     <>
@@ -75,16 +61,6 @@ const OrderDetailPage = () => {
                   </div>
                 </div>
                 <OrderTrackingTimeline status={order.orderStatus} />
-                {order.orderStatus === "PENDING" && (
-                  <button
-                    type="button"
-                    className="btn btn-outline-danger mt-3"
-                    onClick={cancelOrder}
-                    disabled={canceling}
-                  >
-                    {canceling ? "Cancelling…" : "Cancel order"}
-                  </button>
-                )}
               </div>
 
               <div className="checkout-box bg-semi-white p-24 mb-16">
