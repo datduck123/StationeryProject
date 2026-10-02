@@ -20,3 +20,8 @@ pnpm-debug.log*
 !.vscode/extensions.json
 .idea/
 
+# =========================
+# Java / Maven
+# =========================
+**/target/
+*.class
