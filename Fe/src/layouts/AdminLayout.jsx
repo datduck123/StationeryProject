@@ -174,6 +174,19 @@ export const AdminLayout = () => {
                 <span>Brand Management</span>
               </Link>
             </li>
+
+            <li className="admin-nav-item">
+              <Link
+                to="/admin/orders"
+                className={`admin-nav-link ${
+                  isActive("/admin/orders") ? "active" : ""
+                }`}
+                title="Order Management"
+              >
+                <i className="fa-solid fa-receipt"></i>
+                <span>Order Management</span>
+              </Link>
+            </li>
           </ul>
 
           <div className="admin-nav-group-title mt-3">QUICK LINKS</div>

@@ -27,6 +27,7 @@ public interface UserService {
     UserResponseDTO toggleUserStatus(Long userId, String currentAdminEmail);
     UserResponseDTO createUserByAdmin(CreateUserByAdminRequestDTO request);
     UserResponseDTO updateUserByAdmin(Long userId, AdminUpdateUserRequestDTO request);
+    UserStatsResponseDTO getUserStats();
 
     // Compatibility
     List<UserResponse> getAllUsers();

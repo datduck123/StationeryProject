@@ -131,6 +131,16 @@ export const Header = () => {
                         <i className="fa-regular fa-user color-primary"></i>
                         <span>My Profile</span>
                       </Link>
+                      {!isAdmin && (
+                        <Link
+                          to="/account/orders"
+                          className="user-menu-item"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          <i className="fa-solid fa-receipt color-primary"></i>
+                          <span>{t("header.myOrders")}</span>
+                        </Link>
+                      )}
                       {isAdmin && (
                         <>
                           <Link

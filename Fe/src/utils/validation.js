@@ -1,6 +1,6 @@
 /**
  * Frontend Validation Utility
- * Contains all form validation rules, regex patterns, and specific English error messages.
+ * Contains all form validation rules, regex patterns, and specific error messages.
  */
 
 // Regex patterns

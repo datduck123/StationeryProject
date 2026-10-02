@@ -743,3 +743,68 @@
   background-color: #f8f9fa;
   color: var(--admin-primary) !important;
 }
+.admin-order-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 6000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.62);
+}
+
+.admin-order-dialog {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #20252d;
+  background: #fff;
+  border: 1px solid #dce2eb;
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.admin-order-dialog-header,
+.admin-order-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 24px;
+  background: #fff;
+}
+
+.admin-order-dialog-header {
+  border-bottom: 1px solid #e5e9f0;
+}
+
+.admin-order-dialog-header h5 {
+  margin: 0;
+  color: #20252d;
+  font-weight: 700;
+}
+
+.admin-order-dialog-body {
+  padding: 24px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.admin-order-dialog-footer {
+  justify-content: flex-end;
+  border-top: 1px solid #e5e9f0;
+}
+
+/* User Management Specific Stat Cards & Badges */
+.admin-stat-card-clickable {
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.admin-order-status-dialog {
+  width: min(480px, 100%);
+}
