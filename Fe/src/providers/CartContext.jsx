@@ -14,6 +14,7 @@ export const CartProvider = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
+  const [compareList, setCompareList] = useState([]);
 
   // Cart API State
   const [cart, setCart] = useState(null);
@@ -52,6 +53,24 @@ export const CartProvider = ({ children }) => {
   const openCompare = (e) => {
     if (e && typeof e.preventDefault === "function") e.preventDefault();
     setIsCompareOpen(true);
+  };
+
+  const addCompareProduct = (product) => {
+    if (!product) return;
+    setCompareList((prev) => {
+      const prodId = product.id || product.productId;
+      if (prev.some((p) => (p.id || p.productId) === prodId)) {
+        return prev;
+      }
+      if (prev.length >= 2) {
+        return [prev[0], product];
+      }
+      return [...prev, product];
+    });
+  };
+
+  const removeCompareProduct = (productId) => {
+    setCompareList((prev) => prev.filter((p) => (p.id || p.productId) !== productId));
   };
 
   const closeCompare = (e) => {
@@ -222,7 +241,6 @@ export const CartProvider = ({ children }) => {
         isCompareOpen,
         openCompare,
         closeCompare,
-
         // Cart Data & Actions
         cart,
         items,
@@ -237,6 +255,9 @@ export const CartProvider = ({ children }) => {
         updateQuantity,
         removeItem,
         clearCart,
+        compareList,
+        addCompareProduct,
+        removeCompareProduct,
       }}
     >
       {children}

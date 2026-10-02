@@ -359,6 +359,21 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public UserStatsResponseDTO getUserStats() {
+        long totalUsers = userRepository.count();
+        long activeUsers = userRepository.countByStatus(UserStatus.ACTIVE);
+        long inactiveUsers = userRepository.countByStatus(UserStatus.INACTIVE);
+        long blockedUsers = userRepository.countByStatus(UserStatus.BLOCKED);
+
+        return UserStatsResponseDTO.builder()
+                .totalUsers(totalUsers)
+                .activeUsers(activeUsers)
+                .inactiveUsers(inactiveUsers)
+                .blockedUsers(blockedUsers)
+                .build();
+    }
+
+    @Override
     public List<UserResponse> getAllUsers() {
         return userMapper.toResponseList(userRepository.findAll());
     }

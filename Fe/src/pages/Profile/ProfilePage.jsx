@@ -341,7 +341,7 @@ export const ProfilePage = () => {
               </div>
 
               <form onSubmit={handleSaveProfile} noValidate>
-                {/* Full Name with User Icon */}
+                {/* Full Name */}
                 <div className="auth-field-wrapper mb-3 position-relative">
                   <label className="form-label fw-600 mb-1">Full Name *</label>
                   <div className="input-block">
@@ -584,7 +584,7 @@ export const ProfilePage = () => {
                   </div>
                 </div>
 
-                {/* Confirm New Password with Lock Icon */}
+                {/* Confirm New Password */}
                 <div className="auth-field-wrapper mb-4 position-relative">
                   <label className="form-label fw-600 mb-1">
                     Confirm New Password *

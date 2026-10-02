@@ -41,12 +41,14 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/auth/**",
+                    "/api/upload/**",
+                    "/uploads/**",
                     "/v3/api-docs/**",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/api/cart/calculate"
                 ).permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**", "/api/brands/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**", "/api/brands/**", "/api/products/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )

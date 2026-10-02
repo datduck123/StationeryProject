@@ -26,6 +26,15 @@ export const AdminUserManagement = () => {
   const [totalElements, setTotalElements] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // User Statistics states (4 cards)
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    inactiveUsers: 0,
+    blockedUsers: 0,
+  });
+  const [statsLoading, setStatsLoading] = useState(true);
+
   // Modals state
   // 1. View Detail Modal
   const [selectedUser, setSelectedUser] = useState(null);
@@ -106,9 +115,27 @@ export const AdminUserManagement = () => {
     showToast,
   ]);
 
+  // Fetch user statistics
+  const fetchStats = useCallback(async () => {
+    try {
+      const data = await adminUserService.getUserStats();
+      if (data) {
+        setStats(data);
+      }
+    } catch (err) {
+      console.error("Failed to load user stats:", err);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   // --- ADD USER LOGIC ---
   const handleCreateUser = async (e) => {
@@ -147,6 +174,7 @@ export const AdminUserManagement = () => {
         "success",
       );
       fetchUsers();
+      fetchStats();
     } catch (err) {
       const msg =
         err?.response?.data?.message || err.message || "Failed to create user.";
@@ -199,6 +227,7 @@ export const AdminUserManagement = () => {
       setIsEditModalOpen(false);
       showToast("User updated successfully!", "success");
       fetchUsers();
+      fetchStats();
     } catch (err) {
       const msg =
         err?.response?.data?.message || err.message || "Failed to update user.";
@@ -230,6 +259,7 @@ export const AdminUserManagement = () => {
       setUserToToggle(null);
       showToast("User status updated successfully!", "success");
       fetchUsers();
+      fetchStats();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
@@ -282,6 +312,110 @@ export const AdminUserManagement = () => {
         >
           <i className="fa-solid fa-user-plus me-1"></i> Add New User
         </button>
+      </div>
+
+      {/* Top Banner Stats - Designed like Category Management */}
+      <div className="row g-3 mb-4">
+        {/* Card 1: Total Users */}
+        <div className="col-xl-3 col-sm-6">
+          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+            <div>
+              <span className="text-muted fs-12 fw-600 text-uppercase">
+                Total Users
+              </span>
+              <h3 className="mb-0 fw-700 mt-1">
+                {statsLoading ? (
+                  <span className="spinner-border spinner-border-sm text-secondary"></span>
+                ) : (
+                  stats.totalUsers.toLocaleString()
+                )}
+              </h3>
+            </div>
+            <div
+              className="d-flex align-items-center justify-content-center rounded-3"
+              style={{
+                width: "48px",
+                height: "48px",
+                backgroundColor: "rgba(233, 97, 63, 0.12)",
+                color: "#e9613f",
+              }}
+            >
+              <i className="fa-solid fa-users fs-20"></i>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Active Users */}
+        <div className="col-xl-3 col-sm-6">
+          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+            <div>
+              <span className="text-muted fs-12 fw-600 text-uppercase">
+                Active Users
+              </span>
+              <h3 className="mb-0 fw-700 mt-1 text-success">
+                {statsLoading ? (
+                  <span className="spinner-border spinner-border-sm text-secondary"></span>
+                ) : (
+                  stats.activeUsers.toLocaleString()
+                )}
+              </h3>
+            </div>
+            <div
+              className="d-flex align-items-center justify-content-center rounded-3 bg-success-subtle text-success"
+              style={{ width: "48px", height: "48px" }}
+            >
+              <i className="fa-solid fa-circle-check fs-20"></i>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Inactive Users */}
+        <div className="col-xl-3 col-sm-6">
+          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+            <div>
+              <span className="text-muted fs-12 fw-600 text-uppercase">
+                Inactive Users
+              </span>
+              <h3 className="mb-0 fw-700 mt-1 text-secondary">
+                {statsLoading ? (
+                  <span className="spinner-border spinner-border-sm text-secondary"></span>
+                ) : (
+                  stats.inactiveUsers.toLocaleString()
+                )}
+              </h3>
+            </div>
+            <div
+              className="d-flex align-items-center justify-content-center rounded-3 bg-light text-secondary"
+              style={{ width: "48px", height: "48px" }}
+            >
+              <i className="fa-solid fa-pause fs-20"></i>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Blocked Users */}
+        <div className="col-xl-3 col-sm-6">
+          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+            <div>
+              <span className="text-muted fs-12 fw-600 text-uppercase">
+                Blocked Users
+              </span>
+              <h3 className="mb-0 fw-700 mt-1 text-danger">
+                {statsLoading ? (
+                  <span className="spinner-border spinner-border-sm text-secondary"></span>
+                ) : (
+                  stats.blockedUsers.toLocaleString()
+                )}
+              </h3>
+            </div>
+            <div
+              className="d-flex align-items-center justify-content-center rounded-3 bg-danger-subtle text-danger"
+              style={{ width: "48px", height: "48px" }}
+            >
+              <i className="fa-solid fa-ban fs-20"></i>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* TOOLBAR CARD (Clean horizontal layout, uniform search, filters, and sort) */}
@@ -514,7 +648,7 @@ export const AdminUserManagement = () => {
           </table>
         </div>
 
-        {/* PAGINATION BAR (< 1 2 3 > default 10 records without show selector) */}
+        {/* PAGINATION BAR */}
         <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 gap-2">
           <span className="text-muted fs-13">
             Showing{" "}

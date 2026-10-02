@@ -17,5 +17,8 @@ export default defineConfig({
     fs: {
       strict: false,
     },
+    proxy: {
+      "/uploads": "http://localhost:8080",
+    },
   },
 });

@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "categories")
+@Table(name = "Categories")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -28,7 +28,11 @@ public class Category {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
+    @Column(name = "status", nullable = false, length = 20)
+    @Builder.Default
+    private String status = "ACTIVE";
+
+    @Column(name = "updated_at", insertable = false)
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
