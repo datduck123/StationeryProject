@@ -314,7 +314,7 @@ export const AdminUserManagement = () => {
         </button>
       </div>
 
-      {/* Top Banner Stats - Designed like Category Management */}
+      {/* Top Banner Stats */}
       <div className="row g-3 mb-4">
         {/* Card 1: Total Users */}
         <div className="col-xl-3 col-sm-6">
@@ -418,7 +418,7 @@ export const AdminUserManagement = () => {
         </div>
       </div>
 
-      {/* TOOLBAR CARD (Clean horizontal layout, uniform search, filters, and sort) */}
+      {/* TOOLBAR CARD */}
       <div className="admin-card mb-4">
         <div className="d-flex flex-wrap align-items-center gap-3">
           {/* Live Auto Search */}
