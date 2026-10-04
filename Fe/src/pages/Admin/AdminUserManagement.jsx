@@ -1031,7 +1031,7 @@ export const AdminUserManagement = () => {
         </div>
       )}
 
-      {/* --- 3. EDIT USER MODAL (With input icons & Status edit: ACTIVE / INACTIVE / BLOCKED) --- */}
+      {/* --- 3. EDIT USER MODAL --- */}
       {isEditModalOpen && (
         <div
           className="modal fade show d-block"
