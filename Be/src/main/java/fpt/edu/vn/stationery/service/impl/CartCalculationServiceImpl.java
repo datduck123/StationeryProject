@@ -12,6 +12,7 @@ import fpt.edu.vn.stationery.exception.CartStockConflictException;
 import fpt.edu.vn.stationery.repository.CartItemRepository;
 import fpt.edu.vn.stationery.repository.ProductRepository;
 import fpt.edu.vn.stationery.service.CartCalculationService;
+import fpt.edu.vn.stationery.service.VoucherService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,7 @@ public class CartCalculationServiceImpl implements CartCalculationService {
 
     private final ProductRepository productRepository;
     private final CartItemRepository cartItemRepository;
+    private final VoucherService voucherService;
 
     @Override
     @Transactional
@@ -345,7 +347,6 @@ public class CartCalculationServiceImpl implements CartCalculationService {
         if (voucherId == null || subtotal == null || subtotal.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
         }
-        // Có thể mở rộng tích hợp VoucherRepository kiểm tra hạn mức & min_order_amount
-        return BigDecimal.ZERO;
+        return voucherService.calculateDiscount(voucherId, subtotal);
     }
 }
