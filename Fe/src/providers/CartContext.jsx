@@ -200,12 +200,12 @@ export const CartProvider = ({ children }) => {
   /**
    * Clear entire cart
    */
-  const clearCart = async () => {
+  const clearCart = async (showNotification = true) => {
     if (!user) return false;
     try {
       const updatedCart = await cartService.clearCart();
       setCart(updatedCart);
-      showToast("Đã xóa sạch giỏ hàng.", "info");
+      if (showNotification) showToast("Đã xóa sạch giỏ hàng.", "info");
       return true;
     } catch (err) {
       showToast("Không thể xóa toàn bộ giỏ hàng.", "error");
@@ -243,6 +243,7 @@ export const CartProvider = ({ children }) => {
         closeCompare,
         // Cart Data & Actions
         cart,
+        setCart,
         items,
         cartCount,
         cartSubtotal,

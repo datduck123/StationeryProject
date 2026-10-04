@@ -38,7 +38,7 @@ export const SidebarCart = () => {
           <button
             type="button"
             className="btn btn-link text-dark p-0 border-0 fs-5"
-            onClick={closeCart}
+            onClick={() => closeCart()}
             aria-label="Close"
           >
             <i className="fa-solid fa-xmark"></i>
@@ -55,7 +55,7 @@ export const SidebarCart = () => {
               <Link
                 to="/shop"
                 className="cus-btn btn-sm d-inline-block"
-                onClick={closeCart}
+                onClick={() => closeCart()}
               >
                 <span>Mua sắm ngay</span>
               </Link>
@@ -90,7 +90,7 @@ export const SidebarCart = () => {
                         <Link
                           to={`/product-detail?id=${item.productId}`}
                           className="h6 medium-black font-sec fw-600 mb-4 d-block text-truncate text-decoration-none"
-                          onClick={closeCart}
+                          onClick={() => closeCart()}
                           title={item.productName}
                         >
                           {item.productName}
@@ -165,7 +165,7 @@ export const SidebarCart = () => {
                 <Link
                   to="/cart"
                   className="cus-btn w-100 text-center py-2"
-                  onClick={closeCart}
+                  onClick={() => closeCart()}
                 >
                   <span className="btn-text">Xem giỏ hàng</span>
                   <span>Xem giỏ hàng</span>
@@ -175,7 +175,7 @@ export const SidebarCart = () => {
                 <Link
                   to="/checkout"
                   className="cus-btn-2 btn-sec w-100 text-center py-2"
-                  onClick={closeCart}
+                  onClick={() => closeCart()}
                 >
                   <span className="btn-text">Thanh toán</span>
                   <span>Thanh toán</span>
@@ -190,7 +190,7 @@ export const SidebarCart = () => {
       <div
         id="sidebar-cart-curtain"
         className="close-popup"
-        onClick={closeCart}
+        onClick={() => closeCart()}
         style={{
           display: isCartOpen ? "block" : "none",
           opacity: isCartOpen ? 1 : 0,
