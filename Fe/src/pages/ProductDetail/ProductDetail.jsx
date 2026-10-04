@@ -9,10 +9,10 @@ import { getProductById, getProductImage } from "../../services/productService";
 
 export const ProductDetail = () => {
   const [searchParams] = useSearchParams();
-  const productId = searchParams.get("id") ? Number(searchParams.get("id")) : 1;
+  const { id } = useParams();
+  const productId = id ? Number(id) : (searchParams.get("id") ? Number(searchParams.get("id")) : 1);
   const { openCart, openQuickView, openCompare, addToCart } = useCartContext();
   const { t } = useTranslation();
-  const { id } = useParams();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("review");

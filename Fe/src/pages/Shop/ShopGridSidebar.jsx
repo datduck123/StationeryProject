@@ -888,7 +888,7 @@ export const ShopGridSidebar = () => {
                               className="cus-btn"
                               onClick={(e) => {
                                 e.preventDefault();
-                                openCart();
+                                addToCart(prodId, 1, true);
                               }}
                             >
                               <span className="btn-text">
