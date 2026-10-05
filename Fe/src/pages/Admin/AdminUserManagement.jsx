@@ -1158,7 +1158,7 @@ export const AdminUserManagement = () => {
                   </div>
                 </div>
 
-                {/* Role & Status (Can edit ACTIVE / INACTIVE / BLOCKED) */}
+                {/* Role & Status */}
                 <div className="row">
                   <div className="col-sm-6 mb-3">
                     <label className="form-label fw-600 mb-1">Role *</label>
