@@ -316,7 +316,7 @@ export const AdminUserManagement = () => {
 
       {/* Top Banner Stats */}
       <div className="row g-3 mb-4">
-        {/* Card 1: Total Users */}
+        {/* Total Users */}
         <div className="col-xl-3 col-sm-6">
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
@@ -345,7 +345,7 @@ export const AdminUserManagement = () => {
           </div>
         </div>
 
-        {/* Card 2: Active Users */}
+        {/* Active Users */}
         <div className="col-xl-3 col-sm-6">
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
@@ -369,7 +369,7 @@ export const AdminUserManagement = () => {
           </div>
         </div>
 
-        {/* Card 3: Inactive Users */}
+        {/* Inactive Users */}
         <div className="col-xl-3 col-sm-6">
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
@@ -393,7 +393,7 @@ export const AdminUserManagement = () => {
           </div>
         </div>
 
-        {/* Card 4: Blocked Users */}
+        {/* Blocked Users */}
         <div className="col-xl-3 col-sm-6">
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
