@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import AuthModal from "../components/auth/AuthModal";
 import BackToTop from "../components/shared/BackToTop";
-import CompareModal from "../components/shared/CompareModal";
 import Footer from "../components/shared/Footer";
 import Header from "../components/shared/Header";
 import MobileMenu from "../components/shared/MobileMenu";
 import Preloader from "../components/shared/Preloader";
 import QuickViewModal from "../components/shared/QuickViewModal";
 import SidebarCart from "../components/shared/SidebarCart";
+import SidebarWishlist from "../components/shared/SidebarWishlist";
 
 export const MainLayout = () => {
   useEffect(() => {
@@ -32,8 +32,8 @@ export const MainLayout = () => {
       <BackToTop />
       <MobileMenu />
       <SidebarCart />
+      <SidebarWishlist />
       <QuickViewModal />
-      <CompareModal />
       <AuthModal />
     </>
   );

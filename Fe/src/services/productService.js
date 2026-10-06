@@ -117,6 +117,14 @@ export const adminCreateCategory = (data) => api.post("/admin/categories", data)
 export const adminUpdateCategory = (id, data) => api.put(`/admin/categories/${id}`, data);
 export const adminDeleteCategory = (id) => api.delete(`/admin/categories/${id}`);
 
+// ==========================================
+// Admin Brand APIs (/api/admin/brands)
+// ==========================================
+export const adminGetBrands = () => api.get("/admin/brands");
+export const adminCreateBrand = (data) => api.post("/admin/brands", data);
+export const adminUpdateBrand = (id, data) => api.put(`/admin/brands/${id}`, data);
+export const adminDeleteBrand = (id) => api.delete(`/admin/brands/${id}`);
+
 /**
  * Standardize and resolve image URL for a product so name and image match 100%.
  * @param {Object} product
