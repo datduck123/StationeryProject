@@ -38,6 +38,20 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Please sign in with an Admin account to access this page\"}");
+                })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                    response.setContentType("application/json");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"status\":403,\"error\":\"Forbidden\",\"message\":\"Access denied: Administrator privileges required\"}");
+                })
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/auth/**",

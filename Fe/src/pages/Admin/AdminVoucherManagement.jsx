@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import { useToast } from "../../providers/ToastContext";
 import voucherService from "../../services/voucherService";
 import "../../styles/admin.css";
 
@@ -39,16 +40,32 @@ const formatForInput = (isoString) => {
   }
 };
 
+const getPageNumbers = (current, total) => {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "...", total];
+  }
+  if (current >= total - 3) {
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
+};
+
 export const AdminVoucherManagement = () => {
+  const { showToast } = useToast();
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  // Filters & Search
+  // Filters & Search & Pagination
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("createdAt:desc");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -85,10 +102,14 @@ export const AdminVoucherManagement = () => {
       setVouchers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to load vouchers:", err);
-      setError(
+      const msg =
         err.response?.data?.message ||
-          "Failed to load voucher list. Please check backend connection."
-      );
+        (err.response?.status === 403
+          ? "Access denied: Admin permission is required. Please login with an Admin account."
+          : err.response?.status === 401
+          ? "Your login session has expired. Please log in again."
+          : "Failed to load voucher list. Please check backend connection.");
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -111,14 +132,18 @@ export const AdminVoucherManagement = () => {
     e.stopPropagation();
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
+    showToast(`Voucher code "${code}" copied to clipboard!`, "success");
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  // Generate random voucher code
+  // Generate random voucher code (max 8 chars)
   const handleGenerateRandomCode = () => {
-    const prefixes = ["PROMO", "SAVE", "DEAL", "SUMMER", "VIP", "STATIONERY"];
+    const prefixes = ["PROMO", "SAVE", "DEAL", "SUM", "VIP", "SALE"];
     const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    const remainingDigits = 8 - prefix.length;
+    const minNum = Math.pow(10, remainingDigits - 1);
+    const maxNum = Math.pow(10, remainingDigits) - 1;
+    const randomNum = Math.floor(minNum + Math.random() * (maxNum - minNum + 1));
     const newCode = `${prefix}${randomNum}`;
     setFormCode(newCode);
     setFormServerDuplicateError("");
@@ -244,6 +269,24 @@ export const AdminVoucherManagement = () => {
       });
   }, [vouchers, searchQuery, statusFilter, sortBy]);
 
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredVouchers.length / pageSize));
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(Math.max(1, totalPages));
+    }
+  }, [filteredVouchers.length, totalPages, currentPage]);
+
+  const displayedVouchers = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredVouchers.slice(start, start + pageSize);
+  }, [filteredVouchers, currentPage, pageSize]);
+
   // Form Reset
   const resetForm = () => {
     setFormCode("");
@@ -295,8 +338,8 @@ export const AdminVoucherManagement = () => {
 
     if (!code) {
       errors.code = "Voucher code is required";
-    } else if (code.length < 2 || code.length > 50) {
-      errors.code = "Code must be between 2 and 50 characters";
+    } else if (code.length < 2 || code.length > 8) {
+      errors.code = "Voucher code must be between 2 and 8 characters";
     } else if (!/^[A-Z0-9_-]+$/.test(code)) {
       errors.code = "Code can only contain letters, numbers, hyphens, and underscores";
     }
@@ -322,6 +365,13 @@ export const AdminVoucherManagement = () => {
       const limitVal = parseInt(formUsageLimit, 10);
       if (isNaN(limitVal) || limitVal < 1) {
         errors.usageLimit = "Usage limit must be at least 1";
+      } else if (
+        isEditModalOpen &&
+        selectedVoucher &&
+        selectedVoucher.usedCount != null &&
+        limitVal < selectedVoucher.usedCount
+      ) {
+        errors.usageLimit = `Usage limit (${limitVal}) cannot be less than current used count (${selectedVoucher.usedCount})`;
       }
     }
 
@@ -333,6 +383,13 @@ export const AdminVoucherManagement = () => {
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  // Helper to format date for API payload without UTC shift
+  const formatDateTimePayload = (dateStr) => {
+    if (!dateStr) return null;
+    if (dateStr.length === 16) return `${dateStr}:00`;
+    return dateStr;
   };
 
   // Submit Create
@@ -349,28 +406,26 @@ export const AdminVoucherManagement = () => {
         discountPercent: parseFloat(formDiscountPercent),
         maxDiscount: formMaxDiscount ? parseFloat(formMaxDiscount) : null,
         minOrderAmount: formMinOrderAmount ? parseFloat(formMinOrderAmount) : 0,
-        startDate: formStartDate ? new Date(formStartDate).toISOString() : null,
-        endDate: formEndDate ? new Date(formEndDate).toISOString() : null,
+        startDate: formatDateTimePayload(formStartDate),
+        endDate: formatDateTimePayload(formEndDate),
         usageLimit: !isUnlimitedUsage && formUsageLimit ? parseInt(formUsageLimit, 10) : null,
         isActive: formIsActive,
       };
 
       const created = await voucherService.createVoucher(payload);
       setVouchers((prev) => [created, ...prev]);
+      showToast(`Voucher code "${created.code}" created successfully!`, "success");
       setSuccessMsg(`Voucher code "${created.code}" created successfully!`);
       setIsAddModalOpen(false);
       resetForm();
     } catch (err) {
       console.error("Failed to create voucher:", err);
-      if (err.response?.status === 409) {
-        setFormServerDuplicateError(
-          `Voucher code "${formCode.trim().toUpperCase()}" already exists! Please use a unique code.`
-        );
-      } else {
-        setFormServerDuplicateError(
-          err.response?.data?.message || "Failed to create voucher. Please check inputs."
-        );
-      }
+      const errMsg =
+        err.response?.status === 409
+          ? `Voucher code "${formCode.trim().toUpperCase()}" already exists! Please use a unique code.`
+          : err.response?.data?.message || "Failed to create voucher. Please check inputs.";
+      setFormServerDuplicateError(errMsg);
+      showToast(errMsg, "error");
     } finally {
       setFormSubmitting(false);
     }
@@ -391,8 +446,8 @@ export const AdminVoucherManagement = () => {
         discountPercent: parseFloat(formDiscountPercent),
         maxDiscount: formMaxDiscount ? parseFloat(formMaxDiscount) : null,
         minOrderAmount: formMinOrderAmount ? parseFloat(formMinOrderAmount) : 0,
-        startDate: formStartDate ? new Date(formStartDate).toISOString() : null,
-        endDate: formEndDate ? new Date(formEndDate).toISOString() : null,
+        startDate: formatDateTimePayload(formStartDate),
+        endDate: formatDateTimePayload(formEndDate),
         usageLimit: !isUnlimitedUsage && formUsageLimit ? parseInt(formUsageLimit, 10) : null,
         isActive: formIsActive,
       };
@@ -404,20 +459,18 @@ export const AdminVoucherManagement = () => {
       setVouchers((prev) =>
         prev.map((v) => (v.voucherId === updated.voucherId ? updated : v))
       );
+      showToast(`Voucher code "${updated.code}" updated successfully!`, "success");
       setSuccessMsg(`Voucher code "${updated.code}" updated successfully!`);
       setIsEditModalOpen(false);
       resetForm();
     } catch (err) {
       console.error("Failed to update voucher:", err);
-      if (err.response?.status === 409) {
-        setFormServerDuplicateError(
-          `Voucher code "${formCode.trim().toUpperCase()}" already exists for another voucher!`
-        );
-      } else {
-        setFormServerDuplicateError(
-          err.response?.data?.message || "Failed to update voucher. Please try again."
-        );
-      }
+      const errMsg =
+        err.response?.status === 409
+          ? `Voucher code "${formCode.trim().toUpperCase()}" already exists for another voucher!`
+          : err.response?.data?.message || "Failed to update voucher. Please try again.";
+      setFormServerDuplicateError(errMsg);
+      showToast(errMsg, "error");
     } finally {
       setFormSubmitting(false);
     }
@@ -432,14 +485,14 @@ export const AdminVoucherManagement = () => {
       setVouchers((prev) =>
         prev.map((v) => (v.voucherId === updated.voucherId ? updated : v))
       );
-      setSuccessMsg(
-        `Voucher "${updated.code}" is now ${updated.isActive ? "ACTIVE" : "INACTIVE"}.`
-      );
+      const msg = `Voucher "${updated.code}" is now ${updated.isActive ? "ACTIVE" : "INACTIVE"}.`;
+      showToast(msg, "success");
+      setSuccessMsg(msg);
     } catch (err) {
       console.error("Failed to toggle status:", err);
-      setError(
-        err.response?.data?.message || "Failed to change voucher status."
-      );
+      const errMsg = err.response?.data?.message || "Failed to change voucher status.";
+      setError(errMsg);
+      showToast(errMsg, "error");
     } finally {
       setActionLoadingId(null);
     }
@@ -460,14 +513,16 @@ export const AdminVoucherManagement = () => {
       setVouchers((prev) =>
         prev.filter((v) => v.voucherId !== voucherToDelete.voucherId)
       );
-      setSuccessMsg(`Voucher "${voucherToDelete.code}" deleted permanently.`);
+      const msg = `Voucher "${voucherToDelete.code}" deleted permanently.`;
+      showToast(msg, "success");
+      setSuccessMsg(msg);
       setIsDeleteConfirmOpen(false);
       setVoucherToDelete(null);
     } catch (err) {
       console.error("Failed to delete voucher:", err);
-      setError(
-        err.response?.data?.message || "Failed to delete voucher from system."
-      );
+      const errMsg = err.response?.data?.message || "Failed to delete voucher from system.";
+      setError(errMsg);
+      showToast(errMsg, "error");
     } finally {
       setDeleteLoading(false);
     }
@@ -679,11 +734,6 @@ export const AdminVoucherManagement = () => {
               </button>
             )}
           </div>
-
-          <div className="text-muted small fw-medium">
-            Showing <strong className="text-dark">{filteredVouchers.length}</strong> of{" "}
-            <strong>{vouchers.length}</strong> vouchers
-          </div>
         </div>
 
         {/* Table Content */}
@@ -757,16 +807,17 @@ export const AdminVoucherManagement = () => {
                   </td>
                 </tr>
               ) : (
-                filteredVouchers.map((v, idx) => {
+                displayedVouchers.map((v, idx) => {
                   const badge = getStatusBadge(v);
                   const usagePercent =
                     v.usageLimit && v.usageLimit > 0
                       ? Math.min(100, Math.round(((v.usedCount || 0) / v.usageLimit) * 100))
                       : null;
+                  const itemIndex = (currentPage - 1) * pageSize + idx + 1;
 
                   return (
                     <tr key={v.voucherId}>
-                      <td className="text-muted small">{idx + 1}</td>
+                      <td className="text-muted small">{itemIndex}</td>
 
                       {/* Code Badge & Copy */}
                       <td>
@@ -947,6 +998,64 @@ export const AdminVoucherManagement = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer */}
+        <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 border-top gap-3">
+          <span className="text-muted fs-13">
+            Showing{" "}
+            <strong>
+              {filteredVouchers.length === 0
+                ? 0
+                : (currentPage - 1) * pageSize + 1}{" "}
+              to{" "}
+              {Math.min(currentPage * pageSize, filteredVouchers.length)}
+            </strong>{" "}
+            of <strong>{filteredVouchers.length}</strong> vouchers
+          </span>
+
+          {totalPages > 1 && (
+            <div className="btn-group btn-group-sm" role="group" aria-label="Voucher pagination">
+              <button
+                type="button"
+                className="btn btn-light border"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                title="Previous page"
+              >
+                &lt;
+              </button>
+              {getPageNumbers(currentPage, totalPages).map((item, idx) =>
+                item === "..." ? (
+                  <span key={`ellipsis-${idx}`} className="btn btn-light border disabled px-2">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={item}
+                    type="button"
+                    className={`btn ${
+                      item === currentPage
+                        ? "btn-dark bg-color-primary border-0 fw-700 text-white"
+                        : "btn-light border"
+                    }`}
+                    onClick={() => setCurrentPage(item)}
+                  >
+                    {item}
+                  </button>
+                )
+              )}
+              <button
+                type="button"
+                className="btn btn-light border"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                title="Next page"
+              >
+                &gt;
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ========================================================================= */}
@@ -955,240 +1064,379 @@ export const AdminVoucherManagement = () => {
       {isAddModalOpen && (
         <div
           className="modal fade show d-block"
-          style={{ backgroundColor: "rgba(15, 23, 42, 0.65)" }}
           tabIndex="-1"
+          style={{
+            backgroundColor: "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(2px)",
+            zIndex: 1050,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !formSubmitting) {
+              setIsAddModalOpen(false);
+            }
+          }}
         >
-          <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
-              {/* Modal Header */}
-              <div
-                className="modal-header px-4 py-3 border-bottom text-white"
-                style={{ backgroundColor: "var(--admin-primary)" }}
-              >
-                <div className="d-flex align-items-center gap-2">
-                  <div
-                    className="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center"
-                    style={{ width: 34, height: 34, color: "var(--admin-primary) !important" }}
-                  >
-                    <i className="fa-solid fa-plus fw-bold"></i>
-                  </div>
-                  <div>
-                    <h5 className="modal-title fw-bold text-white mb-0">Create New Voucher</h5>
-                    <small className="text-white-50">
-                      Configure coupon code, discount percentage, limits, and expiration
-                    </small>
-                  </div>
-                </div>
+          <div className="modal-dialog modal-dialog-centered">
+            <div
+              className="modal-content admin-modal-card shadow-lg border-0 rounded-4 p-4"
+              style={{ background: "#ffffff" }}
+            >
+              {/* Header */}
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h4 className="fw-700 mb-0">Create New Voucher</h4>
                 <button
                   type="button"
-                  className="btn-close btn-close-white"
+                  className="btn-close"
                   onClick={() => setIsAddModalOpen(false)}
+                  disabled={formSubmitting}
                 ></button>
               </div>
 
-              {/* Modal Body */}
-              <form onSubmit={handleCreateVoucher}>
-                <div className="modal-body p-4" style={{ maxHeight: "70vh", overflowY: "auto" }}>
-                  {/* Server Duplicate Error Alert */}
-                  {formServerDuplicateError && (
-                    <div className="alert alert-danger d-flex align-items-center gap-2 mb-3">
-                      <i className="fa-solid fa-circle-exclamation fs-5"></i>
-                      <div className="flex-grow-1 fw-medium">{formServerDuplicateError}</div>
-                    </div>
+              {/* Form */}
+              <form onSubmit={handleCreateVoucher} noValidate>
+                {/* Server Duplicate Error Alert */}
+                {formServerDuplicateError && (
+                  <div className="alert alert-danger d-flex align-items-center gap-2 mb-3 py-2 px-3 br-10 fs-13">
+                    <i className="fa-solid fa-circle-exclamation"></i>
+                    <div>{formServerDuplicateError}</div>
+                  </div>
+                )}
+
+                {/* Voucher Code */}
+                <div className="auth-field-wrapper mb-3 position-relative">
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <label className="form-label fw-600 mb-0">
+                      Voucher Code <span className="text-danger">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 fs-12"
+                      onClick={handleGenerateRandomCode}
+                      title="Generate random coupon code"
+                    >
+                      <i className="fa-solid fa-shuffle me-1"></i> Random
+                    </button>
+                  </div>
+                  <div className="input-block">
+                    <input
+                      type="text"
+                      maxLength={8}
+                      className={`form-control form-control-2 font-monospace fw-bold text-uppercase ${
+                        formErrors.code || formServerDuplicateError ? "is-invalid" : ""
+                      }`}
+                      placeholder="e.g. SAVE20, VIP50"
+                      value={formCode}
+                      onChange={(e) => {
+                        setFormCode(e.target.value.toUpperCase().slice(0, 8));
+                        setFormServerDuplicateError("");
+                        setFormErrors((prev) => ({ ...prev, code: null }));
+                      }}
+                      disabled={formSubmitting}
+                      required
+                    />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+                      <path d="M13 5v2" />
+                      <path d="M13 17v2" />
+                      <path d="M13 11v2" />
+                    </svg>
+                  </div>
+                  {formErrors.code && (
+                    <div className="text-danger small mt-1">{formErrors.code}</div>
                   )}
+                </div>
 
-                  <div className="row g-3">
-                    {/* Voucher Code */}
-                    <div className="col-12 col-md-7">
-                      <label className="form-label fw-semibold text-dark">
-                        Voucher Code <span className="text-danger">*</span>
-                      </label>
-                      <div className="input-group">
-                        <span className="input-group-text bg-light text-muted">
-                          <i className="fa-solid fa-barcode"></i>
-                        </span>
-                        <input
-                          type="text"
-                          className={`form-control font-monospace fw-bold text-uppercase ${
-                            formErrors.code || formServerDuplicateError ? "is-invalid" : ""
-                          }`}
-                          placeholder="e.g. SUMMER50, WELCOME10"
-                          value={formCode}
-                          onChange={(e) => {
-                            setFormCode(e.target.value.toUpperCase());
-                            setFormServerDuplicateError("");
-                            setFormErrors((prev) => ({ ...prev, code: null }));
-                          }}
-                          required
-                        />
-                        <button
-                          type="button"
-                          className="btn btn-outline-secondary"
-                          onClick={handleGenerateRandomCode}
-                          title="Generate random coupon code"
-                        >
-                          <i className="fa-solid fa-shuffle me-1"></i> Random
-                        </button>
-                      </div>
-                      {formErrors.code && (
-                        <div className="text-danger small mt-1">{formErrors.code}</div>
-                      )}
-                      <small className="text-muted">Unique coupon identifier.</small>
-                    </div>
-
-                    {/* Active Switch */}
-                    <div className="col-12 col-md-5 d-flex align-items-center justify-content-md-end pt-3">
-                      <div className="form-check form-switch fs-6">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          role="switch"
-                          id="createActiveSwitch"
-                          checked={formIsActive}
-                          onChange={(e) => setFormIsActive(e.target.checked)}
-                        />
-                        <label className="form-check-label fw-semibold ms-2" htmlFor="createActiveSwitch">
-                          {formIsActive ? "Status: Active" : "Status: Inactive"}
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Discount Percentage */}
-                    <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold text-dark">
+                {/* Discount Percentage & Max Discount Cap */}
+                <div className="row">
+                  <div className="col-sm-6 mb-3">
+                    <div className="auth-field-wrapper position-relative">
+                      <label className="form-label fw-600 mb-1">
                         Discount Percentage (%) <span className="text-danger">*</span>
                       </label>
-                      <div className="input-group">
-                        <span className="input-group-text bg-light text-muted">%</span>
+                      <div className="input-block">
                         <input
                           type="number"
                           step="0.01"
                           min="0.01"
                           max="100"
-                          className={`form-control ${formErrors.discountPercent ? "is-invalid" : ""}`}
-                          placeholder="e.g. 15 (for 15% OFF)"
+                          className={`form-control form-control-2 ${
+                            formErrors.discountPercent ? "is-invalid" : ""
+                          }`}
+                          placeholder="e.g. 15"
                           value={formDiscountPercent}
                           onChange={(e) => {
                             setFormDiscountPercent(e.target.value);
                             setFormErrors((prev) => ({ ...prev, discountPercent: null }));
                           }}
+                          disabled={formSubmitting}
                           required
                         />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#718096"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <line x1="19" y1="5" x2="5" y2="19" />
+                          <circle cx="6.5" cy="6.5" r="2.5" />
+                          <circle cx="17.5" cy="17.5" r="2.5" />
+                        </svg>
                       </div>
                       {formErrors.discountPercent && (
                         <div className="text-danger small mt-1">{formErrors.discountPercent}</div>
                       )}
                     </div>
+                  </div>
 
-                    {/* Max Discount Amount */}
-                    <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold text-dark">
+                  <div className="col-sm-6 mb-3">
+                    <div className="auth-field-wrapper position-relative">
+                      <label className="form-label fw-600 mb-1">
                         Max Discount Cap ($)
                       </label>
-                      <div className="input-group">
-                        <span className="input-group-text bg-light text-muted">$</span>
+                      <div className="input-block">
                         <input
                           type="number"
                           step="0.01"
                           min="0"
-                          className="form-control"
-                          placeholder="Optional maximum discount (e.g. 50.00)"
+                          className="form-control form-control-2"
+                          placeholder="No cap if empty"
                           value={formMaxDiscount}
                           onChange={(e) => setFormMaxDiscount(e.target.value)}
+                          disabled={formSubmitting}
                         />
-                      </div>
-                      <small className="text-muted">Leave empty for no maximum cap.</small>
-                    </div>
-
-                    {/* Minimum Order Amount */}
-                    <div className="col-12">
-                      <label className="form-label fw-semibold text-dark">
-                        Minimum Order Amount ($)
-                      </label>
-                      <div className="input-group">
-                        <span className="input-group-text bg-light text-muted">$</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          className={`form-control ${formErrors.minOrderAmount ? "is-invalid" : ""}`}
-                          placeholder="0 for no minimum"
-                          value={formMinOrderAmount}
-                          onChange={(e) => setFormMinOrderAmount(e.target.value)}
-                        />
-                      </div>
-                      <small className="text-muted">Minimum subtotal before voucher can be applied.</small>
-                    </div>
-
-                    {/* Date Range */}
-                    <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold text-dark">Start Date (Optional)</label>
-                      <input
-                        type="datetime-local"
-                        className="form-control"
-                        value={formStartDate}
-                        onChange={(e) => setFormStartDate(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold text-dark">End Date / Expiry</label>
-                      <input
-                        type="datetime-local"
-                        className={`form-control ${formErrors.endDate ? "is-invalid" : ""}`}
-                        value={formEndDate}
-                        onChange={(e) => setFormEndDate(e.target.value)}
-                      />
-                      {formErrors.endDate && (
-                        <div className="text-danger small mt-1">{formErrors.endDate}</div>
-                      )}
-                    </div>
-
-                    {/* Usage Limits */}
-                    <div className="col-12">
-                      <label className="form-label fw-semibold text-dark">Usage Limit</label>
-                      <div className="d-flex align-items-center gap-3">
-                        <div className="form-check">
-                          <input
-                            className="form-check-input"
-                            type="checkbox"
-                            id="unlimitedCreateCheck"
-                            checked={isUnlimitedUsage}
-                            onChange={(e) => {
-                              setIsUnlimitedUsage(e.target.checked);
-                              if (e.target.checked) setFormUsageLimit("");
-                            }}
-                          />
-                          <label className="form-check-label text-dark" htmlFor="unlimitedCreateCheck">
-                            Unlimited redemptions
-                          </label>
-                        </div>
-                        {!isUnlimitedUsage && (
-                          <div className="input-group" style={{ maxWidth: 220 }}>
-                            <span className="input-group-text bg-light text-muted">
-                              <i className="fa-solid fa-users"></i>
-                            </span>
-                            <input
-                              type="number"
-                              min="1"
-                              className={`form-control ${formErrors.usageLimit ? "is-invalid" : ""}`}
-                              placeholder="e.g. 100"
-                              value={formUsageLimit}
-                              onChange={(e) => setFormUsageLimit(e.target.value)}
-                              required={!isUnlimitedUsage}
-                            />
-                          </div>
-                        )}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#718096"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <line x1="12" y1="2" x2="12" y2="22" />
+                          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Modal Footer */}
-                <div className="modal-footer px-4 py-3 bg-light border-top">
+                {/* Minimum Order Amount & Account Status */}
+                <div className="row">
+                  <div className="col-sm-6 mb-3">
+                    <div className="auth-field-wrapper position-relative">
+                      <label className="form-label fw-600 mb-1">
+                        Min Order Amount ($)
+                      </label>
+                      <div className="input-block">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className={`form-control form-control-2 ${
+                            formErrors.minOrderAmount ? "is-invalid" : ""
+                          }`}
+                          placeholder="0 for no min"
+                          value={formMinOrderAmount}
+                          onChange={(e) => setFormMinOrderAmount(e.target.value)}
+                          disabled={formSubmitting}
+                        />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#718096"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="8" cy="21" r="1" />
+                          <circle cx="19" cy="21" r="1" />
+                          <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-sm-6 mb-3">
+                    <label className="form-label fw-600 mb-1">
+                      Account Status *
+                    </label>
+                    <select
+                      className="form-select form-control-2"
+                      value={formIsActive ? "ACTIVE" : "INACTIVE"}
+                      onChange={(e) => setFormIsActive(e.target.value === "ACTIVE")}
+                      disabled={formSubmitting}
+                    >
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="INACTIVE">INACTIVE</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Start Date & End Date */}
+                <div className="row">
+                  <div className="col-sm-6 mb-3">
+                    <div className="auth-field-wrapper position-relative">
+                      <label className="form-label fw-600 mb-1">Start Date</label>
+                      <div className="input-block">
+                        <input
+                          type="datetime-local"
+                          className="form-control form-control-2"
+                          value={formStartDate}
+                          onChange={(e) => setFormStartDate(e.target.value)}
+                          disabled={formSubmitting}
+                        />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#718096"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                          <line x1="16" y1="2" x2="16" y2="6" />
+                          <line x1="8" y1="2" x2="8" y2="6" />
+                          <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-sm-6 mb-3">
+                    <div className="auth-field-wrapper position-relative">
+                      <label className="form-label fw-600 mb-1">End Date / Expiry</label>
+                      <div className="input-block">
+                        <input
+                          type="datetime-local"
+                          className={`form-control form-control-2 ${
+                            formErrors.endDate ? "is-invalid" : ""
+                          }`}
+                          value={formEndDate}
+                          onChange={(e) => setFormEndDate(e.target.value)}
+                          disabled={formSubmitting}
+                        />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#718096"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                          <line x1="16" y1="2" x2="16" y2="6" />
+                          <line x1="8" y1="2" x2="8" y2="6" />
+                          <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
+                      </div>
+                      {formErrors.endDate && (
+                        <div className="text-danger small mt-1">{formErrors.endDate}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Usage Limits */}
+                <div className="auth-field-wrapper mb-4 position-relative">
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <label className="form-label fw-600 mb-0">Usage Limit</label>
+                    <div className="form-check form-check-inline m-0">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="unlimitedCreateCheck"
+                        checked={isUnlimitedUsage}
+                        onChange={(e) => {
+                          setIsUnlimitedUsage(e.target.checked);
+                          if (e.target.checked) setFormUsageLimit("");
+                        }}
+                        disabled={formSubmitting}
+                      />
+                      <label
+                        className="form-check-label fs-13 text-muted"
+                        htmlFor="unlimitedCreateCheck"
+                      >
+                        Unlimited redemptions
+                      </label>
+                    </div>
+                  </div>
+                  <div className="input-block">
+                    {!isUnlimitedUsage ? (
+                      <input
+                        type="number"
+                        min="1"
+                        className={`form-control form-control-2 ${
+                          formErrors.usageLimit ? "is-invalid" : ""
+                        }`}
+                        placeholder="e.g. 100"
+                        value={formUsageLimit}
+                        onChange={(e) => setFormUsageLimit(e.target.value)}
+                        disabled={formSubmitting}
+                        required={!isUnlimitedUsage}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        className="form-control form-control-2 bg-light text-muted"
+                        value="Unlimited (No redemption limit)"
+                        disabled
+                        readOnly
+                      />
+                    )}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                  </div>
+                  {formErrors.usageLimit && (
+                    <div className="text-danger small mt-1">{formErrors.usageLimit}</div>
+                  )}
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="d-flex justify-content-end gap-2 mt-4 pt-2">
                   <button
                     type="button"
-                    className="btn btn-outline-secondary px-4"
+                    className="btn btn-light rounded-pill px-4 fw-600 border"
                     onClick={() => setIsAddModalOpen(false)}
                     disabled={formSubmitting}
                   >
@@ -1196,20 +1444,10 @@ export const AdminVoucherManagement = () => {
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-primary px-4 fw-semibold"
-                    style={{ backgroundColor: "var(--admin-primary)", borderColor: "var(--admin-primary)" }}
+                    className="admin-btn-primary px-4"
                     disabled={formSubmitting}
                   >
-                    {formSubmitting ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2"></span>
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fa-solid fa-check me-1"></i> Create Voucher
-                      </>
-                    )}
+                    {formSubmitting ? "Creating..." : "Create Voucher"}
                   </button>
                 </div>
               </form>
@@ -1224,229 +1462,377 @@ export const AdminVoucherManagement = () => {
       {isEditModalOpen && selectedVoucher && (
         <div
           className="modal fade show d-block"
-          style={{ backgroundColor: "rgba(15, 23, 42, 0.65)" }}
           tabIndex="-1"
+          style={{
+            backgroundColor: "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(2px)",
+            zIndex: 1050,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !formSubmitting) {
+              setIsEditModalOpen(false);
+            }
+          }}
         >
-          <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
-              {/* Modal Header */}
-              <div
-                className="modal-header px-4 py-3 border-bottom text-white"
-                style={{ backgroundColor: "#1e293b" }}
-              >
-                <div className="d-flex align-items-center gap-2">
-                  <div
-                    className="rounded-circle bg-white text-dark d-flex align-items-center justify-content-center"
-                    style={{ width: 34, height: 34 }}
-                  >
-                    <i className="fa-solid fa-pen-to-square"></i>
-                  </div>
-                  <div>
-                    <h5 className="modal-title fw-bold text-white mb-0">
-                      Edit Voucher: {selectedVoucher.code}
-                    </h5>
-                    <small className="text-white-50">
-                      Update coupon code, discount percentage, validity, and limits
-                    </small>
-                  </div>
-                </div>
+          <div className="modal-dialog modal-dialog-centered">
+            <div
+              className="modal-content admin-modal-card shadow-lg border-0 rounded-4 p-4"
+              style={{ background: "#ffffff" }}
+            >
+              {/* Header */}
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h4 className="fw-700 mb-0">Edit Voucher</h4>
                 <button
                   type="button"
-                  className="btn-close btn-close-white"
+                  className="btn-close"
                   onClick={() => setIsEditModalOpen(false)}
+                  disabled={formSubmitting}
                 ></button>
               </div>
 
-              {/* Modal Body */}
-              <form onSubmit={handleUpdateVoucher}>
-                <div className="modal-body p-4" style={{ maxHeight: "70vh", overflowY: "auto" }}>
-                  {/* Server Duplicate Error Alert */}
-                  {formServerDuplicateError && (
-                    <div className="alert alert-danger d-flex align-items-center gap-2 mb-3">
-                      <i className="fa-solid fa-circle-exclamation fs-5"></i>
-                      <div className="flex-grow-1 fw-medium">{formServerDuplicateError}</div>
-                    </div>
+              {/* Form */}
+              <form onSubmit={handleUpdateVoucher} noValidate>
+                {/* Server Duplicate Error Alert */}
+                {formServerDuplicateError && (
+                  <div className="alert alert-danger d-flex align-items-center gap-2 mb-3 py-2 px-3 br-10 fs-13">
+                    <i className="fa-solid fa-circle-exclamation"></i>
+                    <div>{formServerDuplicateError}</div>
+                  </div>
+                )}
+
+                {/* Voucher Code */}
+                <div className="auth-field-wrapper mb-3 position-relative">
+                  <label className="form-label fw-600 mb-1">
+                    Voucher Code <span className="text-danger">*</span>
+                  </label>
+                  <div className="input-block">
+                    <input
+                      type="text"
+                      maxLength={8}
+                      className={`form-control form-control-2 font-monospace fw-bold text-uppercase ${
+                        formErrors.code || formServerDuplicateError ? "is-invalid" : ""
+                      }`}
+                      placeholder="e.g. SAVE20, VIP50"
+                      value={formCode}
+                      onChange={(e) => {
+                        setFormCode(e.target.value.toUpperCase().slice(0, 8));
+                        setFormServerDuplicateError("");
+                        setFormErrors((prev) => ({ ...prev, code: null }));
+                      }}
+                      disabled={formSubmitting}
+                      required
+                    />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z" />
+                      <path d="M13 5v2" />
+                      <path d="M13 17v2" />
+                      <path d="M13 11v2" />
+                    </svg>
+                  </div>
+                  {formErrors.code && (
+                    <div className="text-danger small mt-1">{formErrors.code}</div>
                   )}
+                </div>
 
-                  <div className="row g-3">
-                    {/* Voucher Code */}
-                    <div className="col-12 col-md-7">
-                      <label className="form-label fw-semibold text-dark">
-                        Voucher Code <span className="text-danger">*</span>
-                      </label>
-                      <div className="input-group">
-                        <span className="input-group-text bg-light text-muted">
-                          <i className="fa-solid fa-barcode"></i>
-                        </span>
-                        <input
-                          type="text"
-                          className={`form-control font-monospace fw-bold text-uppercase ${
-                            formErrors.code || formServerDuplicateError ? "is-invalid" : ""
-                          }`}
-                          value={formCode}
-                          onChange={(e) => {
-                            setFormCode(e.target.value.toUpperCase());
-                            setFormServerDuplicateError("");
-                            setFormErrors((prev) => ({ ...prev, code: null }));
-                          }}
-                          required
-                        />
-                      </div>
-                      {formErrors.code && (
-                        <div className="text-danger small mt-1">{formErrors.code}</div>
-                      )}
-                    </div>
-
-                    {/* Active Switch */}
-                    <div className="col-12 col-md-5 d-flex align-items-center justify-content-md-end pt-3">
-                      <div className="form-check form-switch fs-6">
-                        <input
-                          className="form-check-input"
-                          type="checkbox"
-                          role="switch"
-                          id="editActiveSwitch"
-                          checked={formIsActive}
-                          onChange={(e) => setFormIsActive(e.target.checked)}
-                        />
-                        <label className="form-check-label fw-semibold ms-2" htmlFor="editActiveSwitch">
-                          {formIsActive ? "Status: Active" : "Status: Inactive"}
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Discount Percentage */}
-                    <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold text-dark">
+                {/* Discount Percentage & Max Discount Cap */}
+                <div className="row">
+                  <div className="col-sm-6 mb-3">
+                    <div className="auth-field-wrapper position-relative">
+                      <label className="form-label fw-600 mb-1">
                         Discount Percentage (%) <span className="text-danger">*</span>
                       </label>
-                      <div className="input-group">
-                        <span className="input-group-text bg-light text-muted">%</span>
+                      <div className="input-block">
                         <input
                           type="number"
                           step="0.01"
                           min="0.01"
                           max="100"
-                          className={`form-control ${formErrors.discountPercent ? "is-invalid" : ""}`}
+                          className={`form-control form-control-2 ${
+                            formErrors.discountPercent ? "is-invalid" : ""
+                          }`}
                           value={formDiscountPercent}
                           onChange={(e) => {
                             setFormDiscountPercent(e.target.value);
                             setFormErrors((prev) => ({ ...prev, discountPercent: null }));
                           }}
+                          disabled={formSubmitting}
                           required
                         />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#718096"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <line x1="19" y1="5" x2="5" y2="19" />
+                          <circle cx="6.5" cy="6.5" r="2.5" />
+                          <circle cx="17.5" cy="17.5" r="2.5" />
+                        </svg>
                       </div>
                       {formErrors.discountPercent && (
                         <div className="text-danger small mt-1">{formErrors.discountPercent}</div>
                       )}
                     </div>
+                  </div>
 
-                    {/* Max Discount Amount */}
-                    <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold text-dark">
+                  <div className="col-sm-6 mb-3">
+                    <div className="auth-field-wrapper position-relative">
+                      <label className="form-label fw-600 mb-1">
                         Max Discount Cap ($)
                       </label>
-                      <div className="input-group">
-                        <span className="input-group-text bg-light text-muted">$</span>
+                      <div className="input-block">
                         <input
                           type="number"
                           step="0.01"
                           min="0"
-                          className="form-control"
+                          className="form-control form-control-2"
+                          placeholder="No cap"
                           value={formMaxDiscount}
                           onChange={(e) => setFormMaxDiscount(e.target.value)}
+                          disabled={formSubmitting}
                         />
-                      </div>
-                    </div>
-
-                    {/* Minimum Order Amount */}
-                    <div className="col-12">
-                      <label className="form-label fw-semibold text-dark">
-                        Minimum Order Amount ($)
-                      </label>
-                      <div className="input-group">
-                        <span className="input-group-text bg-light text-muted">$</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          className={`form-control ${formErrors.minOrderAmount ? "is-invalid" : ""}`}
-                          value={formMinOrderAmount}
-                          onChange={(e) => setFormMinOrderAmount(e.target.value)}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Date Range */}
-                    <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold text-dark">Start Date</label>
-                      <input
-                        type="datetime-local"
-                        className="form-control"
-                        value={formStartDate}
-                        onChange={(e) => setFormStartDate(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="col-12 col-md-6">
-                      <label className="form-label fw-semibold text-dark">End Date / Expiry</label>
-                      <input
-                        type="datetime-local"
-                        className={`form-control ${formErrors.endDate ? "is-invalid" : ""}`}
-                        value={formEndDate}
-                        onChange={(e) => setFormEndDate(e.target.value)}
-                      />
-                      {formErrors.endDate && (
-                        <div className="text-danger small mt-1">{formErrors.endDate}</div>
-                      )}
-                    </div>
-
-                    {/* Usage Limits */}
-                    <div className="col-12">
-                      <label className="form-label fw-semibold text-dark">Usage Limit</label>
-                      <div className="d-flex align-items-center gap-3">
-                        <div className="form-check">
-                          <input
-                            className="form-check-input"
-                            type="checkbox"
-                            id="unlimitedEditCheck"
-                            checked={isUnlimitedUsage}
-                            onChange={(e) => {
-                              setIsUnlimitedUsage(e.target.checked);
-                              if (e.target.checked) setFormUsageLimit("");
-                            }}
-                          />
-                          <label className="form-check-label text-dark" htmlFor="unlimitedEditCheck">
-                            Unlimited redemptions
-                          </label>
-                        </div>
-                        {!isUnlimitedUsage && (
-                          <div className="input-group" style={{ maxWidth: 220 }}>
-                            <span className="input-group-text bg-light text-muted">
-                              <i className="fa-solid fa-users"></i>
-                            </span>
-                            <input
-                              type="number"
-                              min="1"
-                              className={`form-control ${formErrors.usageLimit ? "is-invalid" : ""}`}
-                              value={formUsageLimit}
-                              onChange={(e) => setFormUsageLimit(e.target.value)}
-                              required={!isUnlimitedUsage}
-                            />
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-muted small mt-2">
-                        Currently used: <strong>{selectedVoucher.usedCount || 0}</strong> times
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#718096"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <line x1="12" y1="2" x2="12" y2="22" />
+                          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Modal Footer */}
-                <div className="modal-footer px-4 py-3 bg-light border-top">
+                {/* Minimum Order Amount & Account Status */}
+                <div className="row">
+                  <div className="col-sm-6 mb-3">
+                    <div className="auth-field-wrapper position-relative">
+                      <label className="form-label fw-600 mb-1">
+                        Min Order Amount ($)
+                      </label>
+                      <div className="input-block">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className={`form-control form-control-2 ${
+                            formErrors.minOrderAmount ? "is-invalid" : ""
+                          }`}
+                          value={formMinOrderAmount}
+                          onChange={(e) => setFormMinOrderAmount(e.target.value)}
+                          disabled={formSubmitting}
+                        />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#718096"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="8" cy="21" r="1" />
+                          <circle cx="19" cy="21" r="1" />
+                          <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-sm-6 mb-3">
+                    <label className="form-label fw-600 mb-1">
+                      Account Status *
+                    </label>
+                    <select
+                      className="form-select form-control-2"
+                      value={formIsActive ? "ACTIVE" : "INACTIVE"}
+                      onChange={(e) => setFormIsActive(e.target.value === "ACTIVE")}
+                      disabled={formSubmitting}
+                    >
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="INACTIVE">INACTIVE</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Start Date & End Date */}
+                <div className="row">
+                  <div className="col-sm-6 mb-3">
+                    <div className="auth-field-wrapper position-relative">
+                      <label className="form-label fw-600 mb-1">Start Date</label>
+                      <div className="input-block">
+                        <input
+                          type="datetime-local"
+                          className="form-control form-control-2"
+                          value={formStartDate}
+                          onChange={(e) => setFormStartDate(e.target.value)}
+                          disabled={formSubmitting}
+                        />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#718096"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                          <line x1="16" y1="2" x2="16" y2="6" />
+                          <line x1="8" y1="2" x2="8" y2="6" />
+                          <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-sm-6 mb-3">
+                    <div className="auth-field-wrapper position-relative">
+                      <label className="form-label fw-600 mb-1">End Date / Expiry</label>
+                      <div className="input-block">
+                        <input
+                          type="datetime-local"
+                          className={`form-control form-control-2 ${
+                            formErrors.endDate ? "is-invalid" : ""
+                          }`}
+                          value={formEndDate}
+                          onChange={(e) => setFormEndDate(e.target.value)}
+                          disabled={formSubmitting}
+                        />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#718096"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                          <line x1="16" y1="2" x2="16" y2="6" />
+                          <line x1="8" y1="2" x2="8" y2="6" />
+                          <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
+                      </div>
+                      {formErrors.endDate && (
+                        <div className="text-danger small mt-1">{formErrors.endDate}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Usage Limits */}
+                <div className="auth-field-wrapper mb-4 position-relative">
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <label className="form-label fw-600 mb-0">Usage Limit</label>
+                    <div className="form-check form-check-inline m-0">
+                      <input
+                        className="form-check-input"
+                        type="checkbox"
+                        id="unlimitedEditCheck"
+                        checked={isUnlimitedUsage}
+                        onChange={(e) => {
+                          setIsUnlimitedUsage(e.target.checked);
+                          if (e.target.checked) setFormUsageLimit("");
+                        }}
+                        disabled={formSubmitting}
+                      />
+                      <label
+                        className="form-check-label fs-13 text-muted"
+                        htmlFor="unlimitedEditCheck"
+                      >
+                        Unlimited redemptions
+                      </label>
+                    </div>
+                  </div>
+                  <div className="input-block">
+                    {!isUnlimitedUsage ? (
+                      <input
+                        type="number"
+                        min="1"
+                        className={`form-control form-control-2 ${
+                          formErrors.usageLimit ? "is-invalid" : ""
+                        }`}
+                        value={formUsageLimit}
+                        onChange={(e) => setFormUsageLimit(e.target.value)}
+                        disabled={formSubmitting}
+                        required={!isUnlimitedUsage}
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        className="form-control form-control-2 bg-light text-muted"
+                        value="Unlimited (No redemption limit)"
+                        disabled
+                        readOnly
+                      />
+                    )}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#718096"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                  </div>
+                  {formErrors.usageLimit && (
+                    <div className="text-danger small mt-1">{formErrors.usageLimit}</div>
+                  )}
+                  <div className="text-muted small mt-2">
+                    Currently used: <strong>{selectedVoucher.usedCount || 0}</strong> times
+                  </div>
+                  {selectedVoucher.usedCount > 0 && !isUnlimitedUsage && (
+                    <div className="alert alert-warning py-1.5 px-3 mt-2 mb-0 d-flex align-items-center gap-2 fs-13">
+                      <i className="fa-solid fa-triangle-exclamation text-warning"></i>
+                      <span>
+                        Usage limit must be at least <strong>{selectedVoucher.usedCount}</strong> (cannot be lower than the {selectedVoucher.usedCount} already redeemed).
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="d-flex justify-content-end gap-2 mt-4 pt-2">
                   <button
                     type="button"
-                    className="btn btn-outline-secondary px-4"
+                    className="btn btn-light rounded-pill px-4 fw-600 border"
                     onClick={() => setIsEditModalOpen(false)}
                     disabled={formSubmitting}
                   >
@@ -1454,20 +1840,10 @@ export const AdminVoucherManagement = () => {
                   </button>
                   <button
                     type="submit"
-                    className="btn btn-primary px-4 fw-semibold"
-                    style={{ backgroundColor: "var(--admin-primary)", borderColor: "var(--admin-primary)" }}
+                    className="admin-btn-primary px-4"
                     disabled={formSubmitting}
                   >
-                    {formSubmitting ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2"></span>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fa-solid fa-check me-1"></i> Save Changes
-                      </>
-                    )}
+                    {formSubmitting ? "Saving..." : "Save Changes"}
                   </button>
                 </div>
               </form>
@@ -1482,104 +1858,121 @@ export const AdminVoucherManagement = () => {
       {isDetailModalOpen && selectedVoucher && (
         <div
           className="modal fade show d-block"
-          style={{ backgroundColor: "rgba(15, 23, 42, 0.65)" }}
           tabIndex="-1"
+          style={{
+            backgroundColor: "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(2px)",
+            zIndex: 1050,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsDetailModalOpen(false);
+          }}
         >
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
-              <div
-                className="modal-header px-4 py-3 border-bottom text-white"
-                style={{ backgroundColor: "var(--admin-primary)" }}
-              >
-                <div className="d-flex align-items-center gap-2">
-                  <i className="fa-solid fa-ticket fa-lg"></i>
-                  <h5 className="modal-title fw-bold text-white mb-0">Voucher Details</h5>
-                </div>
+            <div
+              className="modal-content admin-modal-card shadow-lg border-0 rounded-4 p-4"
+              style={{ background: "#ffffff" }}
+            >
+              {/* Header */}
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h4 className="fw-700 mb-0">Voucher Details</h4>
                 <button
                   type="button"
-                  className="btn-close btn-close-white"
+                  className="btn-close"
                   onClick={() => setIsDetailModalOpen(false)}
                 ></button>
               </div>
 
-              <div className="modal-body p-4">
-                {/* Visual Card Banner */}
+              {/* Visual Card Banner matching User Details */}
+              <div className="d-flex align-items-center gap-3 p-3 bg-light rounded-3 mb-3">
                 <div
-                  className="p-3 rounded-3 text-center mb-3"
+                  className="rounded-circle d-flex align-items-center justify-content-center text-white fw-700"
                   style={{
-                    background: "linear-gradient(135deg, #fff0eb 0%, #ffe4dc 100%)",
-                    border: "1.5px dashed var(--admin-primary)",
+                    width: 50,
+                    height: 50,
+                    background: "#e9613f",
+                    fontSize: 20,
                   }}
                 >
-                  <span className="badge bg-primary px-3 py-1 font-monospace fs-5 fw-bold mb-2">
-                    {selectedVoucher.code}
-                  </span>
-                  <h4 className="fw-bold text-dark mb-1">
-                    {selectedVoucher.discountPercent}% DISCOUNT
-                  </h4>
+                  <i className="fa-solid fa-ticket"></i>
                 </div>
-
-                <div className="list-group list-group-flush small">
-                  <div className="list-group-item d-flex justify-content-between px-0 py-2">
-                    <span className="text-muted">Status:</span>
-                    <span className={`badge ${getStatusBadge(selectedVoucher).className}`}>
-                      {getStatusBadge(selectedVoucher).label}
-                    </span>
-                  </div>
-                  <div className="list-group-item d-flex justify-content-between px-0 py-2">
-                    <span className="text-muted">Discount Percent:</span>
-                    <span className="fw-semibold text-dark">
-                      {selectedVoucher.discountPercent}%
-                    </span>
-                  </div>
-                  <div className="list-group-item d-flex justify-content-between px-0 py-2">
-                    <span className="text-muted">Max Discount Cap:</span>
-                    <span className="fw-semibold text-dark">
-                      {selectedVoucher.maxDiscount
-                        ? money(selectedVoucher.maxDiscount)
-                        : "No maximum limit"}
-                    </span>
-                  </div>
-                  <div className="list-group-item d-flex justify-content-between px-0 py-2">
-                    <span className="text-muted">Minimum Order Amount:</span>
-                    <span className="fw-semibold text-dark">
-                      {selectedVoucher.minOrderAmount && Number(selectedVoucher.minOrderAmount) > 0
-                        ? money(selectedVoucher.minOrderAmount)
-                        : "No minimum spend"}
-                    </span>
-                  </div>
-                  <div className="list-group-item d-flex justify-content-between px-0 py-2">
-                    <span className="text-muted">Start Date:</span>
-                    <span className="fw-semibold text-dark">
-                      {formatDate(selectedVoucher.startDate)}
-                    </span>
-                  </div>
-                  <div className="list-group-item d-flex justify-content-between px-0 py-2">
-                    <span className="text-muted">Expiration Date:</span>
-                    <span className="fw-semibold text-dark">
-                      {formatDate(selectedVoucher.endDate)}
-                    </span>
-                  </div>
-                  <div className="list-group-item d-flex justify-content-between px-0 py-2">
-                    <span className="text-muted">Times Used:</span>
-                    <span className="fw-semibold text-dark">
-                      {selectedVoucher.usedCount || 0}
-                      {selectedVoucher.usageLimit ? ` / ${selectedVoucher.usageLimit}` : " (Unlimited)"}
-                    </span>
-                  </div>
-                  <div className="list-group-item d-flex justify-content-between px-0 py-2">
-                    <span className="text-muted">Created At:</span>
-                    <span className="fw-semibold text-dark">
-                      {formatDate(selectedVoucher.createdAt)}
-                    </span>
-                  </div>
+                <div>
+                  <h5 className="mb-0 fw-700 font-monospace">{selectedVoucher.code}</h5>
+                  <p className="text-muted fs-13 mb-0">
+                    {selectedVoucher.discountPercent}% DISCOUNT
+                  </p>
+                </div>
+                <div className="ms-auto d-flex flex-column align-items-end gap-1">
+                  <span
+                    className={`badge ${getStatusBadge(selectedVoucher).className} d-inline-flex align-items-center gap-1`}
+                  >
+                    <i className={`fa-solid ${getStatusBadge(selectedVoucher).icon}`}></i>
+                    {getStatusBadge(selectedVoucher).label}
+                  </span>
                 </div>
               </div>
 
-              <div className="modal-footer px-4 py-2.5 bg-light border-top">
+              {/* Information Grid */}
+              <div className="row g-3 fs-14">
+                <div className="col-6">
+                  <span className="text-muted d-block">Voucher Code:</span>
+                  <strong className="font-monospace text-primary">{selectedVoucher.code}</strong>
+                </div>
+                <div className="col-6">
+                  <span className="text-muted d-block">Discount Rate:</span>
+                  <strong>{selectedVoucher.discountPercent}% OFF</strong>
+                </div>
+                <div className="col-6">
+                  <span className="text-muted d-block">Max Discount Cap:</span>
+                  <strong>
+                    {selectedVoucher.maxDiscount
+                      ? money(selectedVoucher.maxDiscount)
+                      : "No max cap"}
+                  </strong>
+                </div>
+                <div className="col-6">
+                  <span className="text-muted d-block">Min Order Amount:</span>
+                  <strong>
+                    {selectedVoucher.minOrderAmount && Number(selectedVoucher.minOrderAmount) > 0
+                      ? money(selectedVoucher.minOrderAmount)
+                      : "No minimum"}
+                  </strong>
+                </div>
+                <div className="col-6">
+                  <span className="text-muted d-block">Start Date:</span>
+                  <span>{formatDate(selectedVoucher.startDate)}</span>
+                </div>
+                <div className="col-6">
+                  <span className="text-muted d-block">Expiration Date:</span>
+                  <span
+                    className={
+                      selectedVoucher.endDate &&
+                      new Date(selectedVoucher.endDate) < new Date()
+                        ? "text-danger fw-semibold"
+                        : ""
+                    }
+                  >
+                    {formatDate(selectedVoucher.endDate)}
+                  </span>
+                </div>
+                <div className="col-6">
+                  <span className="text-muted d-block">Times Used:</span>
+                  <strong>
+                    {selectedVoucher.usedCount || 0}
+                    {selectedVoucher.usageLimit ? ` / ${selectedVoucher.usageLimit}` : " (Unlimited)"}
+                  </strong>
+                </div>
+                <div className="col-6">
+                  <span className="text-muted d-block">Created At:</span>
+                  <span>{formatDate(selectedVoucher.createdAt)}</span>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="mt-4 pt-3 border-top text-end">
                 <button
                   type="button"
-                  className="btn btn-secondary btn-sm px-4"
+                  className="btn btn-light rounded-pill px-4 fw-600 border"
                   onClick={() => setIsDetailModalOpen(false)}
                 >
                   Close

@@ -29,16 +29,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const { response } = error;
-    if (response && response.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(USER_STORAGE_KEY);
-      // Only redirect if not already on login or public page
-      if (
-        !window.location.pathname.includes("/login") &&
-        !window.location.pathname.includes("/register") &&
-        !window.location.pathname.includes("/forgot-password")
-      ) {
+    if (response && (response.status === 401 || response.status === 403)) {
+      const isAuthPage =
+        window.location.pathname.includes("/login") ||
+        window.location.pathname.includes("/register") ||
+        window.location.pathname.includes("/forgot-password");
+
+      if (response.status === 401 && !isAuthPage) {
+        // Token is invalid or expired
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        localStorage.removeItem(USER_STORAGE_KEY);
         window.location.href = "/login?sessionExpired=true";
       }
     }

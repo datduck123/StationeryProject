@@ -6,6 +6,19 @@ import adminUserService from "../../services/adminUserService";
 import "../../styles/admin.css";
 import { validateAdminUserForm } from "../../utils/validation";
 
+const getPageNumbers = (current, total) => {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "...", total];
+  }
+  if (current >= total - 3) {
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
+};
+
 export const AdminUserManagement = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -526,7 +539,7 @@ export const AdminUserManagement = () => {
           </span>
 
           {totalPages > 1 && (
-            <div className="btn-group btn-group-sm">
+            <div className="btn-group btn-group-sm" role="group" aria-label="User pagination">
               <button
                 type="button"
                 className="btn btn-light border"
@@ -536,21 +549,25 @@ export const AdminUserManagement = () => {
               >
                 &lt;
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i).map(
-                (pageNum) => (
+              {getPageNumbers(page + 1, totalPages).map((item, idx) =>
+                item === "..." ? (
+                  <span key={`ellipsis-${idx}`} className="btn btn-light border disabled px-2">
+                    ...
+                  </span>
+                ) : (
                   <button
-                    key={pageNum}
+                    key={item}
                     type="button"
                     className={`btn ${
-                      pageNum === page
-                        ? "btn-dark bg-color-primary border-0 fw-700"
+                      item - 1 === page
+                        ? "btn-dark bg-color-primary border-0 fw-700 text-white"
                         : "btn-light border"
                     }`}
-                    onClick={() => setPage(pageNum)}
+                    onClick={() => setPage(item - 1)}
                   >
-                    {pageNum + 1}
+                    {item}
                   </button>
-                ),
+                )
               )}
               <button
                 type="button"

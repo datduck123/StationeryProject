@@ -1,5 +1,6 @@
 package fpt.edu.vn.stationery.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,8 +17,8 @@ import java.time.LocalDateTime;
 public class VoucherRequestDTO {
 
     @NotBlank(message = "Voucher code is required")
-    @Size(min = 2, max = 50, message = "Voucher code must be between 2 and 50 characters")
-    @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "Voucher code can only contain letters, digits, dashes, and underscores")
+    @Size(min = 2, max = 8, message = "Voucher code must be between 2 and 8 characters")
+    @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "Voucher code can only contain uppercase letters, digits, dashes, and underscores")
     private String code;
 
     @NotNull(message = "Discount percentage is required")
@@ -31,8 +32,10 @@ public class VoucherRequestDTO {
     @DecimalMin(value = "0.00", message = "Minimum order amount cannot be negative")
     private BigDecimal minOrderAmount;
 
+    @JsonFormat(pattern = "yyyy-MM-dd['T'[HH:mm[:ss[.SSS]]]]")
     private LocalDateTime startDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd['T'[HH:mm[:ss[.SSS]]]]")
     private LocalDateTime endDate;
 
     @Min(value = 1, message = "Usage limit must be at least 1")

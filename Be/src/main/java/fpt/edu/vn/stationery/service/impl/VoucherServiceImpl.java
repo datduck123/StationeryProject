@@ -31,6 +31,9 @@ public class VoucherServiceImpl implements VoucherService {
         if (code.isEmpty()) {
             throw new BadRequestException("Voucher code must not be empty");
         }
+        if (code.length() < 2 || code.length() > 8) {
+            throw new BadRequestException("Voucher code must be between 2 and 8 characters");
+        }
 
         if (voucherRepository.existsByCodeIgnoreCase(code)) {
             throw new DuplicateResourceException("Voucher code '" + code + "' already exists");
@@ -39,6 +42,7 @@ public class VoucherServiceImpl implements VoucherService {
         validateVoucherRules(request);
 
         Voucher voucher = voucherMapper.toEntity(request);
+        voucher.setCode(code);
         Voucher savedVoucher = voucherRepository.save(voucher);
         return voucherMapper.toDto(savedVoucher);
     }
@@ -53,14 +57,22 @@ public class VoucherServiceImpl implements VoucherService {
         if (code.isEmpty()) {
             throw new BadRequestException("Voucher code must not be empty");
         }
+        if (code.length() < 2 || code.length() > 8) {
+            throw new BadRequestException("Voucher code must be between 2 and 8 characters");
+        }
 
         if (voucherRepository.existsByCodeIgnoreCaseAndVoucherIdNot(code, id)) {
             throw new DuplicateResourceException("Voucher code '" + code + "' already exists");
         }
 
+        if (request.getUsageLimit() != null && voucher.getUsedCount() != null && request.getUsageLimit() < voucher.getUsedCount()) {
+            throw new BadRequestException("Usage limit (" + request.getUsageLimit() + ") cannot be less than current used count (" + voucher.getUsedCount() + ")");
+        }
+
         validateVoucherRules(request);
 
         voucherMapper.updateEntity(voucher, request);
+        voucher.setCode(code);
         Voucher updatedVoucher = voucherRepository.save(voucher);
         return voucherMapper.toDto(updatedVoucher);
     }
@@ -167,6 +179,14 @@ public class VoucherServiceImpl implements VoucherService {
                 request.getDiscountPercent().compareTo(BigDecimal.ZERO) <= 0 ||
                 request.getDiscountPercent().compareTo(BigDecimal.valueOf(100)) > 0) {
             throw new BadRequestException("Discount percentage must be between 0.01% and 100%");
+        }
+
+        if (request.getMaxDiscount() != null && request.getMaxDiscount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Max discount cap cannot be negative");
+        }
+
+        if (request.getMinOrderAmount() != null && request.getMinOrderAmount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestException("Minimum order amount cannot be negative");
         }
 
         if (request.getStartDate() != null && request.getEndDate() != null) {

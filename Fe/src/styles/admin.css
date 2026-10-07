@@ -856,3 +856,32 @@
   border-color: #d1d5db;
   color: #374151;
 }
+
+/* Admin Modal Card & Inputs */
+.admin-modal-card {
+  background: #ffffff !important;
+}
+
+.admin-modal-card .form-control,
+.admin-modal-card .form-select {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.admin-modal-card .form-control:focus,
+.admin-modal-card .form-select:focus {
+  background-color: #ffffff !important;
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 3px rgba(233, 97, 63, 0.15) !important;
+}
+
+.admin-modal-card .form-control.bg-light {
+  background-color: #f8fafc !important;
+}
+
+.admin-modal-card select.form-select.form-control-2 {
+  padding-left: 14px !important;
+}
+
