@@ -93,7 +93,7 @@ public class EmailServiceImpl implements EmailService {
               <style>
                 body { margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
                 .email-container { max-width: 600px; margin: 30px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
-                .email-header { background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); padding: 32px 30px; text-align: center; color: #ffffff; }
+                .email-header {background: linear-gradient(135deg, #10b981 0%, #047857 100%);; padding: 32px 30px; text-align: center; color: #ffffff; }
                 .brand-title { font-size: 22px; font-weight: 800; letter-spacing: 0.5px; margin: 0; text-transform: uppercase; color: #ffffff; }
                 .brand-subtitle { font-size: 14px; color: #c7d2fe; margin: 6px 0 0 0; }
                 .email-body { padding: 32px 30px; color: #334155; }

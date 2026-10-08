@@ -25,7 +25,7 @@ public class CustomUserDetailsService implements UserDetailsService {
             throw new AccountLockedException("Your account has been locked. Please contact support for assistance.");
         }
 
-        String role = (user.getIsAdmin() != null && user.getIsAdmin() == 1) ? "ROLE_ADMIN" : "ROLE_CUSTOMER";
+        String role = user.getRoleName();
 
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(),

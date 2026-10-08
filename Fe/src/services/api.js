@@ -36,7 +36,6 @@ api.interceptors.response.use(
       // Only redirect if not already on login or public page
       if (
         !window.location.pathname.includes("/login") &&
-        !window.location.pathname.includes("/register") &&
         !window.location.pathname.includes("/forgot-password")
       ) {
         window.location.href = "/login?sessionExpired=true";
