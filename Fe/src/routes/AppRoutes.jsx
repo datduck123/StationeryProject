@@ -8,7 +8,6 @@ import AdminOrderManagement from "../pages/Admin/AdminOrderManagement";
 import AdminUserManagement from "../pages/Admin/AdminUserManagement";
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 import LoginPage from "../pages/Auth/LoginPage";
-import RegisterPage from "../pages/Auth/RegisterPage";
 import Cart from "../pages/Cart/Cart";
 import Checkout from "../pages/Checkout/Checkout";
 import Home from "../pages/Home/Home";
@@ -69,7 +68,7 @@ export const AppRoutes = () => {
 
         {/* Authentication Routes */}
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register" element={<Navigate to="/" replace />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         {/* Customer Profile Route (Protected) */}

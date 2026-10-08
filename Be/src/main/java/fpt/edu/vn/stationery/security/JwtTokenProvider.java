@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -14,11 +15,21 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
 
-    @Value("${jwt.secret:9a4f2c8d3b7a1e6f4c8d2e9a7b1c3d5e7f9a2b4c6d8e0f1a3b5c7d9e1f3a5b7c}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
     @Value("${jwt.expiration:86400000}")
     private long jwtExpiration;
+
+    @PostConstruct
+    public void validateSecret() {
+        if (jwtSecret == null || jwtSecret.trim().isEmpty()) {
+            throw new IllegalStateException("JWT secret key is not configured. Please set the JWT_SECRET environment variable.");
+        }
+        if (jwtSecret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException("JWT secret key must be at least 256 bits (32 bytes) long.");
+        }
+    }
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
@@ -35,10 +46,6 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public String generateToken(String email) {
-        return generateToken(email, null, "ROLE_CUSTOMER");
-    }
-
     private Claims getClaimsFromToken(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -51,19 +58,10 @@ public class JwtTokenProvider {
         return getClaimsFromToken(token).getSubject();
     }
 
-    public Long getUserIdFromToken(String token) {
-        Claims claims = getClaimsFromToken(token);
-        Object userId = claims.get("userId");
-        if (userId instanceof Number) {
-            return ((Number) userId).longValue();
-        }
-        return null;
+    public String getRoleFromToken(String token) {
+        return getClaimsFromToken(token).get("role", String.class);
     }
 
-    public String getRoleFromToken(String token) {
-        Claims claims = getClaimsFromToken(token);
-        return claims.get("role", String.class);
-    }
 
     public boolean validateToken(String token) {
         try {

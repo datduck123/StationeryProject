@@ -12,16 +12,17 @@ import fpt.edu.vn.stationery.exception.TooManyRequestsException;
 import fpt.edu.vn.stationery.mapper.UserMapper;
 import fpt.edu.vn.stationery.repository.UserRepository;
 import fpt.edu.vn.stationery.security.JwtTokenProvider;
+import fpt.edu.vn.stationery.service.impl.AuthServiceImpl;
 import fpt.edu.vn.stationery.service.impl.EmailServiceImpl;
 import fpt.edu.vn.stationery.service.impl.OtpServiceImpl;
 import fpt.edu.vn.stationery.service.impl.UserServiceImpl;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -46,9 +47,6 @@ class ServiceEnglishMessagesAndEmailTest {
     private JwtTokenProvider jwtTokenProvider;
 
     @Mock
-    private AuthenticationManager authenticationManager;
-
-    @Mock
     private PasswordEncoder passwordEncoder;
 
     @Mock
@@ -56,6 +54,19 @@ class ServiceEnglishMessagesAndEmailTest {
 
     @InjectMocks
     private UserServiceImpl userService;
+
+    private AuthServiceImpl authService;
+
+    @BeforeEach
+    void setUp() {
+        authService = new AuthServiceImpl(
+                userRepository,
+                otpService,
+                emailService,
+                jwtTokenProvider,
+                passwordEncoder
+        );
+    }
 
     @Test
     @DisplayName("EmailServiceImpl should generate beautiful HTML with inline CSS styling for OTP email")
@@ -124,7 +135,7 @@ class ServiceEnglishMessagesAndEmailTest {
         req.setEmail("used@example.com");
 
         DuplicateResourceException dupEx = assertThrows(DuplicateResourceException.class, () ->
-                userService.sendRegisterOtp(req)
+                authService.sendRegisterOtp(req)
         );
         assertEquals("Email is already in use.", dupEx.getMessage());
 
@@ -134,7 +145,7 @@ class ServiceEnglishMessagesAndEmailTest {
         forgotReq.setEmail("notfound@example.com");
 
         ResourceNotFoundException notFoundEx = assertThrows(ResourceNotFoundException.class, () ->
-                userService.sendForgotPasswordOtp(forgotReq)
+                authService.sendForgotPasswordOtp(forgotReq)
         );
         assertEquals("Email does not exist in the system.", notFoundEx.getMessage());
 
@@ -149,7 +160,7 @@ class ServiceEnglishMessagesAndEmailTest {
         lockedReq.setEmail("locked@example.com");
 
         AccountLockedException lockedEx = assertThrows(AccountLockedException.class, () ->
-                userService.sendForgotPasswordOtp(lockedReq)
+                authService.sendForgotPasswordOtp(lockedReq)
         );
         assertEquals("Your account has been locked. Please contact support for assistance.", lockedEx.getMessage());
 
