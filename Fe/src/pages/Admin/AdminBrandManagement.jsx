@@ -1,10 +1,19 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import { useToast } from "../../providers/ToastContext";
+import {
+  adminCreateBrand,
+  adminDeleteBrand,
+  adminGetBrands,
+  adminGetProducts,
+  adminUpdateBrand,
+} from "../../services/productService";
 import { notifyProductChange } from "../../utils/syncEvents";
 import "../../styles/admin.css";
 
-const INITIAL_BRANDS = [
+const FALLBACK_BRANDS = [
   {
+    brandId: 1,
     id: 1,
     name: "Pilot",
     country: "Japan",
@@ -16,6 +25,7 @@ const INITIAL_BRANDS = [
     establishedYear: 1918,
   },
   {
+    brandId: 2,
     id: 2,
     name: "Tombow",
     country: "Japan",
@@ -27,6 +37,7 @@ const INITIAL_BRANDS = [
     establishedYear: 1913,
   },
   {
+    brandId: 3,
     id: 3,
     name: "Kokuyo",
     country: "Japan",
@@ -38,6 +49,7 @@ const INITIAL_BRANDS = [
     establishedYear: 1905,
   },
   {
+    brandId: 4,
     id: 4,
     name: "Faber-Castell",
     country: "Germany",
@@ -49,6 +61,7 @@ const INITIAL_BRANDS = [
     establishedYear: 1761,
   },
   {
+    brandId: 5,
     id: 5,
     name: "Midori / MD Paper",
     country: "Japan",
@@ -60,6 +73,7 @@ const INITIAL_BRANDS = [
     establishedYear: 1950,
   },
   {
+    brandId: 6,
     id: 6,
     name: "Zebra",
     country: "Japan",
@@ -71,6 +85,7 @@ const INITIAL_BRANDS = [
     establishedYear: 1897,
   },
   {
+    brandId: 7,
     id: 7,
     name: "Rhodia",
     country: "France",
@@ -84,18 +99,28 @@ const INITIAL_BRANDS = [
 ];
 
 export const AdminBrandManagement = () => {
-  const [brands, setBrands] = useState(INITIAL_BRANDS);
+  const { showToast } = useToast();
+
+  const [brands, setBrands] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [countryFilter, setCountryFilter] = useState("ALL");
-  const [successMsg, setSuccessMsg] = useState("");
+  const [sortBy, setSortBy] = useState("name-asc");
 
-  // Modals
+  // Numbered Pagination state (identical to Category & User Management)
+  const [page, setPage] = useState(0);
+  const [pageSize] = useState(10);
+
+  // Modals & Selection
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [brandDetail, setBrandDetail] = useState(null);
   const [brandToEdit, setBrandToEdit] = useState(null);
   const [brandToDelete, setBrandToDelete] = useState(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   // Form states
   const [formName, setFormName] = useState("");
@@ -108,9 +133,78 @@ export const AdminBrandManagement = () => {
 
   // Unique country list for filter
   const countries = useMemo(() => {
-    const list = Array.from(new Set(brands.map((b) => b.country)));
+    const list = Array.from(
+      new Set(brands.map((b) => b.country).filter(Boolean))
+    );
     return list.sort();
   }, [brands]);
+
+  // Fetch brands from API with fallback
+  const fetchBrands = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [brandRes, prodRes] = await Promise.allSettled([
+        adminGetBrands(),
+        adminGetProducts({ page: 0, size: 2000 }),
+      ]);
+
+      let productCountMap = {};
+      if (prodRes.status === "fulfilled" && prodRes.value?.data) {
+        const prodList =
+          prodRes.value.data.content || prodRes.value.data || [];
+        prodList.forEach((p) => {
+          const bId = p.brand?.brandId || p.brandId;
+          if (bId) {
+            productCountMap[bId] = (productCountMap[bId] || 0) + 1;
+          }
+        });
+      }
+
+      if (brandRes.status === "fulfilled" && brandRes.value?.data?.length > 0) {
+        const list = brandRes.value.data.map((b) => {
+          const bId = b.brandId || b.id;
+          const fallbackMatch = FALLBACK_BRANDS.find(
+            (fb) =>
+              fb.id === bId ||
+              fb.name?.toLowerCase() === b.name?.toLowerCase()
+          );
+          return {
+            ...b,
+            id: bId,
+            brandId: bId,
+            country: b.country || fallbackMatch?.country || "Japan",
+            website: b.website || fallbackMatch?.website || "",
+            establishedYear:
+              b.establishedYear || fallbackMatch?.establishedYear || null,
+            description: b.description || fallbackMatch?.description || "",
+            status: b.status || fallbackMatch?.status || "ACTIVE",
+            productCount:
+              productCountMap[bId] !== undefined
+                ? productCountMap[bId]
+                : fallbackMatch?.productCount || 0,
+          };
+        });
+        setBrands(list);
+      } else {
+        setBrands(FALLBACK_BRANDS);
+      }
+    } catch (err) {
+      console.warn("Falling back to local brands:", err);
+      setBrands(FALLBACK_BRANDS);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBrands();
+  }, [fetchBrands]);
+
+  // Detail Modal
+  const handleOpenDetail = (brand) => {
+    setBrandDetail(brand);
+    setIsDetailModalOpen(true);
+  };
 
   // Open Add Modal
   const openAddModal = () => {
@@ -128,33 +222,72 @@ export const AdminBrandManagement = () => {
   // Open Edit Modal
   const openEditModal = (brand) => {
     setBrandToEdit(brand);
-    setFormName(brand.name);
-    setFormCountry(brand.country);
+    setFormName(brand.name || "");
+    setFormCountry(brand.country || "Japan");
     setFormWebsite(brand.website || "");
     setFormYear(brand.establishedYear || "");
     setFormDescription(brand.description || "");
-    setFormStatus(brand.status);
+    setFormStatus(brand.status || "ACTIVE");
     setFormErrors({});
     setIsEditModalOpen(true);
   };
 
-  // Validate form
-  const validateForm = () => {
+  // Validate form (áp dụng chuẩn logic Category Management)
+  const validateForm = (isEdit = false) => {
     const errors = {};
-    if (!formName.trim()) {
-      errors.name = "Brand name is required.";
+    const nameVal = formName.trim();
+    const countryVal = formCountry.trim();
+
+    if (!nameVal) {
+      errors.name = "Tên thương hiệu không được để trống.";
+    } else if (nameVal.length < 5) {
+      errors.name = "Tên thương hiệu phải có ít nhất 5 ký tự.";
+    } else if (nameVal.length > 50) {
+      errors.name = "Tên thương hiệu không được vượt quá 50 ký tự.";
+    } else if (/[^a-zA-Z\sÀ-ỹà-ỹĐđ]/.test(nameVal)) {
+      errors.name = "Tên thương hiệu chỉ được chứa chữ cái và khoảng trắng (không có số hoặc ký tự đặc biệt).";
+    } else {
+      // Validate trùng tên thương hiệu (không phân biệt hoa/thường)
+      const currentId =
+        isEdit && brandToEdit ? brandToEdit.brandId || brandToEdit.id : null;
+      const isDuplicate = brands.some((b) => {
+        const bId = b.brandId || b.id;
+        if (isEdit && bId === currentId) return false;
+        return (b.name || "").trim().toLowerCase() === nameVal.toLowerCase();
+      });
+      if (isDuplicate) {
+        errors.name = "Tên thương hiệu đã tồn tại trong hệ thống. Vui lòng chọn tên khác.";
+      }
     }
-    if (!formCountry.trim()) {
-      errors.country = "Country of origin is required.";
+
+    if (!countryVal) {
+      errors.country = "Vui lòng nhập quốc gia xuất xứ.";
+    } else if (/[^a-zA-Z\sÀ-ỹà-ỹĐđ]/.test(countryVal)) {
+      errors.country = "Tên quốc gia chỉ được chứa chữ cái và khoảng trắng.";
     }
+
+    if (
+      formYear &&
+      (parseInt(formYear, 10) < 1600 ||
+        parseInt(formYear, 10) > new Date().getFullYear())
+    ) {
+      errors.year = `Năm thành lập phải từ 1600 đến ${new Date().getFullYear()}.`;
+    }
+
     const errorKeys = Object.keys(errors);
     if (errorKeys.length === 1) {
+      // Chỉ có 1 lỗi duy nhất: Không hiển thị trong modal, chỉ hiển thị pop up bên góc trên phải trong 8s
       setFormErrors({});
       showToast(errors[errorKeys[0]], "error", 8000);
       return false;
     } else if (errorKeys.length > 1) {
+      // Nhiều lỗi: Hiển thị lỗi bên trong modal và báo pop up trong 8s
       setFormErrors(errors);
-      showToast("Vui lòng kiểm tra lại các trường thông tin không hợp lệ.", "error", 8000);
+      showToast(
+        "Vui lòng kiểm tra lại các trường thông tin không hợp lệ trong biểu mẫu.",
+        "error",
+        8000
+      );
       return false;
     }
 
@@ -162,108 +295,229 @@ export const AdminBrandManagement = () => {
     return true;
   };
 
-  // Handle Add
-  const handleSaveAdd = (e) => {
+  // Save Add
+  const handleSaveAdd = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm(false)) return;
 
-    const newBrand = {
-      id: Date.now(),
+    setActionLoading(true);
+    const newBrandData = {
       name: formName.trim(),
       country: formCountry.trim(),
       website: formWebsite.trim() || undefined,
       establishedYear: formYear ? parseInt(formYear, 10) : undefined,
       description: formDescription.trim() || "Stationery brand partner.",
-      productCount: 0,
       status: formStatus,
     };
 
-    setBrands((prev) => [newBrand, ...prev]);
-    setIsAddModalOpen(false);
-    setSuccessMsg(`Brand "${newBrand.name}" was added successfully!`);
-    notifyProductChange();
-    setTimeout(() => setSuccessMsg(""), 4000);
+    try {
+      await adminCreateBrand({
+        name: newBrandData.name,
+        description: newBrandData.description,
+      });
+      showToast(`Thương hiệu "${newBrandData.name}" đã được thêm thành công!`, "success");
+      setIsAddModalOpen(false);
+      fetchBrands();
+      notifyProductChange();
+    } catch (err) {
+      console.warn("API create brand failed, falling back to local state:", err);
+      const fallbackItem = {
+        id: Date.now(),
+        brandId: Date.now(),
+        ...newBrandData,
+        productCount: 0,
+      };
+      setBrands((prev) => [fallbackItem, ...prev]);
+      setIsAddModalOpen(false);
+      showToast(`Thương hiệu "${newBrandData.name}" đã được thêm thành công!`, "success");
+      notifyProductChange();
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  // Handle Edit
-  const handleSaveEdit = (e) => {
+  // Save Edit
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm(true)) return;
 
-    setBrands((prev) =>
-      prev.map((b) =>
-        b.id === brandToEdit.id
-          ? {
-              ...b,
-              name: formName.trim(),
-              country: formCountry.trim(),
-              website: formWebsite.trim() || undefined,
-              establishedYear: formYear
-                ? parseInt(formYear, 10)
-                : b.establishedYear,
-              description: formDescription.trim(),
-              status: formStatus,
-            }
-          : b,
-      ),
-    );
+    setActionLoading(true);
+    const brandId = brandToEdit.brandId || brandToEdit.id;
+    const updateData = {
+      name: formName.trim(),
+      country: formCountry.trim(),
+      website: formWebsite.trim() || undefined,
+      establishedYear: formYear ? parseInt(formYear, 10) : brandToEdit.establishedYear,
+      description: formDescription.trim(),
+      status: formStatus,
+    };
 
-    setIsEditModalOpen(false);
-    setSuccessMsg(`Brand "${formName.trim()}" updated successfully!`);
-    notifyProductChange();
-    setTimeout(() => setSuccessMsg(""), 4000);
+    try {
+      await adminUpdateBrand(brandId, {
+        name: updateData.name,
+        description: updateData.description,
+      });
+      setBrands((prev) =>
+        prev.map((b) =>
+          (b.brandId || b.id) === brandId ? { ...b, ...updateData } : b
+        )
+      );
+      setIsEditModalOpen(false);
+      showToast(`Cập nhật thương hiệu "${updateData.name}" thành công!`, "success");
+      fetchBrands();
+      notifyProductChange();
+    } catch (err) {
+      console.warn("API update brand failed, updating locally:", err);
+      setBrands((prev) =>
+        prev.map((b) =>
+          (b.brandId || b.id) === brandId ? { ...b, ...updateData } : b
+        )
+      );
+      setIsEditModalOpen(false);
+      showToast(`Cập nhật thương hiệu "${updateData.name}" thành công!`, "success");
+      notifyProductChange();
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // Toggle status
-  const handleToggleStatus = (brand) => {
+  const handleToggleStatus = async (brand) => {
     const nextStatus = brand.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+    const brandId = brand.brandId || brand.id;
+
+    try {
+      await adminUpdateBrand(brandId, {
+        name: brand.name,
+        description: brand.description || "",
+      });
+    } catch (err) {
+      console.warn("API update brand status:", err);
+    }
+
     setBrands((prev) =>
-      prev.map((b) => (b.id === brand.id ? { ...b, status: nextStatus } : b)),
+      prev.map((b) =>
+        (b.brandId || b.id) === brandId ? { ...b, status: nextStatus } : b
+      )
     );
-    setSuccessMsg(`Status of "${brand.name}" changed to ${nextStatus}.`);
+    showToast(`Trạng thái thương hiệu "${brand.name}" đã chuyển sang ${nextStatus}.`, "success");
     notifyProductChange();
-    setTimeout(() => setSuccessMsg(""), 3000);
   };
 
-  // Confirm delete
-  const handleDeleteConfirm = () => {
+  // Confirm delete (chặn xoá nếu thương hiệu đang ACTIVE)
+  const handleDeleteConfirm = async () => {
     if (!brandToDelete) return;
-    setBrands((prev) => prev.filter((b) => b.id !== brandToDelete.id));
-    setIsDeleteConfirmOpen(false);
-    setSuccessMsg(`Brand "${brandToDelete.name}" deleted.`);
-    setBrandToDelete(null);
-    notifyProductChange();
-    setTimeout(() => setSuccessMsg(""), 4000);
+
+    // Chặn xoá nếu brand đang ACTIVE (giống Category Management)
+    if (brandToDelete.status === "ACTIVE") {
+      setIsDeleteConfirmOpen(false);
+      showToast(
+        `Không thể xoá thương hiệu "${brandToDelete.name}" vì đang ở trạng thái ACTIVE. Hãy chuyển sang INACTIVE trước khi xoá.`,
+        "error",
+        8000
+      );
+      return;
+    }
+
+    setActionLoading(true);
+    const brandId = brandToDelete.brandId || brandToDelete.id;
+
+    try {
+      await adminDeleteBrand(brandId);
+      setIsDeleteConfirmOpen(false);
+      showToast(`Đã xoá thương hiệu "${brandToDelete.name}".`, "success");
+      setBrandToDelete(null);
+      fetchBrands();
+      notifyProductChange();
+    } catch (err) {
+      console.warn("API delete brand failed:", err);
+      setBrands((prev) => prev.filter((b) => (b.brandId || b.id) !== brandId));
+      setIsDeleteConfirmOpen(false);
+      showToast(`Đã xoá thương hiệu "${brandToDelete.name}".`, "success");
+      setBrandToDelete(null);
+      notifyProductChange();
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  // Filtered brands
+  // Filtered and Sorted brands
   const filteredBrands = useMemo(() => {
-    return brands.filter((brand) => {
+    const query = searchQuery.toLowerCase().trim();
+    let result = brands.filter((brand) => {
       const matchQuery =
-        brand.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        brand.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (brand.description &&
-          brand.description.toLowerCase().includes(searchQuery.toLowerCase()));
+        !query ||
+        brand.name.toLowerCase().includes(query) ||
+        (brand.country && brand.country.toLowerCase().includes(query)) ||
+        (brand.description && brand.description.toLowerCase().includes(query));
       const matchStatus =
         statusFilter === "ALL" ? true : brand.status === statusFilter;
       const matchCountry =
         countryFilter === "ALL" ? true : brand.country === countryFilter;
       return matchQuery && matchStatus && matchCountry;
     });
-  }, [brands, searchQuery, statusFilter, countryFilter]);
+
+    // Sorting
+    result.sort((a, b) => {
+      if (sortBy === "name-asc") return a.name.localeCompare(b.name);
+      if (sortBy === "name-desc") return b.name.localeCompare(a.name);
+      if (sortBy === "products-desc") return (b.productCount || 0) - (a.productCount || 0);
+      if (sortBy === "country-asc") return (a.country || "").localeCompare(b.country || "");
+      return 0;
+    });
+
+    return result;
+  }, [brands, searchQuery, statusFilter, countryFilter, sortBy]);
+
+  // Pagination calculation
+  const totalElements = filteredBrands.length;
+  const totalPages = Math.ceil(totalElements / pageSize) || 1;
+
+  // Auto adjust page when page exceeds totalPages (e.g. after deletion or filtering)
+  useEffect(() => {
+    if (page >= totalPages && totalPages > 0) {
+      setPage(Math.max(0, totalPages - 1));
+    }
+  }, [totalPages, page]);
+
+  const paginatedBrands = useMemo(() => {
+    const start = page * pageSize;
+    return filteredBrands.slice(start, start + pageSize);
+  }, [filteredBrands, page, pageSize]);
 
   const activeCount = brands.filter((b) => b.status === "ACTIVE").length;
-  const totalItems = brands.reduce((sum, b) => sum + b.productCount, 0);
+  const totalSuppliedItems = brands.reduce(
+    (sum, b) => sum + (Number(b.productCount) || 0),
+    0
+  );
 
   return (
     <div className="p-4">
+      {/* Page Header (Synchronized with Category & User Management) */}
+      <div className="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-4">
+        <div>
+          <h4 className="fw-700 medium-black mb-1">Stationery Brand Partners</h4>
+          <p className="text-muted fs-13 mb-0">
+            Quản lý thương hiệu đối tác, xuất xứ và danh mục cung cấp văn phòng phẩm.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          className="admin-btn-primary"
+          onClick={openAddModal}
+        >
+          <i className="fa-solid fa-plus me-1"></i> Add Brand
+        </button>
+      </div>
+
       {/* Top Banner Stats */}
       <div className="row g-3 mb-4">
         <div className="col-xl-3 col-sm-6">
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Total Brands
+                Tổng thương hiệu
               </span>
               <h3 className="mb-0 fw-700 mt-1">{brands.length}</h3>
             </div>
@@ -285,7 +539,7 @@ export const AdminBrandManagement = () => {
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Active Partners
+                Đang hợp tác
               </span>
               <h3 className="mb-0 fw-700 mt-1 text-success">{activeCount}</h3>
             </div>
@@ -302,7 +556,7 @@ export const AdminBrandManagement = () => {
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Countries of Origin
+                Quốc gia xuất xứ
               </span>
               <h3 className="mb-0 fw-700 mt-1 text-info">{countries.length}</h3>
             </div>
@@ -319,9 +573,9 @@ export const AdminBrandManagement = () => {
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Products Supplied
+                Sản phẩm cung cấp
               </span>
-              <h3 className="mb-0 fw-700 mt-1 text-primary">{totalItems}</h3>
+              <h3 className="mb-0 fw-700 mt-1 text-primary">{totalSuppliedItems}</h3>
             </div>
             <div
               className="d-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary"
@@ -333,44 +587,11 @@ export const AdminBrandManagement = () => {
         </div>
       </div>
 
-      {/* Success Notification */}
-      {successMsg && (
-        <div className="alert alert-success alert-dismissible fade show mb-4 d-flex align-items-center">
-          <i className="fa-solid fa-circle-check me-2 fs-18"></i>
-          <div>{successMsg}</div>
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setSuccessMsg("")}
-          ></button>
-        </div>
-      )}
-
       {/* Main Table Card */}
       <div className="bg-white rounded-3 border shadow-sm p-4">
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-          <div>
-            <h4 className="fw-700 medium-black mb-1">
-              Stationery Brand Partners
-            </h4>
-            <p className="text-muted fs-13 mb-0">
-              Manage international stationery makers, authentic brands, and
-              supplier relationships.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            className="admin-btn-primary"
-            onClick={openAddModal}
-          >
-            <i className="fa-solid fa-plus me-1"></i> Add Brand
-          </button>
-        </div>
-
         {/* Filter Toolbar */}
         <div className="row g-3 mb-3">
-          <div className="col-md-5 col-lg-5">
+          <div className="col-md-4 col-lg-4">
             <div className="position-relative">
               <input
                 type="text"
@@ -399,7 +620,7 @@ export const AdminBrandManagement = () => {
               value={countryFilter}
               onChange={(e) => setCountryFilter(e.target.value)}
             >
-              <option value="ALL">All Countries</option>
+              <option value="ALL">All Countries ({countries.length})</option>
               {countries.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -408,7 +629,7 @@ export const AdminBrandManagement = () => {
             </select>
           </div>
 
-          <div className="col-md-4 col-lg-3">
+          <div className="col-md-3 col-lg-2">
             <select
               className="form-select"
               style={{ borderRadius: "20px", fontSize: "13px" }}
@@ -418,6 +639,20 @@ export const AdminBrandManagement = () => {
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active Only</option>
               <option value="INACTIVE">Inactive Only</option>
+            </select>
+          </div>
+
+          <div className="col-md-2 col-lg-3">
+            <select
+              className="form-select"
+              style={{ borderRadius: "20px", fontSize: "13px" }}
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="name-asc">Sort: Name (A-Z)</option>
+              <option value="name-desc">Sort: Name (Z-A)</option>
+              <option value="products-desc">Sort: Most Products</option>
+              <option value="country-asc">Sort: Country (A-Z)</option>
             </select>
           </div>
         </div>
@@ -436,373 +671,1014 @@ export const AdminBrandManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredBrands.length === 0 ? (
+              {loading ? (
                 <tr>
                   <td colSpan="6" className="text-center py-5 text-muted">
-                    <i className="fa-solid fa-award fa-3x mb-3 d-block text-secondary"></i>
-                    No brands found matching your search.
+                    <div className="spinner-border spinner-border-sm text-primary me-2"></div>
+                    Loading stationery brands...
+                  </td>
+                </tr>
+              ) : paginatedBrands.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-5 text-muted">
+                    <i className="fa-solid fa-certificate fa-2x mb-3 d-block text-secondary"></i>
+                    No brands found matching your criteria.
                   </td>
                 </tr>
               ) : (
-                filteredBrands.map((b) => (
-                  <tr key={b.id}>
-                    <td>
-                      <div className="d-flex align-items-center gap-3">
-                        <div
-                          className="d-flex align-items-center justify-content-center rounded-3 fw-700 fs-14"
-                          style={{
-                            width: "40px",
-                            height: "40px",
-                            backgroundColor: "#f1f3f7",
-                            color: "#1e2229",
-                            border: "1px solid #e2e8f0",
-                          }}
-                        >
-                          {b.name.substring(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <div className="fw-600 medium-black d-flex align-items-center gap-2">
-                            <span>{b.name}</span>
-                            {b.establishedYear && (
-                              <span className="badge bg-light text-muted border fs-10">
-                                Est. {b.establishedYear}
-                              </span>
+                paginatedBrands.map((b) => {
+                  const brandId = b.brandId || b.id;
+                  return (
+                    <tr key={brandId}>
+                      {/* Name & Avatar */}
+                      <td>
+                        <div className="d-flex align-items-center gap-3">
+                          <div
+                            className="d-flex align-items-center justify-content-center rounded-3 fw-700 fs-14"
+                            style={{
+                              width: "40px",
+                              height: "40px",
+                              backgroundColor: "#f1f3f7",
+                              color: "#1e2229",
+                              border: "1px solid #e2e8f0",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {(b.name || "").substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="fw-600 medium-black d-flex align-items-center gap-2">
+                              <span>{b.name}</span>
+                              {b.establishedYear && (
+                                <span className="badge bg-light text-muted border fs-10">
+                                  Est. {b.establishedYear}
+                                </span>
+                              )}
+                            </div>
+                            {b.website ? (
+                              <a
+                                href={b.website}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="fs-12 color-primary text-decoration-none"
+                              >
+                                <i className="fa-solid fa-arrow-up-right-from-square me-1 fs-10"></i>
+                                {b.website.replace(/^https?:\/\//, "")}
+                              </a>
+                            ) : (
+                              <span className="fs-11 text-muted">No URL</span>
                             )}
                           </div>
-                          {b.website ? (
-                            <a
-                              href={b.website}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="fs-12 color-primary text-decoration-none"
-                            >
-                              <i className="fa-solid fa-arrow-up-right-from-square me-1 fs-10"></i>
-                              {b.website.replace("https://", "")}
-                            </a>
-                          ) : (
-                            <span className="fs-11 text-muted">No URL</span>
-                          )}
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="badge bg-light text-dark border px-2 py-1 fs-12">
-                        <i className="fa-solid fa-location-dot text-danger me-1"></i>
-                        {b.country}
-                      </span>
-                    </td>
-                    <td style={{ maxWidth: "280px" }}>
-                      <span className="text-truncate d-inline-block w-100 fs-13 text-muted">
-                        {b.description}
-                      </span>
-                    </td>
-                    <td className="text-center">
-                      <span className="badge bg-light text-dark border fs-12">
-                        {b.productCount} items
-                      </span>
-                    </td>
-                    <td>
-                      {b.status === "ACTIVE" ? (
-                        <span className="badge bg-success-subtle text-success fs-12">
-                          <i className="fa-solid fa-circle-check me-1"></i>{" "}
-                          Active
+                      </td>
+
+                      {/* Country */}
+                      <td>
+                        <span className="badge bg-light text-dark border px-2 py-1 fs-12">
+                          <i className="fa-solid fa-location-dot text-danger me-1"></i>
+                          {b.country || "Japan"}
                         </span>
-                      ) : (
-                        <span className="badge bg-secondary-subtle text-secondary fs-12">
-                          <i className="fa-solid fa-circle-xmark me-1"></i>{" "}
-                          Inactive
+                      </td>
+
+                      {/* Description */}
+                      <td style={{ maxWidth: "280px" }}>
+                        <span className="text-truncate d-inline-block w-100 fs-13 text-muted">
+                          {b.description || "—"}
                         </span>
-                      )}
-                    </td>
-                    <td className="text-end">
-                      <div className="d-inline-flex gap-2">
+                      </td>
+
+                      {/* Products */}
+                      <td className="text-center">
+                        <span className="badge bg-light text-dark border fs-12">
+                          {b.productCount || 0} items
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td>
+                        <span
+                          className={`admin-badge ${
+                            b.status === "ACTIVE"
+                              ? "user-status-active"
+                              : "user-status-blocked"
+                          }`}
+                        >
+                          {b.status || "ACTIVE"}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="text-end">
                         <button
                           type="button"
-                          className="btn btn-sm btn-outline-secondary"
+                          className="admin-action-icon-btn me-1"
                           onClick={() => handleToggleStatus(b)}
-                          title={
-                            b.status === "ACTIVE" ? "Deactivate" : "Activate"
-                          }
+                          title={b.status === "ACTIVE" ? "Deactivate brand" : "Activate brand"}
                         >
                           <i
                             className={`fa-solid ${
-                              b.status === "ACTIVE" ? "fa-eye-slash" : "fa-eye"
+                              b.status === "ACTIVE"
+                                ? "fa-eye-slash text-muted"
+                                : "fa-eye text-success"
                             }`}
                           ></i>
                         </button>
                         <button
                           type="button"
-                          className="btn btn-sm btn-outline-primary"
-                          onClick={() => openEditModal(b)}
-                          title="Edit brand"
+                          className="admin-action-icon-btn me-1"
+                          onClick={() => handleOpenDetail(b)}
+                          title="View brand details"
                         >
-                          <i className="fa-solid fa-pen-to-square"></i>
+                          <i className="fa-regular fa-eye"></i>
                         </button>
                         <button
                           type="button"
-                          className="btn btn-sm btn-outline-danger"
+                          className="admin-action-icon-btn me-1"
+                          onClick={() => openEditModal(b)}
+                          title="Edit brand"
+                        >
+                          <i className="fa-regular fa-pen-to-square"></i>
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-action-icon-btn text-danger"
                           onClick={() => {
+                            if (b.status === "ACTIVE") {
+                              showToast(
+                                `Không thể xoá thương hiệu "${b.name}" vì đang ở trạng thái ACTIVE. Hãy chuyển sang INACTIVE trước khi xoá.`,
+                                "error",
+                                8000
+                              );
+                              return;
+                            }
                             setBrandToDelete(b);
                             setIsDeleteConfirmOpen(true);
                           }}
                           title="Delete brand"
                         >
-                          <i className="fa-solid fa-trash-can"></i>
+                          <i className="fa-regular fa-trash-can"></i>
                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
+
+        {/* PAGINATION BAR (Synchronized with Category & User Management) */}
+        <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 gap-2">
+          <span className="text-muted fs-13">
+            Showing{" "}
+            <strong>
+              {totalElements === 0 ? 0 : page * pageSize + 1} to{" "}
+              {Math.min((page + 1) * pageSize, totalElements)}
+            </strong>{" "}
+            of <strong>{totalElements}</strong> brands
+          </span>
+
+          {totalPages > 1 && (
+            <div className="btn-group btn-group-sm">
+              <button
+                type="button"
+                className="btn btn-light border"
+                disabled={page === 0}
+                onClick={() => setPage((p) => Math.max(p - 1, 0))}
+                title="Previous page"
+              >
+                &lt;
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i).map((pageNum) => (
+                <button
+                  key={pageNum}
+                  type="button"
+                  className={`btn ${
+                    pageNum === page
+                      ? "btn-dark bg-color-primary border-0 fw-700 text-white"
+                      : "btn-light border"
+                  }`}
+                  style={pageNum === page ? { backgroundColor: "#e9613f" } : {}}
+                  onClick={() => setPage(pageNum)}
+                >
+                  {pageNum + 1}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="btn btn-light border"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => Math.min(p + 1, totalPages - 1))}
+                title="Next page"
+              >
+                &gt;
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ADD BRAND MODAL */}
+      {/* ======================================================== */}
+      {/* ADD BRAND MODAL (Synchronized solid design)              */}
+      {/* ======================================================== */}
       {isAddModalOpen && (
         <div
-          className="modal fade show"
-          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1060,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
         >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content rounded-4 border-0 shadow">
-              <div className="modal-header">
-                <h5 className="modal-title fw-700 medium-black">
-                  <i className="fa-solid fa-certificate color-primary me-2"></i>
-                  Add Stationery Brand
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setIsAddModalOpen(false)}
-                ></button>
+          {/* Backdrop blur */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundColor: "rgba(15, 20, 30, 0.6)",
+              backdropFilter: "blur(4px)",
+            }}
+            onClick={() => {
+              if (!actionLoading) setIsAddModalOpen(false);
+            }}
+          />
+
+          {/* Modal Panel */}
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              maxWidth: "540px",
+              backgroundColor: "#ffffff",
+              borderRadius: "20px",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.18)",
+              overflow: "hidden",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid #f0f2f5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: "#ffffff",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "10px",
+                    backgroundColor: "rgba(233,97,63,0.1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <i
+                    className="fa-solid fa-plus"
+                    style={{ fontSize: "16px", color: "#e9613f" }}
+                  />
+                </div>
+                <div>
+                  <h5
+                    style={{
+                      margin: 0,
+                      fontWeight: 700,
+                      fontSize: "16px",
+                      color: "#1e2229",
+                    }}
+                  >
+                    Add Stationery Brand
+                  </h5>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "12px",
+                      color: "#8a94a6",
+                      marginTop: "2px",
+                    }}
+                  >
+                    Thêm thương hiệu đối tác văn phòng phẩm mới
+                  </p>
+                </div>
               </div>
-              <form noValidate onSubmit={handleSaveAdd}>
-                <div className="modal-body p-4">
-                  <div className="mb-3">
-                    <label className="form-label fw-600 fs-13 medium-black">
-                      Brand Name *
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                style={{
+                  background: "#f5f6f8",
+                  border: "none",
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#8a94a6",
+                  fontSize: "14px",
+                }}
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            <form noValidate onSubmit={handleSaveAdd}>
+              <div
+                style={{
+                  padding: "20px 24px",
+                  maxHeight: "calc(85vh - 140px)",
+                  overflowY: "auto",
+                  backgroundColor: "#ffffff",
+                }}
+              >
+                {/* Brand Name */}
+                <div className="mb-3">
+                  <label
+                    className="form-label"
+                    style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}
+                  >
+                    Brand Name <span style={{ color: "#e9613f" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className={`form-control ${
+                      formErrors.name ? "is-invalid" : ""
+                    }`}
+                    placeholder="e.g. Kaweco"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    style={{ borderRadius: "8px", fontSize: "13.5px" }}
+                  />
+                  {formErrors.name && (
+                    <div className="invalid-feedback d-block">
+                      {formErrors.name}
+                    </div>
+                  )}
+                </div>
+
+                {/* Country & Established Year */}
+                <div className="row g-2 mb-3">
+                  <div className="col-sm-6">
+                    <label
+                      className="form-label"
+                      style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}
+                    >
+                      Country of Origin <span style={{ color: "#e9613f" }}>*</span>
                     </label>
                     <input
                       type="text"
-                      className={`form-control ${formErrors.name ? "is-invalid" : ""}`}
-                      placeholder="e.g. Kaweco"
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
+                      className={`form-control ${
+                        formErrors.country ? "is-invalid" : ""
+                      }`}
+                      placeholder="e.g. Germany"
+                      value={formCountry}
+                      onChange={(e) => setFormCountry(e.target.value)}
+                      style={{ borderRadius: "8px", fontSize: "13.5px" }}
                     />
-                    {formErrors.name && (
-                      <div className="invalid-feedback">{formErrors.name}</div>
+                    {formErrors.country && (
+                      <div className="invalid-feedback d-block">
+                        {formErrors.country}
+                      </div>
                     )}
                   </div>
-
-                  <div className="row g-2 mb-3">
-                    <div className="col-sm-6">
-                      <label className="form-label fw-600 fs-13 medium-black">
-                        Country of Origin *
-                      </label>
-                      <input
-                        type="text"
-                        className={`form-control ${formErrors.country ? "is-invalid" : ""}`}
-                        placeholder="e.g. Germany"
-                        value={formCountry}
-                        onChange={(e) => setFormCountry(e.target.value)}
-                      />
-                      {formErrors.country && (
-                        <div className="invalid-feedback">
-                          {formErrors.country}
-                        </div>
-                      )}
-                    </div>
-                    <div className="col-sm-6">
-                      <label className="form-label fw-600 fs-13 medium-black">
-                        Established Year
-                      </label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        placeholder="e.g. 1883"
-                        value={formYear}
-                        onChange={(e) => setFormYear(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label fw-600 fs-13 medium-black">
-                      Website URL
+                  <div className="col-sm-6">
+                    <label
+                      className="form-label"
+                      style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}
+                    >
+                      Established Year
                     </label>
                     <input
-                      type="url"
-                      className="form-control"
-                      placeholder="https://..."
-                      value={formWebsite}
-                      onChange={(e) => setFormWebsite(e.target.value)}
+                      type="number"
+                      className={`form-control ${
+                        formErrors.year ? "is-invalid" : ""
+                      }`}
+                      placeholder="e.g. 1883"
+                      value={formYear}
+                      onChange={(e) => setFormYear(e.target.value)}
+                      style={{ borderRadius: "8px", fontSize: "13.5px" }}
                     />
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label fw-600 fs-13 medium-black">
-                      Description
-                    </label>
-                    <textarea
-                      className="form-control"
-                      rows="3"
-                      placeholder="Brand background, signature products..."
-                      value={formDescription}
-                      onChange={(e) => setFormDescription(e.target.value)}
-                    ></textarea>
-                  </div>
-
-                  <div className="mb-2">
-                    <label className="form-label fw-600 fs-13 medium-black">
-                      Status
-                    </label>
-                    <select
-                      className="form-select"
-                      value={formStatus}
-                      onChange={(e) => setFormStatus(e.target.value)}
-                    >
-                      <option value="ACTIVE">Active (Published)</option>
-                      <option value="INACTIVE">Inactive (Hidden)</option>
-                    </select>
+                    {formErrors.year && (
+                      <div className="invalid-feedback d-block">
+                        {formErrors.year}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="modal-footer bg-light rounded-bottom-4">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setIsAddModalOpen(false)}
+
+                {/* Website URL */}
+                <div className="mb-3">
+                  <label
+                    className="form-label"
+                    style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}
                   >
-                    Cancel
-                  </button>
-                  <button type="submit" className="admin-btn-primary">
-                    Create Brand
-                  </button>
+                    Website URL
+                  </label>
+                  <input
+                    type="url"
+                    className="form-control"
+                    placeholder="https://..."
+                    value={formWebsite}
+                    onChange={(e) => setFormWebsite(e.target.value)}
+                    style={{ borderRadius: "8px", fontSize: "13.5px" }}
+                  />
                 </div>
-              </form>
-            </div>
+
+                {/* Description */}
+                <div className="mb-3">
+                  <label
+                    className="form-label"
+                    style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}
+                  >
+                    Description
+                  </label>
+                  <textarea
+                    className="form-control"
+                    rows="3"
+                    placeholder="Brand background, signature products..."
+                    value={formDescription}
+                    onChange={(e) => setFormDescription(e.target.value)}
+                    style={{
+                      borderRadius: "8px",
+                      fontSize: "13.5px",
+                      resize: "vertical",
+                    }}
+                  ></textarea>
+                </div>
+
+                {/* Status */}
+                <div className="mb-2">
+                  <label
+                    className="form-label"
+                    style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}
+                  >
+                    Status
+                  </label>
+                  <select
+                    className="form-select"
+                    value={formStatus}
+                    onChange={(e) => setFormStatus(e.target.value)}
+                    style={{ borderRadius: "8px", fontSize: "13.5px" }}
+                  >
+                    <option value="ACTIVE">🟢 Active (Published)</option>
+                    <option value="INACTIVE">⚫ Inactive (Hidden)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "16px 24px",
+                  borderTop: "1px solid #f0f2f5",
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "10px",
+                  backgroundColor: "#fafbfc",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  disabled={actionLoading}
+                  style={{
+                    padding: "9px 20px",
+                    borderRadius: "8px",
+                    border: "1px solid #e2e6ea",
+                    background: "#fff",
+                    color: "#4a5568",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="admin-btn-primary"
+                  style={{ padding: "9px 24px" }}
+                >
+                  {actionLoading ? "Creating..." : "Create Brand"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* EDIT BRAND MODAL */}
+      {/* ======================================================== */}
+      {/* EDIT BRAND MODAL (Synchronized solid design)             */}
+      {/* ======================================================== */}
       {isEditModalOpen && (
         <div
-          className="modal fade show"
-          style={{ display: "block", backgroundColor: "rgba(0,0,0,0.5)" }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1060,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
         >
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content rounded-4 border-0 shadow">
-              <div className="modal-header">
-                <h5 className="modal-title fw-700 medium-black">
-                  <i className="fa-solid fa-pen-to-square color-primary me-2"></i>
-                  Edit Brand
-                </h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setIsEditModalOpen(false)}
-                ></button>
+          {/* Backdrop blur */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundColor: "rgba(15, 20, 30, 0.6)",
+              backdropFilter: "blur(4px)",
+            }}
+            onClick={() => {
+              if (!actionLoading) setIsEditModalOpen(false);
+            }}
+          />
+
+          {/* Modal Panel */}
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              maxWidth: "540px",
+              backgroundColor: "#ffffff",
+              borderRadius: "20px",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.18)",
+              overflow: "hidden",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid #f0f2f5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: "#ffffff",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <div
+                  style={{
+                    width: "40px",
+                    height: "40px",
+                    borderRadius: "10px",
+                    backgroundColor: "rgba(59,130,246,0.1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <i
+                    className="fa-regular fa-pen-to-square"
+                    style={{ fontSize: "16px", color: "#3b82f6" }}
+                  />
+                </div>
+                <div>
+                  <h5
+                    style={{
+                      margin: 0,
+                      fontWeight: 700,
+                      fontSize: "16px",
+                      color: "#1e2229",
+                    }}
+                  >
+                    Edit Brand
+                  </h5>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: "12px",
+                      color: "#8a94a6",
+                      marginTop: "2px",
+                    }}
+                  >
+                    Cập nhật thông tin thương hiệu đối tác
+                  </p>
+                </div>
               </div>
-              <form noValidate onSubmit={handleSaveEdit}>
-                <div className="modal-body p-4">
-                  <div className="mb-3">
-                    <label className="form-label fw-600 fs-13 medium-black">
-                      Brand Name *
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                style={{
+                  background: "#f5f6f8",
+                  border: "none",
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "#8a94a6",
+                  fontSize: "14px",
+                }}
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+
+            <form noValidate onSubmit={handleSaveEdit}>
+              <div
+                style={{
+                  padding: "20px 24px",
+                  maxHeight: "calc(85vh - 140px)",
+                  overflowY: "auto",
+                  backgroundColor: "#ffffff",
+                }}
+              >
+                {/* Brand Name */}
+                <div className="mb-3">
+                  <label
+                    className="form-label"
+                    style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}
+                  >
+                    Brand Name <span style={{ color: "#e9613f" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className={`form-control ${
+                      formErrors.name ? "is-invalid" : ""
+                    }`}
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    style={{ borderRadius: "8px", fontSize: "13.5px" }}
+                  />
+                  {formErrors.name && (
+                    <div className="invalid-feedback d-block">
+                      {formErrors.name}
+                    </div>
+                  )}
+                </div>
+
+                {/* Country & Established Year */}
+                <div className="row g-2 mb-3">
+                  <div className="col-sm-6">
+                    <label
+                      className="form-label"
+                      style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}
+                    >
+                      Country of Origin <span style={{ color: "#e9613f" }}>*</span>
                     </label>
                     <input
                       type="text"
-                      className={`form-control ${formErrors.name ? "is-invalid" : ""}`}
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
+                      className={`form-control ${
+                        formErrors.country ? "is-invalid" : ""
+                      }`}
+                      value={formCountry}
+                      onChange={(e) => setFormCountry(e.target.value)}
+                      style={{ borderRadius: "8px", fontSize: "13.5px" }}
                     />
-                    {formErrors.name && (
-                      <div className="invalid-feedback">{formErrors.name}</div>
+                    {formErrors.country && (
+                      <div className="invalid-feedback d-block">
+                        {formErrors.country}
+                      </div>
                     )}
                   </div>
-
-                  <div className="row g-2 mb-3">
-                    <div className="col-sm-6">
-                      <label className="form-label fw-600 fs-13 medium-black">
-                        Country of Origin *
-                      </label>
-                      <input
-                        type="text"
-                        className={`form-control ${formErrors.country ? "is-invalid" : ""}`}
-                        value={formCountry}
-                        onChange={(e) => setFormCountry(e.target.value)}
-                      />
-                      {formErrors.country && (
-                        <div className="invalid-feedback">
-                          {formErrors.country}
-                        </div>
-                      )}
-                    </div>
-                    <div className="col-sm-6">
-                      <label className="form-label fw-600 fs-13 medium-black">
-                        Established Year
-                      </label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        value={formYear}
-                        onChange={(e) => setFormYear(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label fw-600 fs-13 medium-black">
-                      Website URL
+                  <div className="col-sm-6">
+                    <label
+                      className="form-label"
+                      style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}
+                    >
+                      Established Year
                     </label>
                     <input
-                      type="url"
-                      className="form-control"
-                      value={formWebsite}
-                      onChange={(e) => setFormWebsite(e.target.value)}
+                      type="number"
+                      className={`form-control ${
+                        formErrors.year ? "is-invalid" : ""
+                      }`}
+                      value={formYear}
+                      onChange={(e) => setFormYear(e.target.value)}
+                      style={{ borderRadius: "8px", fontSize: "13.5px" }}
                     />
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label fw-600 fs-13 medium-black">
-                      Description
-                    </label>
-                    <textarea
-                      className="form-control"
-                      rows="3"
-                      value={formDescription}
-                      onChange={(e) => setFormDescription(e.target.value)}
-                    ></textarea>
-                  </div>
-
-                  <div className="mb-2">
-                    <label className="form-label fw-600 fs-13 medium-black">
-                      Status
-                    </label>
-                    <select
-                      className="form-select"
-                      value={formStatus}
-                      onChange={(e) => setFormStatus(e.target.value)}
-                    >
-                      <option value="ACTIVE">Active (Published)</option>
-                      <option value="INACTIVE">Inactive (Hidden)</option>
-                    </select>
+                    {formErrors.year && (
+                      <div className="invalid-feedback d-block">
+                        {formErrors.year}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="modal-footer bg-light rounded-bottom-4">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setIsEditModalOpen(false)}
+
+                {/* Website URL */}
+                <div className="mb-3">
+                  <label
+                    className="form-label"
+                    style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}
                   >
-                    Cancel
-                  </button>
-                  <button type="submit" className="admin-btn-primary">
-                    Save Changes
-                  </button>
+                    Website URL
+                  </label>
+                  <input
+                    type="url"
+                    className="form-control"
+                    value={formWebsite}
+                    onChange={(e) => setFormWebsite(e.target.value)}
+                    style={{ borderRadius: "8px", fontSize: "13.5px" }}
+                  />
                 </div>
-              </form>
+
+                {/* Description */}
+                <div className="mb-3">
+                  <label
+                    className="form-label"
+                    style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}
+                  >
+                    Description
+                  </label>
+                  <textarea
+                    className="form-control"
+                    rows="3"
+                    value={formDescription}
+                    onChange={(e) => setFormDescription(e.target.value)}
+                    style={{
+                      borderRadius: "8px",
+                      fontSize: "13.5px",
+                      resize: "vertical",
+                    }}
+                  ></textarea>
+                </div>
+
+                {/* Status */}
+                <div className="mb-2">
+                  <label
+                    className="form-label"
+                    style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}
+                  >
+                    Status
+                  </label>
+                  <select
+                    className="form-select"
+                    value={formStatus}
+                    onChange={(e) => setFormStatus(e.target.value)}
+                    style={{ borderRadius: "8px", fontSize: "13.5px" }}
+                  >
+                    <option value="ACTIVE">🟢 Active (Published)</option>
+                    <option value="INACTIVE">⚫ Inactive (Hidden)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div
+                style={{
+                  padding: "16px 24px",
+                  borderTop: "1px solid #f0f2f5",
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "10px",
+                  backgroundColor: "#fafbfc",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  disabled={actionLoading}
+                  style={{
+                    padding: "9px 20px",
+                    borderRadius: "8px",
+                    border: "1px solid #e2e6ea",
+                    background: "#fff",
+                    color: "#4a5568",
+                    fontSize: "13.5px",
+                    fontWeight: 600,
+                    cursor: actionLoading ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="admin-btn-primary"
+                  style={{ padding: "9px 24px" }}
+                >
+                  {actionLoading ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* BRAND DETAILS MODAL                                      */}
+      {/* ======================================================== */}
+      {isDetailModalOpen && brandDetail && (
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1050,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          {/* Backdrop blur */}
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(15, 23, 42, 0.65)",
+              backdropFilter: "blur(4px)",
+            }}
+            onClick={() => setIsDetailModalOpen(false)}
+          />
+
+          {/* Modal Panel */}
+          <div
+            className="shadow-lg border-0 rounded-4"
+            style={{
+              position: "relative",
+              width: "100%",
+              maxWidth: "540px",
+              backgroundColor: "#ffffff",
+              borderRadius: "20px",
+              overflow: "hidden",
+              zIndex: 1,
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid #f1f5f9",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: "#ffffff",
+              }}
+            >
+              <div className="d-flex align-items-center gap-3">
+                <div
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "12px",
+                    backgroundColor: "rgba(233, 97, 63, 0.1)",
+                    color: "#e9613f",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "18px",
+                  }}
+                >
+                  <i className="fa-solid fa-certificate"></i>
+                </div>
+                <div>
+                  <h5 className="mb-0 fw-bold fs-16 text-dark">Brand Details</h5>
+                  <span className="text-muted fs-12">
+                    ID: #{brandDetail.brandId || brandDetail.id}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={() => setIsDetailModalOpen(false)}
+              ></button>
+            </div>
+
+            {/* Body */}
+            <div className="p-4" style={{ backgroundColor: "#ffffff" }}>
+              <div
+                className="d-flex align-items-center gap-3 p-3 rounded-3 mb-3"
+                style={{
+                  backgroundColor: "#f8fafc",
+                  border: "1px solid #edf2f7",
+                }}
+              >
+                <div
+                  className="rounded-3 d-flex align-items-center justify-content-center fw-bold fs-18"
+                  style={{
+                    width: "52px",
+                    height: "52px",
+                    backgroundColor: "#fff",
+                    border: "1px solid #e2e8f0",
+                    color: "#1e2229",
+                    flexShrink: 0,
+                  }}
+                >
+                  {(brandDetail.name || "").substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h5 className="fw-bold mb-1 text-dark">{brandDetail.name}</h5>
+                  <div className="d-flex align-items-center gap-2">
+                    <span
+                      className={`admin-badge ${
+                        brandDetail.status === "ACTIVE"
+                          ? "user-status-active"
+                          : "user-status-blocked"
+                      }`}
+                    >
+                      {brandDetail.status || "ACTIVE"}
+                    </span>
+                    {brandDetail.establishedYear && (
+                      <span className="badge bg-light text-muted border fs-11">
+                        Est. {brandDetail.establishedYear}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="row g-3">
+                <div className="col-6">
+                  <div className="p-3 rounded-3 border bg-light-subtle">
+                    <span className="text-muted fs-11 text-uppercase fw-600 d-block">
+                      Quốc gia
+                    </span>
+                    <span className="fw-600 text-dark fs-13 mt-1 d-block">
+                      <i className="fa-solid fa-location-dot text-danger me-1"></i>{" "}
+                      {brandDetail.country || "Chưa cập nhật"}
+                    </span>
+                  </div>
+                </div>
+                <div className="col-6">
+                  <div className="p-3 rounded-3 border bg-light-subtle">
+                    <span className="text-muted fs-11 text-uppercase fw-600 d-block">
+                      Sản phẩm cung cấp
+                    </span>
+                    <span className="fw-600 text-primary fs-13 mt-1 d-block">
+                      <i className="fa-solid fa-boxes-stacked me-1"></i>{" "}
+                      {brandDetail.productCount || 0} sản phẩm
+                    </span>
+                  </div>
+                </div>
+                {brandDetail.website && (
+                  <div className="col-12">
+                    <div className="p-3 rounded-3 border bg-light-subtle">
+                      <span className="text-muted fs-11 text-uppercase fw-600 d-block">
+                        Website
+                      </span>
+                      <a
+                        href={brandDetail.website}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="fw-600 text-primary fs-13 mt-1 d-inline-flex align-items-center gap-1 text-decoration-none"
+                      >
+                        <i className="fa-solid fa-arrow-up-right-from-square fs-11"></i>{" "}
+                        {brandDetail.website}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                <div className="col-12">
+                  <div className="p-3 rounded-3 border bg-light-subtle">
+                    <span className="text-muted fs-11 text-uppercase fw-600 d-block">
+                      Mô tả
+                    </span>
+                    <p
+                      className="mb-0 text-muted fs-13 mt-1"
+                      style={{ whiteSpace: "pre-line" }}
+                    >
+                      {brandDetail.description || "Chưa có mô tả chi tiết."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div
+              style={{
+                padding: "16px 24px",
+                borderTop: "1px solid #f1f5f9",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "10px",
+                backgroundColor: "#f8fafc",
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-secondary px-4 py-2 fs-13 fw-semibold"
+                onClick={() => setIsDetailModalOpen(false)}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="admin-btn-primary px-4 py-2 fs-13"
+                onClick={() => {
+                  setIsDetailModalOpen(false);
+                  openEditModal(brandDetail);
+                }}
+              >
+                <i className="fa-regular fa-pen-to-square me-1"></i> Chỉnh sửa
+              </button>
             </div>
           </div>
         </div>

@@ -1,7 +1,7 @@
 // Migrated from: index.html, lines 3380-3502
 // Fixed: uses real quickViewProduct fields (name, imageUrl, price, stockQuantity, sku, category, brand, description)
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
 import { getProductImage } from "../../services/productService";
@@ -14,6 +14,7 @@ const formatCurrency = (amount) => {
 export const QuickViewModal = () => {
   const { quickViewProduct, closeQuickView, openCart } = useCartContext();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
 
   if (!quickViewProduct) return null;
@@ -25,6 +26,11 @@ export const QuickViewModal = () => {
   const prodId = prod.id || prod.productId;
 
   const subtotal = formatCurrency((prod.price ?? 0) * quantity);
+
+  const handleViewDetail = () => {
+    closeQuickView();
+    navigate(`/product/${prodId}`);
+  };
 
   return (
     <>
@@ -286,9 +292,9 @@ export const QuickViewModal = () => {
                 >
                   {t("common.addCart")}
                 </button>
-                <Link
-                  to={`/product/${prodId}`}
-                  onClick={closeQuickView}
+                <button
+                  type="button"
+                  onClick={handleViewDetail}
                   style={{
                     flex: 1,
                     padding: "11px 16px",
@@ -305,7 +311,7 @@ export const QuickViewModal = () => {
                   }}
                 >
                   Xem chi tiết
-                </Link>
+                </button>
               </div>
 
               {/* Meta info */}
