@@ -37,7 +37,7 @@ public class Product {
     @Column(name = "price", nullable = false, precision = 18, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "stock", nullable = false)
+    @Column(name = "stock_quantity", nullable = false)
     @Builder.Default
     private Integer stock = 0;
 
@@ -60,9 +60,12 @@ public class Product {
 
     @PrePersist
     protected void onCreate() {
-        if (createdAt == null) createdAt = LocalDateTime.now();
-        if (status == null) status = ProductStatus.ACTIVE;
-        if (stock == null) stock = 0;
+        if (createdAt == null)
+            createdAt = LocalDateTime.now();
+        if (status == null)
+            status = ProductStatus.ACTIVE;
+        if (stock == null)
+            stock = 0;
     }
 
     @PreUpdate

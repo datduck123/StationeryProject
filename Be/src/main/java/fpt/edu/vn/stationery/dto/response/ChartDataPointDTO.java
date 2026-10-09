@@ -17,4 +17,6 @@ public class ChartDataPointDTO {
     private Long orders;
     private Long deliveredOrders;
     private BigDecimal revenue;
+    private Long newUsers;
+    private Long users;
 }

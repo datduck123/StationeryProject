@@ -76,25 +76,48 @@ public class DashboardServiceImpl implements DashboardService {
                 })
                 .toList();
 
-        // 3. Weekly chart data (Last 7 days)
-        List<ChartDataPointDTO> weeklyChart = buildWeeklyChartData();
+        // 3. 7 Days Chart (Week)
+        List<ChartDataPointDTO> sevenDaysChart = buildDailyChartData(7);
 
-        // 4. Monthly chart data (Last 6 months)
-        List<ChartDataPointDTO> monthlyChart = buildMonthlyChartData();
+        // 4. 30 Days Chart (Month)
+        List<ChartDataPointDTO> thirtyDaysChart = buildDailyChartData(30);
 
-        // 5. Selected period
-        String selectedPeriod = (period != null && period.equalsIgnoreCase("month")) ? "month" : "week";
-        List<ChartDataPointDTO> activeChartData = "month".equals(selectedPeriod) ? monthlyChart : weeklyChart;
+        // 5. Yearly Chart (12 Months)
+        List<ChartDataPointDTO> yearlyChart = buildYearlyChartData(12);
+
+        // 6. Selected period resolution (7d / 30d / year)
+        String normalizedPeriod = normalizePeriod(period);
+        List<ChartDataPointDTO> activeChartData;
+        switch (normalizedPeriod) {
+            case "30d" -> activeChartData = thirtyDaysChart;
+            case "year" -> activeChartData = yearlyChart;
+            default -> activeChartData = sevenDaysChart;
+        }
 
         return DashboardChartsResponseDTO.builder()
                 .lowStockProducts(lowStockProducts)
                 .orderStatusDistribution(statusDistribution)
                 .orderStatusCounts(statusCounts)
-                .weeklyChart(weeklyChart)
-                .monthlyChart(monthlyChart)
-                .selectedPeriod(selectedPeriod)
+                .weeklyChart(sevenDaysChart)
+                .monthlyChart(yearlyChart)
+                .sevenDaysChart(sevenDaysChart)
+                .thirtyDaysChart(thirtyDaysChart)
+                .yearlyChart(yearlyChart)
+                .selectedPeriod(normalizedPeriod)
                 .chartData(activeChartData)
                 .build();
+    }
+
+    private String normalizePeriod(String period) {
+        if (period == null) return "7d";
+        String p = period.trim().toLowerCase();
+        if (p.equals("30d") || p.equals("30days") || p.equals("month") || p.equals("30")) {
+            return "30d";
+        }
+        if (p.equals("year") || p.equals("yearly") || p.equals("1y") || p.equals("12m") || p.equals("365d")) {
+            return "year";
+        }
+        return "7d";
     }
 
     private LowStockProductDTO mapToLowStockDto(Product p) {
@@ -130,12 +153,13 @@ public class DashboardServiceImpl implements DashboardService {
         return counts;
     }
 
-    private List<ChartDataPointDTO> buildWeeklyChartData() {
+    private List<ChartDataPointDTO> buildDailyChartData(int days) {
         LocalDate today = LocalDate.now();
-        LocalDate startDay = today.minusDays(6);
+        LocalDate startDay = today.minusDays(days - 1);
         LocalDateTime sinceTime = startDay.atStartOfDay();
 
         List<Order> orders = orderRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtAsc(sinceTime);
+        List<fpt.edu.vn.stationery.entity.User> users = userRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtAsc(sinceTime);
 
         // Group orders by LocalDate
         Map<LocalDate, List<Order>> ordersByDate = new HashMap<>();
@@ -146,12 +170,24 @@ public class DashboardServiceImpl implements DashboardService {
             }
         }
 
-        List<ChartDataPointDTO> chartPoints = new ArrayList<>();
-        DateTimeFormatter labelFormatter = DateTimeFormatter.ofPattern("MMM dd", Locale.ENGLISH);
+        // Group users by LocalDate
+        Map<LocalDate, List<fpt.edu.vn.stationery.entity.User>> usersByDate = new HashMap<>();
+        if (users != null) {
+            for (fpt.edu.vn.stationery.entity.User u : users) {
+                if (u.getCreatedAt() != null) {
+                    LocalDate userDate = u.getCreatedAt().toLocalDate();
+                    usersByDate.computeIfAbsent(userDate, k -> new ArrayList<>()).add(u);
+                }
+            }
+        }
 
-        for (int i = 0; i < 7; i++) {
+        List<ChartDataPointDTO> chartPoints = new ArrayList<>();
+        DateTimeFormatter labelFormatter = DateTimeFormatter.ofPattern("dd/MM", Locale.ENGLISH);
+
+        for (int i = 0; i < days; i++) {
             LocalDate date = startDay.plusDays(i);
             List<Order> dayOrders = ordersByDate.getOrDefault(date, Collections.emptyList());
+            List<fpt.edu.vn.stationery.entity.User> dayUsers = usersByDate.getOrDefault(date, Collections.emptyList());
 
             long orderCount = dayOrders.size();
             long deliveredCount = dayOrders.stream()
@@ -163,8 +199,10 @@ public class DashboardServiceImpl implements DashboardService {
                     .map(o -> o.getTotalCost() != null ? o.getTotalCost() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+            long userCount = dayUsers.size();
+
             String dayName = date.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
-            String label = dayName + ", " + date.format(labelFormatter);
+            String label = days <= 7 ? (dayName + ", " + date.format(labelFormatter)) : date.format(labelFormatter);
 
             chartPoints.add(ChartDataPointDTO.builder()
                     .label(label)
@@ -172,18 +210,21 @@ public class DashboardServiceImpl implements DashboardService {
                     .orders(orderCount)
                     .deliveredOrders(deliveredCount)
                     .revenue(revenue)
+                    .newUsers(userCount)
+                    .users(userCount)
                     .build());
         }
 
         return chartPoints;
     }
 
-    private List<ChartDataPointDTO> buildMonthlyChartData() {
+    private List<ChartDataPointDTO> buildYearlyChartData(int months) {
         YearMonth currentMonth = YearMonth.now();
-        YearMonth startMonth = currentMonth.minusMonths(5);
+        YearMonth startMonth = currentMonth.minusMonths(months - 1);
         LocalDateTime sinceTime = startMonth.atDay(1).atStartOfDay();
 
         List<Order> orders = orderRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtAsc(sinceTime);
+        List<fpt.edu.vn.stationery.entity.User> users = userRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtAsc(sinceTime);
 
         // Group orders by YearMonth
         Map<YearMonth, List<Order>> ordersByMonth = new HashMap<>();
@@ -194,12 +235,24 @@ public class DashboardServiceImpl implements DashboardService {
             }
         }
 
+        // Group users by YearMonth
+        Map<YearMonth, List<fpt.edu.vn.stationery.entity.User>> usersByMonth = new HashMap<>();
+        if (users != null) {
+            for (fpt.edu.vn.stationery.entity.User u : users) {
+                if (u.getCreatedAt() != null) {
+                    YearMonth ym = YearMonth.from(u.getCreatedAt());
+                    usersByMonth.computeIfAbsent(ym, k -> new ArrayList<>()).add(u);
+                }
+            }
+        }
+
         List<ChartDataPointDTO> chartPoints = new ArrayList<>();
         DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM yyyy", Locale.ENGLISH);
 
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < months; i++) {
             YearMonth ym = startMonth.plusMonths(i);
             List<Order> monthOrders = ordersByMonth.getOrDefault(ym, Collections.emptyList());
+            List<fpt.edu.vn.stationery.entity.User> monthUsers = usersByMonth.getOrDefault(ym, Collections.emptyList());
 
             long orderCount = monthOrders.size();
             long deliveredCount = monthOrders.stream()
@@ -211,12 +264,16 @@ public class DashboardServiceImpl implements DashboardService {
                     .map(o -> o.getTotalCost() != null ? o.getTotalCost() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+            long userCount = monthUsers.size();
+
             chartPoints.add(ChartDataPointDTO.builder()
                     .label(ym.format(monthFormatter))
                     .date(ym.toString())
                     .orders(orderCount)
                     .deliveredOrders(deliveredCount)
                     .revenue(revenue)
+                    .newUsers(userCount)
+                    .users(userCount)
                     .build());
         }
 

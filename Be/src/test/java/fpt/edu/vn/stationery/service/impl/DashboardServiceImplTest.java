@@ -103,11 +103,13 @@ public class DashboardServiceImplTest {
 
         when(orderRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtAsc(any(LocalDateTime.class)))
                 .thenReturn(List.of(order));
+        when(userRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtAsc(any(LocalDateTime.class)))
+                .thenReturn(List.of());
 
-        DashboardChartsResponseDTO result = dashboardService.getDashboardCharts("week");
+        DashboardChartsResponseDTO result = dashboardService.getDashboardCharts("7d");
 
         assertNotNull(result);
-        assertEquals("week", result.getSelectedPeriod());
+        assertEquals("7d", result.getSelectedPeriod());
         assertNotNull(result.getLowStockProducts());
         assertEquals(1, result.getLowStockProducts().size());
         assertEquals(3, result.getLowStockProducts().get(0).getStock());
@@ -120,13 +122,16 @@ public class DashboardServiceImplTest {
         assertEquals(15L, result.getOrderStatusCounts().get("DELIVERED"));
         assertEquals(0L, result.getOrderStatusCounts().get("CANCELLED"));
 
-        assertNotNull(result.getWeeklyChart());
-        assertEquals(7, result.getWeeklyChart().size());
+        assertNotNull(result.getSevenDaysChart());
+        assertEquals(7, result.getSevenDaysChart().size());
 
-        assertNotNull(result.getMonthlyChart());
-        assertEquals(6, result.getMonthlyChart().size());
+        assertNotNull(result.getThirtyDaysChart());
+        assertEquals(30, result.getThirtyDaysChart().size());
 
-        assertEquals(result.getWeeklyChart(), result.getChartData());
+        assertNotNull(result.getYearlyChart());
+        assertEquals(12, result.getYearlyChart().size());
+
+        assertEquals(result.getSevenDaysChart(), result.getChartData());
     }
 
     @Test
@@ -135,11 +140,29 @@ public class DashboardServiceImplTest {
         when(orderRepository.countOrdersByStatus()).thenReturn(List.of());
         when(orderRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtAsc(any(LocalDateTime.class)))
                 .thenReturn(List.of());
+        when(userRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtAsc(any(LocalDateTime.class)))
+                .thenReturn(List.of());
 
-        DashboardChartsResponseDTO result = dashboardService.getDashboardCharts("month");
+        DashboardChartsResponseDTO result = dashboardService.getDashboardCharts("30d");
 
         assertNotNull(result);
-        assertEquals("month", result.getSelectedPeriod());
-        assertEquals(result.getMonthlyChart(), result.getChartData());
+        assertEquals("30d", result.getSelectedPeriod());
+        assertEquals(result.getThirtyDaysChart(), result.getChartData());
+    }
+
+    @Test
+    void getDashboardCharts_YearPeriod_Success() {
+        when(productRepository.findByStockLessThanEqualOrderByStockAsc(5)).thenReturn(List.of());
+        when(orderRepository.countOrdersByStatus()).thenReturn(List.of());
+        when(orderRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtAsc(any(LocalDateTime.class)))
+                .thenReturn(List.of());
+        when(userRepository.findByCreatedAtGreaterThanEqualOrderByCreatedAtAsc(any(LocalDateTime.class)))
+                .thenReturn(List.of());
+
+        DashboardChartsResponseDTO result = dashboardService.getDashboardCharts("year");
+
+        assertNotNull(result);
+        assertEquals("year", result.getSelectedPeriod());
+        assertEquals(result.getYearlyChart(), result.getChartData());
     }
 }

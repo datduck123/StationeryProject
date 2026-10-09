@@ -58,7 +58,6 @@ export const AdminVoucherManagement = () => {
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [successMsg, setSuccessMsg] = useState("");
 
   // Filters & Search & Pagination
   const [searchQuery, setSearchQuery] = useState("");
@@ -118,14 +117,6 @@ export const AdminVoucherManagement = () => {
   useEffect(() => {
     fetchVouchers();
   }, []);
-
-  // Flash auto-dismiss success notice
-  useEffect(() => {
-    if (successMsg) {
-      const timer = setTimeout(() => setSuccessMsg(""), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMsg]);
 
   // Copy code helper
   const handleCopyCode = (code, e) => {
@@ -415,7 +406,6 @@ export const AdminVoucherManagement = () => {
       const created = await voucherService.createVoucher(payload);
       setVouchers((prev) => [created, ...prev]);
       showToast(`Voucher code "${created.code}" created successfully!`, "success");
-      setSuccessMsg(`Voucher code "${created.code}" created successfully!`);
       setIsAddModalOpen(false);
       resetForm();
     } catch (err) {
@@ -460,7 +450,6 @@ export const AdminVoucherManagement = () => {
         prev.map((v) => (v.voucherId === updated.voucherId ? updated : v))
       );
       showToast(`Voucher code "${updated.code}" updated successfully!`, "success");
-      setSuccessMsg(`Voucher code "${updated.code}" updated successfully!`);
       setIsEditModalOpen(false);
       resetForm();
     } catch (err) {
@@ -487,7 +476,6 @@ export const AdminVoucherManagement = () => {
       );
       const msg = `Voucher "${updated.code}" is now ${updated.isActive ? "ACTIVE" : "INACTIVE"}.`;
       showToast(msg, "success");
-      setSuccessMsg(msg);
     } catch (err) {
       console.error("Failed to toggle status:", err);
       const errMsg = err.response?.data?.message || "Failed to change voucher status.";
@@ -515,7 +503,6 @@ export const AdminVoucherManagement = () => {
       );
       const msg = `Voucher "${voucherToDelete.code}" deleted permanently.`;
       showToast(msg, "success");
-      setSuccessMsg(msg);
       setIsDeleteConfirmOpen(false);
       setVoucherToDelete(null);
     } catch (err) {
@@ -531,20 +518,6 @@ export const AdminVoucherManagement = () => {
   return (
     <div className="admin-content">
       {/* Toast / Notice Alerts */}
-      {successMsg && (
-        <div
-          className="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-4 shadow-sm"
-          role="alert"
-        >
-          <i className="fa-solid fa-circle-check fs-5"></i>
-          <span className="flex-grow-1 fw-medium">{successMsg}</span>
-          <button
-            type="button"
-            className="btn-close"
-            onClick={() => setSuccessMsg("")}
-          ></button>
-        </div>
-      )}
 
       {error && (
         <div

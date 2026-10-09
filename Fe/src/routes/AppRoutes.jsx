@@ -34,6 +34,7 @@ export const AppRoutes = () => {
         }
       >
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUserManagement />} />
         <Route path="/admin/categories" element={<AdminCategoryManagement />} />
         <Route path="/admin/brands" element={<AdminBrandManagement />} />

@@ -18,6 +18,9 @@ public class DashboardChartsResponseDTO {
     private Map<String, Long> orderStatusCounts;
     private List<ChartDataPointDTO> weeklyChart;
     private List<ChartDataPointDTO> monthlyChart;
+    private List<ChartDataPointDTO> sevenDaysChart;
+    private List<ChartDataPointDTO> thirtyDaysChart;
+    private List<ChartDataPointDTO> yearlyChart;
     private String selectedPeriod;
     private List<ChartDataPointDTO> chartData;
 }
