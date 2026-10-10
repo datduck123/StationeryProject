@@ -74,9 +74,9 @@ export const Checkout = () => {
       showToast(response.message || "Khởi tạo đơn hàng thành công!", "success");
       
       // In a real flow, we would redirect to a success page or payment gateway (like VNPAY)
-      // Since Order module is not ready, we clear cart locally and navigate
+      // Redirect to Order History page as requested
       await clearCart(false);
-      setTimeout(() => navigate("/"), 2000);
+      setTimeout(() => navigate("/account/orders"), 2000);
       
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || "Lỗi khi xử lý đơn hàng";
