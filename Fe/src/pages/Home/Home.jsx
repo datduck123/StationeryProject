@@ -1,10 +1,19 @@
 // Migrated from: index.html, lines 198-2992
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / br / input self-closing, Link integration, CartContext integration, i18n support
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import CountdownTimer from "../../components/ui/CountdownTimer";
 import { useCartContext } from "../../providers/CartContext";
+import { getProducts, getProductImage } from "../../services/productService";
+
+const formatCurrency = (amount) => {
+  if (amount == null) return "—";
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(amount);
+};
 
 const RatingStars = () => (
   <div className="rating-stars">
@@ -28,24 +37,39 @@ const RatingStars = () => (
 
 const ProductCard = ({ product, openCart, openQuickView, t }) => {
   const { toggleWishlist, isInWishlist } = useCartContext();
-  const prodId = product.id || product.productId;
+  const prodId = product.productId || product.id;
   const isWishlisted = isInWishlist(prodId);
+  const displayImage = getProductImage(product);
   const normalizedProduct = {
     ...product,
+    id: prodId,
+    productId: prodId,
     name: product.name || product.title,
-    imageUrl: product.imageUrl || product.image,
+    imageUrl: product.imageUrl || displayImage,
   };
 
   return (
     <div className="latest-product-card">
       <div className="image-box mb-16">
-        {product.badge && (
+        {product.sold && product.sold >= 50 ? (
+          <span className="sale-label subtitle fw-400 white">
+            {t("common.sale") || "Hot"}
+          </span>
+        ) : product.badge ? (
           <span className="sale-label subtitle fw-400 white">
             {product.badge === "Sale" ? t("common.sale") : product.badge}
           </span>
-        )}
+        ) : null}
         <Link to={`/product/${prodId}`} className="image">
-          <img src={product.image} className="product-image" alt={product.title || product.name || ""} />
+          <img
+            src={displayImage}
+            className="product-image"
+            alt={product.name || product.title || ""}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "/assets/media/products/product-1.png";
+            }}
+          />
         </Link>
         <div className="side-icons">
           <ul className="list-unstyled">
@@ -80,34 +104,41 @@ const ProductCard = ({ product, openCart, openQuickView, t }) => {
             </li>
           </ul>
         </div>
-      <a
-        href="#cart"
-        className="cus-btn"
-        onClick={(e) => {
-          e.preventDefault();
-          openCart();
-        }}
-      >
-        <span className="btn-text">{t("common.addCart")}</span>
-        <span>{t("common.goToCart")}</span>
-      </a>
-    </div>
-    <div className="product-desc">
-      <div>
-        <Link
-          to={`/product/${prodId}`}
-          className="product-title h6 fw-700 mb-8"
+        <a
+          href="#cart"
+          className="cus-btn"
+          onClick={(e) => {
+            e.preventDefault();
+            openCart();
+          }}
         >
-          {product.title}
-        </Link>
-        <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
-          <RatingStars />
-          <p className="fw-500">(02)</p>
+          <span className="btn-text">{t("common.addCart")}</span>
+          <span>{t("common.goToCart")}</span>
+        </a>
+      </div>
+      <div className="product-desc">
+        <div>
+          <Link
+            to={`/product/${prodId}`}
+            className="product-title h6 fw-700 mb-8"
+            title={product.name || product.title}
+          >
+            {product.name || product.title}
+          </Link>
+          <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
+            <RatingStars />
+            <span className="fw-500 light-gray font-sm">
+              ({product.sold != null ? `${product.sold} đã bán` : "0 đã bán"})
+            </span>
+          </div>
+          <h5 className="medium-black fw-700">
+            {typeof product.price === "number" || (product.price && !isNaN(product.price))
+              ? formatCurrency(product.price)
+              : product.price || "—"}
+          </h5>
         </div>
-        <h5 className="medium-black fw-700">{product.price}</h5>
       </div>
     </div>
-  </div>
   );
 };
 
@@ -115,27 +146,84 @@ export const Home = () => {
   const { openCart, openQuickView } = useCartContext();
   const { t } = useTranslation();
 
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [bestSellerProducts, setBestSellerProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  // Fetch real products from backend API
+  useEffect(() => {
+    let active = true;
+    setLoadingProducts(true);
+
+    Promise.all([
+      // Sản phẩm nổi bật: dựa trên sản phẩm có số lượng cao nhất (stockQuantity,desc)
+      getProducts({ page: 0, size: 8, sort: "stockQuantity,desc" }),
+      // Sản phẩm bán chạy: dựa trên sản phẩm có lượt mua cao nhất (sold,desc)
+      getProducts({ page: 0, size: 8, sort: "sold,desc" }),
+    ])
+      .then(([featuredRes, bestSellerRes]) => {
+        if (!active) return;
+        const featuredData = featuredRes.data?.data?.content || featuredRes.data?.content || featuredRes.data || [];
+        const bestSellerData = bestSellerRes.data?.data?.content || bestSellerRes.data?.content || bestSellerRes.data || [];
+        setFeaturedProducts(featuredData);
+        setBestSellerProducts(bestSellerData);
+      })
+      .catch((err) => {
+        console.error("Error fetching home products:", err);
+      })
+      .finally(() => {
+        if (active) setLoadingProducts(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Slick Slider for featured products
+  useEffect(() => {
+    if (featuredProducts.length === 0) return;
+
+    const timer = setTimeout(() => {
+      if (window.$ && window.$.fn && window.$.fn.slick) {
+        const $featured = window.$(".featured-product-slider");
+        if ($featured.length) {
+          if ($featured.hasClass("slick-initialized")) {
+            $featured.slick("unslick");
+          }
+          $featured.slick({
+            slidesToShow: 4,
+            slidesToScroll: 1,
+            autoplay: true,
+            autoplaySpeed: 3000,
+            dots: false,
+            arrows: false,
+            centerPadding: "0",
+            cssEase: "linear",
+            responsive: [
+              { breakpoint: 1200, settings: { slidesToShow: 3 } },
+              { breakpoint: 821, settings: { slidesToShow: 2 } },
+              { breakpoint: 768, settings: { slidesToShow: 1 } },
+            ],
+          });
+        }
+      }
+    }, 150);
+
+    return () => {
+      clearTimeout(timer);
+      if (window.$ && window.$.fn && window.$.fn.slick) {
+        const $featured = window.$(".featured-product-slider");
+        if ($featured.length && $featured.hasClass("slick-initialized")) {
+          $featured.slick("unslick");
+        }
+      }
+    };
+  }, [featuredProducts]);
+
+  // Slick Slider for brands
   useEffect(() => {
     if (window.$ && window.$.fn && window.$.fn.slick) {
-      const $featured = window.$(".featured-product-slider");
-      if ($featured.length && !$featured.hasClass("slick-initialized")) {
-        $featured.slick({
-          slidesToShow: 4,
-          slidesToScroll: 1,
-          autoplay: true,
-          autoplaySpeed: 3000,
-          dots: false,
-          arrows: false,
-          centerPadding: "0",
-          cssEase: "linear",
-          responsive: [
-            { breakpoint: 1200, settings: { slidesToShow: 3 } },
-            { breakpoint: 821, settings: { slidesToShow: 2 } },
-            { breakpoint: 768, settings: { slidesToShow: 1 } },
-          ],
-        });
-      }
-
       const $brand = window.$(".brand-slider");
       if ($brand.length && !$brand.hasClass("slick-initialized")) {
         $brand.slick({
@@ -160,11 +248,6 @@ export const Home = () => {
 
     return () => {
       if (window.$ && window.$.fn && window.$.fn.slick) {
-        if (
-          window.$(".featured-product-slider").hasClass("slick-initialized")
-        ) {
-          window.$(".featured-product-slider").slick("unslick");
-        }
         if (window.$(".brand-slider").hasClass("slick-initialized")) {
           window.$(".brand-slider").slick("unslick");
         }
@@ -221,124 +304,6 @@ export const Home = () => {
       count: "5",
       image: "/assets/media/collection/collection-7.png",
       delay: "400ms",
-    },
-  ];
-
-  const featuredProducts = [
-    {
-      id: 1,
-      title: "Daily Planner Pro",
-      image: "/assets/media/products/product-1.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 2,
-      title: "SmoothFlow Pens",
-      image: "/assets/media/products/product-2.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 3,
-      title: "Premium Bags",
-      image: "/assets/media/products/product-3.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 4,
-      title: "Premium Letter Paper",
-      image: "/assets/media/products/product-4.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 5,
-      title: "Daily Planner Pro",
-      image: "/assets/media/products/product-1.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 6,
-      title: "SmoothFlow Pens",
-      image: "/assets/media/products/product-2.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 7,
-      title: "Premium Bags",
-      image: "/assets/media/products/product-3.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 8,
-      title: "Premium Letter Paper",
-      image: "/assets/media/products/product-4.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-  ];
-
-  const bestSellerProducts = [
-    {
-      id: 1,
-      title: "Classic Ballpoint Pens",
-      image: "/assets/media/products/product-5.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 2,
-      title: "Magnetic Paper Clips",
-      image: "/assets/media/products/product-6.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 3,
-      title: "Pen's Box",
-      image: "/assets/media/products/product-7.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 4,
-      title: "Calculator",
-      image: "/assets/media/products/product-8.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 5,
-      title: "Watercolor Paper Pad",
-      image: "/assets/media/products/product-9.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 6,
-      title: "Watercolor Paper Pad",
-      image: "/assets/media/products/product-10.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 7,
-      title: "Daily Planner Pro",
-      image: "/assets/media/products/product-11.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 8,
-      title: "Hardcover Notebook",
-      image: "/assets/media/products/product-12.png",
-      price: "$59.00",
-      badge: "Sale",
     },
   ];
 
@@ -516,7 +481,7 @@ export const Home = () => {
           <div className="featured-product-slider">
             {featuredProducts.map((prod) => (
               <ProductCard
-                key={prod.id}
+                key={prod.productId || prod.id}
                 product={prod}
                 openCart={openCart}
                 openQuickView={openQuickView}
@@ -527,6 +492,43 @@ export const Home = () => {
         </div>
       </section>
       {/* FEATURED PRODUCT END */}
+
+      {/* BEST SELLER START */}
+      <section className="best-seller-sec py-40">
+        <img
+          src="/assets/media/images/element-1.png"
+          alt=""
+          className="element-1"
+        />
+        <div className="container-2">
+          <div
+            className="heading mb-48 text-center wow fadeInUp animated"
+            data-wow-delay="400ms"
+          >
+            <h2 className="medium-black fw-700 mb-16">
+              <span className="color-primary">{t("home.bestSeller")}</span>{" "}
+              {t("home.bestSellerHighlight")}
+            </h2>
+            <p>{t("home.bestSellerSubtitle")}</p>
+          </div>
+          <div className="row row-gap-4">
+            {bestSellerProducts.map((prod) => (
+              <div
+                key={prod.productId || prod.id}
+                className="col-xl-3 col-lg-4 col-md-6 col-sm-6"
+              >
+                <ProductCard
+                  product={prod}
+                  openCart={openCart}
+                  openQuickView={openQuickView}
+                  t={t}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* BEST SELLER END */}
 
       {/* COLLECTION GRIDS START */}
       <section className="collection-grid-sec py-40">
@@ -631,43 +633,6 @@ export const Home = () => {
         </div>
       </section>
       {/* INNER BANNER END */}
-
-      {/* BEST SELLER START */}
-      <section className="best-seller-sec py-40">
-        <img
-          src="/assets/media/images/element-1.png"
-          alt=""
-          className="element-1"
-        />
-        <div className="container-2">
-          <div
-            className="heading mb-48 text-center wow fadeInUp animated"
-            data-wow-delay="400ms"
-          >
-            <h2 className="medium-black fw-700 mb-16">
-              <span className="color-primary">{t("home.bestSeller")}</span>{" "}
-              {t("home.bestSellerHighlight")}
-            </h2>
-            <p>{t("home.bestSellerSubtitle")}</p>
-          </div>
-          <div className="row row-gap-4">
-            {bestSellerProducts.map((prod) => (
-              <div
-                key={prod.id}
-                className="col-xl-3 col-lg-4 col-md-6 col-sm-6"
-              >
-                <ProductCard
-                  product={prod}
-                  openCart={openCart}
-                  openQuickView={openQuickView}
-                  t={t}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      {/* BEST SELLER END */}
 
       {/* INNER BANNER 2 START */}
       <section
