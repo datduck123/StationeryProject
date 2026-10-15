@@ -38,4 +38,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Override
     @EntityGraph(attributePaths = {"category", "brand"})
     Optional<Product> findById(Long id);
+
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("UPDATE Product p SET p.sold = COALESCE(p.sold, 0) + :quantity WHERE p.productId = :productId")
+    int incrementSoldCount(@org.springframework.data.repository.query.Param("productId") Long productId, @org.springframework.data.repository.query.Param("quantity") int quantity);
 }

@@ -40,6 +40,8 @@ public class ProductResponseDTO {
 
     private Integer stockQuantity;
 
+    private Integer sold;
+
     @JsonProperty("stock")
     public Integer getStock() {
         return stockQuantity;

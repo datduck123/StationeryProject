@@ -4,11 +4,13 @@ import fpt.edu.vn.stationery.dto.response.OrderDetailResponseDTO;
 import fpt.edu.vn.stationery.dto.response.OrderResponseDTO;
 import fpt.edu.vn.stationery.dto.response.PageDTO;
 import fpt.edu.vn.stationery.entity.Order;
+import fpt.edu.vn.stationery.entity.OrderItem;
 import fpt.edu.vn.stationery.event.OrderStatusChangedEvent;
 import fpt.edu.vn.stationery.exception.BadRequestException;
 import fpt.edu.vn.stationery.exception.ResourceNotFoundException;
 import fpt.edu.vn.stationery.mapper.OrderMapper;
 import fpt.edu.vn.stationery.repository.OrderRepository;
+import fpt.edu.vn.stationery.repository.ProductRepository;
 import fpt.edu.vn.stationery.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -34,6 +36,7 @@ public class OrderServiceImpl implements OrderService {
             "createdAt", "orderId", "totalCost", "orderStatus");
 
     private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
     private final OrderMapper orderMapper;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -128,6 +131,18 @@ public class OrderServiceImpl implements OrderService {
             throw new BadRequestException("Cannot change order status from " + previous + " to " + next);
         }
         order.setOrderStatus(next);
+
+        // When order reaches DELIVERED, increment sold count for all items in order
+        if ("DELIVERED".equals(next) && !"DELIVERED".equals(previous)) {
+            if (order.getOrderItems() != null) {
+                for (OrderItem item : order.getOrderItems()) {
+                    if (item.getProductId() != null && item.getQuantity() != null && item.getQuantity() > 0) {
+                        productRepository.incrementSoldCount(item.getProductId(), item.getQuantity());
+                    }
+                }
+            }
+        }
+
         orderRepository.saveAndFlush(order);
         eventPublisher.publishEvent(new OrderStatusChangedEvent(
                 order.getOrderId(), previous, next, order.getUser().getUserId()));

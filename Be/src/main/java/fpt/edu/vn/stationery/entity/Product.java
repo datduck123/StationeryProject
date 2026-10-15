@@ -44,6 +44,10 @@ public class Product {
     @Builder.Default
     private Integer stockQuantity = 0;
 
+    @Column(name = "sold", nullable = false)
+    @Builder.Default
+    private Integer sold = 0;
+
     @Column(name = "description", columnDefinition = "NVARCHAR(1000)")
     private String description;
 
@@ -67,6 +71,7 @@ public class Product {
         if (updatedAt == null) updatedAt = LocalDateTime.now();
         if (status == null) status = ProductStatus.ACTIVE;
         if (stockQuantity == null) stockQuantity = 0;
+        if (sold == null) sold = 0;
     }
 
     @PreUpdate
