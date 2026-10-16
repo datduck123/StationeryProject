@@ -31,7 +31,7 @@ const formatCurrency = (amount) => {
 
 export const ShopGridSidebar = () => {
   const {
-    openCart,
+    addToCart,
     openQuickView,
     toggleWishlist,
     isInWishlist,
@@ -823,7 +823,7 @@ export const ShopGridSidebar = () => {
                               className="cus-btn"
                               onClick={(e) => {
                                 e.preventDefault();
-                                openCart();
+                                addToCart(prod, 1);
                               }}
                             >
                               <span className="btn-text">

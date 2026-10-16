@@ -4,6 +4,7 @@ const AdminListControls = ({
   searchPlaceholder,
   filters = [],
   sort,
+  sortLabel = "Sort orders",
   onSortChange,
   sortOptions = [],
 }) => (
@@ -34,7 +35,7 @@ const AdminListControls = ({
       ))}
       <select
         className="admin-select-sm"
-        aria-label="Sort orders"
+        aria-label={sortLabel}
         value={sort}
         onChange={(event) => onSortChange(event.target.value)}
       >

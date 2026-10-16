@@ -11,6 +11,7 @@ import java.util.List;
 @Builder
 public class OrderResponseDTO {
     private Long orderId;
+    private String trackingCode;
     private Long userId;
     private String customerName;
     private String customerEmail;

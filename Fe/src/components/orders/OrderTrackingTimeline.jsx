@@ -1,12 +1,16 @@
+import { useTranslation } from "react-i18next";
+import { orderStatusLabel } from "../../utils/orderFormatters";
+
 const STEPS = ["PENDING", "CONFIRMED", "SHIPPING", "DELIVERED"];
 
 const OrderTrackingTimeline = ({ status }) => {
+  const { t } = useTranslation();
   const normalizedStatus = String(status || "").toUpperCase();
   const activeIndex = STEPS.indexOf(normalizedStatus);
   const isCancelled = ["CANCELLED", "CANCELED"].includes(normalizedStatus);
 
   return (
-    <ol className="list-unstyled d-flex flex-wrap gap-3 mb-0" aria-label="Order status">
+    <ol className="list-unstyled d-flex flex-wrap gap-3 mb-0" aria-label={t("orders.status")}>
       {STEPS.map((step, index) => {
         const complete = activeIndex >= 0 && index <= activeIndex;
         return (
@@ -20,7 +24,7 @@ const OrderTrackingTimeline = ({ status }) => {
               {complete ? "✓" : index + 1}
             </span>
             <span className={complete ? "fw-600 medium-black" : "light-gray"}>
-              {step}
+              {orderStatusLabel(step, t)}
             </span>
           </li>
         );
@@ -30,7 +34,7 @@ const OrderTrackingTimeline = ({ status }) => {
           <span className="badge rounded-circle border border-danger text-danger">
             ×
           </span>
-          CANCELLED
+          {orderStatusLabel("CANCELLED", t)}
         </li>
       )}
     </ol>

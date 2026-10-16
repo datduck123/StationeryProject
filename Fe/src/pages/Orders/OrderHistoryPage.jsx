@@ -1,73 +1,70 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
+import CustomerOrderDetailModal from "../../components/orders/CustomerOrderDetailModal";
 import TitleBanner from "../../components/shared/TitleBanner";
+import Pagination from "../../components/ui/Pagination";
+import { useToast } from "../../providers/ToastContext";
 import orderService from "../../services/orderService";
+import {
+  formatOrderMoney,
+  orderStatusLabel,
+  paymentMethodLabel,
+  paymentStatusLabel,
+  shippingMethodLabel,
+} from "../../utils/orderFormatters";
 import "../../styles/customer-orders.css";
 
-const PAGE_SIZE = 8;
-const sortOptions = [
-  { value: "createdAt:desc", label: "Mới nhất" },
-  { value: "createdAt:asc", label: "Cũ nhất" },
-  { value: "totalCost:desc", label: "Tổng tiền: cao đến thấp" },
-  { value: "totalCost:asc", label: "Tổng tiền: thấp đến cao" },
-  { value: "orderId:desc", label: "Mã đơn: giảm dần" },
-  { value: "orderId:asc", label: "Mã đơn: tăng dần" },
-];
-
-const money = (amount) => new Intl.NumberFormat("vi-VN", {
-  style: "currency",
-  currency: "VND",
-}).format(Number(amount || 0));
-
-const paymentStatusLabel = (status) => ({
-  SUCCESS: "Đã thanh toán",
-  PENDING: "Chưa thanh toán",
-  FAILED: "Thanh toán thất bại",
-  REFUNDED: "Đã hoàn tiền",
-})[status] || (status || "Chưa có thông tin");
-
-const paymentMethodLabel = (method) => ({
-  COD: "Khi nhận hàng (COD)",
-  ONLINE: "Trực tuyến",
-})[method] || (method || "—");
-
-const pageNumbers = (current, total) => {
-  if (total <= 7) return Array.from({ length: total }, (_, index) => index);
-  const visible = new Set([0, 1, 2, total - 1, current - 1, current, current + 1]);
-  return [...visible].filter((number) => number >= 0 && number < total).sort((a, b) => a - b);
-};
+const PAGE_SIZE = 10;
 
 const OrderHistoryPage = () => {
+  const { t, i18n } = useTranslation();
+  const { showToast } = useToast();
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [hasError, setHasError] = useState(false);
   const [page, setPage] = useState(0);
   const [sort, setSort] = useState("createdAt:desc");
   const [refreshKey, setRefreshKey] = useState(0);
   const [cancelingId, setCancelingId] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedOrderNumber, setSelectedOrderNumber] = useState(null);
+
+  const sortOptions = useMemo(() => [
+    { value: "createdAt:desc", label: t("orders.sort.newest") },
+    { value: "createdAt:asc", label: t("orders.sort.oldest") },
+    { value: "totalCost:desc", label: t("orders.sort.totalHighLow") },
+    { value: "totalCost:asc", label: t("orders.sort.totalLowHigh") },
+    { value: "orderId:desc", label: t("orders.sort.idDescending") },
+    { value: "orderId:asc", label: t("orders.sort.idAscending") },
+  ], [t]);
 
   useEffect(() => {
     let active = true;
     const [sortBy, sortDir] = sort.split(":");
     setLoading(true);
+    setHasError(false);
     orderService.getMyOrders({ page, size: PAGE_SIZE, sortBy, sortDir })
       .then((data) => {
-        if (active) {
-          setPageData(data);
-          setError("");
-        }
+        if (active) setPageData(data);
       })
       .catch((requestError) => {
-        if (active) setError(requestError?.response?.data?.message || "Không tải được đơn hàng. Vui lòng thử lại.");
+        if (!active) return;
+        setHasError(true);
+        showToast(requestError?.response?.data?.message || t("orders.toast.loadError"), "error");
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [page, sort, refreshKey]);
+  }, [page, sort, refreshKey, showToast, t]);
+
+  const closeDetails = useCallback(() => {
+    setSelectedOrder(null);
+    setSelectedOrderNumber(null);
+  }, []);
 
   const cancelOrder = async (orderId, orderNumber) => {
-    if (!window.confirm(`Bạn muốn hủy đơn hàng số ${orderNumber}?`)) return;
+    if (!window.confirm(t("orders.confirmCancel", { number: orderNumber }))) return;
     setCancelingId(orderId);
-    setError("");
     try {
       await orderService.cancelMyOrder(orderId);
       setPageData((current) => current && ({
@@ -76,125 +73,97 @@ const OrderHistoryPage = () => {
           ? { ...order, orderStatus: "CANCELLED" }
           : order),
       }));
+      showToast(t("orders.toast.cancelSuccess", { number: orderNumber }), "success");
       setRefreshKey((value) => value + 1);
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || "Không hủy được đơn hàng.");
+      showToast(requestError?.response?.data?.message || t("orders.toast.cancelError"), "error");
     } finally {
       setCancelingId(null);
     }
   };
 
   const totalPages = pageData?.totalPages || 0;
-  const visiblePages = pageNumbers(page, totalPages);
 
   return (
     <>
-      <TitleBanner title="Đơn hàng của tôi" />
+      <TitleBanner title={t("orders.pageTitle")} />
       <section className="py-40">
         <div className="container-2">
           <div className="customer-orders-heading">
             <div>
-              <h4 className="font-sec fw-700 medium-black mb-1">Lịch sử đơn hàng</h4>
-              <p className="light-gray mb-0">Xem sản phẩm, thanh toán và trạng thái giao hàng.</p>
+              <h4 className="font-sec fw-700 medium-black mb-1">{t("orders.historyTitle")}</h4>
+              <p className="light-gray mb-0">{t("orders.historyDescription")}</p>
             </div>
             <div className="customer-orders-controls">
-              <label htmlFor="customer-order-sort">Sắp xếp</label>
+              <label htmlFor="customer-order-sort">{t("orders.sortLabel")}</label>
               <select id="customer-order-sort" className="form-select" value={sort} onChange={(event) => {
                 setSort(event.target.value);
                 setPage(0);
               }}>
                 {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
-              <Link to="/shop" className="btn btn-outline-secondary">Tiếp tục mua sắm</Link>
+              <Link to="/shop" className="btn btn-outline-secondary">{t("orders.continueShopping")}</Link>
             </div>
           </div>
 
-          {error && <div className="alert alert-danger" role="alert">{error}</div>}
           <div className="customer-orders-card">
             <div className="customer-orders-table-wrap">
               <table className="customer-orders-table">
-                <thead>
-                  <tr>
-                    <th>STT / Ngày đặt</th>
-                    <th>Sản phẩm / Đơn giá</th>
-                    <th>Trạng thái</th>
-                    <th>Thanh toán</th>
-                    <th>Giao hàng / SĐT</th>
-                    <th>Voucher / Giảm giá</th>
-                    <th>Tổng tiền</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
+                <thead><tr>
+                  <th>{t("orders.columns.number")}</th><th>{t("orders.columns.productsPrice")}</th>
+                  <th>{t("orders.columns.status")}</th><th>{t("orders.columns.payment")}</th>
+                  <th>{t("orders.columns.shippingPhone")}</th><th>{t("orders.columns.voucherDiscount")}</th>
+                  <th>{t("orders.columns.total")}</th><th>{t("orders.columns.actions")}</th>
+                </tr></thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan="8" className="customer-orders-empty">Đang tải đơn hàng...</td></tr>
-                  ) : !error && pageData?.content?.length ? (
-                    pageData.content.map((order, index) => (
-                      <tr key={order.orderId}>
-                        <td>
-                          <strong>{page * PAGE_SIZE + index + 1}</strong>
-                          <small>{order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : "—"}</small>
-                        </td>
-                        <td className="customer-orders-products">
-                          {order.orderItems?.length ? order.orderItems.map((item) => (
-                            <div className="customer-orders-product" key={item.orderItemId}>
-                              <strong>{item.productName}</strong>
-                              <small>{item.quantity} × {money(item.unitPrice)}</small>
-                            </div>
-                          )) : <span className="light-gray">Chưa có sản phẩm</span>}
-                        </td>
-                        <td><span className={`customer-order-status customer-order-status-${String(order.orderStatus || "unknown").toLowerCase()}`}>{order.orderStatus || "—"}</span></td>
-                        <td>
-                          <span>{paymentMethodLabel(order.paymentMethod)}</span>
-                          <small>{paymentStatusLabel(order.paymentStatus)}</small>
-                        </td>
-                        <td>
-                          <span>{order.shippingMethod || "—"}</span>
-                          <small>{order.phone || "—"}</small>
-                        </td>
-                        <td>
-                          <span>{order.voucherCode || (order.voucherId ? `#${order.voucherId}` : "—")}</span>
-                          <small>Giảm {money(order.discountAmount)}</small>
-                        </td>
-                        <td><strong className="customer-orders-total">{money(order.totalCost)}</strong></td>
-                        <td>
-                          <div className="customer-orders-actions">
-                            <Link className="btn btn-outline-primary btn-sm" to={`/account/orders/${order.orderId}`}>Chi tiết</Link>
+                    <tr><td colSpan="8" className="customer-orders-empty">{t("orders.loading")}</td></tr>
+                  ) : !hasError && pageData?.content?.length ? (
+                    pageData.content.map((order, index) => {
+                      const orderNumber = page * PAGE_SIZE + index + 1;
+                      return (
+                        <tr key={order.orderId}>
+                          <td><strong>{orderNumber}</strong></td>
+                          <td className="customer-orders-products">
+                            {order.orderItems?.length ? order.orderItems.map((item) => (
+                              <div className="customer-orders-product" key={item.orderItemId}>
+                                <strong>{item.productName}</strong>
+                                <small>{t("orders.quantityPrice", { quantity: item.quantity, price: formatOrderMoney(item.unitPrice, i18n.language) })}</small>
+                              </div>
+                            )) : <span className="light-gray">{t("orders.noProducts")}</span>}
+                          </td>
+                          <td><span className={`customer-order-status customer-order-status-${String(order.orderStatus || "unknown").toLowerCase()}`}>{orderStatusLabel(order.orderStatus, t)}</span></td>
+                          <td><span>{paymentMethodLabel(order.paymentMethod, t)}</span><small>{paymentStatusLabel(order.paymentStatus, t)}</small></td>
+                          <td><span>{shippingMethodLabel(order.shippingMethod, t)}</span><small>{order.phone || "—"}</small></td>
+                          <td><span>{order.voucherCode || (order.voucherId ? `#${order.voucherId}` : "—")}</span><small>{t("orders.discountValue", { amount: formatOrderMoney(order.discountAmount, i18n.language) })}</small></td>
+                          <td><strong className="customer-orders-total">{formatOrderMoney(order.totalCost, i18n.language)}</strong></td>
+                          <td><div className="customer-orders-actions">
+                            <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => { setSelectedOrder(order); setSelectedOrderNumber(orderNumber); }}>{t("orders.details")}</button>
                             {order.orderStatus === "PENDING" && (
-                              <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => cancelOrder(order.orderId, page * PAGE_SIZE + index + 1)} disabled={cancelingId === order.orderId}>
-                                {cancelingId === order.orderId ? "Đang hủy..." : "Hủy đơn"}
+                              <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => cancelOrder(order.orderId, orderNumber)} disabled={cancelingId === order.orderId}>
+                                {cancelingId === order.orderId ? t("orders.cancelling") : t("orders.cancelOrder")}
                               </button>
                             )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                          </div></td>
+                        </tr>
+                      );
+                    })
                   ) : (
-                    <tr><td colSpan="8" className="customer-orders-empty">{error ? "Không thể hiển thị đơn hàng." : "Bạn chưa có đơn hàng nào."}</td></tr>
+                    <tr><td colSpan="8" className="customer-orders-empty">{hasError ? t("orders.unableToDisplay") : t("orders.empty")}</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
-            {!loading && !error && pageData && (
+            {!loading && !hasError && pageData && (
               <div className="customer-orders-footer">
-                <span>Hiển thị {pageData.content.length} / {pageData.totalElements} đơn hàng</span>
-                {totalPages > 1 && (
-                  <nav className="customer-orders-pages" aria-label="Phân trang đơn hàng">
-                    <button type="button" disabled={page === 0} onClick={() => setPage(page - 1)} aria-label="Trang trước">‹</button>
-                    {visiblePages.map((number, index) => (
-                      <span key={number} className="customer-orders-page-group">
-                        {index > 0 && number - visiblePages[index - 1] > 1 && <span className="customer-orders-ellipsis">…</span>}
-                        <button type="button" className={number === page ? "active" : ""} aria-current={number === page ? "page" : undefined} onClick={() => setPage(number)}>{number + 1}</button>
-                      </span>
-                    ))}
-                    <button type="button" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} aria-label="Trang sau">›</button>
-                  </nav>
-                )}
+                <span>{t("orders.paginationSummary", { shown: pageData.content.length, total: pageData.totalElements })}</span>
+                <Pagination page={page} totalPages={totalPages} onPageChange={setPage} ariaLabel={t("orders.paginationLabel")} />
               </div>
             )}
           </div>
         </div>
       </section>
+      <CustomerOrderDetailModal order={selectedOrder} orderNumber={selectedOrderNumber} onClose={closeDetails} />
     </>
   );
 };

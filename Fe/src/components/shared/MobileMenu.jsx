@@ -57,7 +57,7 @@ export const MobileMenu = () => {
                 </Link>
                 <button
                   type="button"
-                  aria-label="dropdown toggler"
+                  aria-label={t("header.shop")}
                   className={expandedSubMenu ? "expanded" : ""}
                   onClick={toggleSubMenu}
                   style={{
@@ -110,7 +110,7 @@ export const MobileMenu = () => {
                     isAdmin ? "user-role-admin" : "user-role-patient"
                   }`}
                 >
-                  {isAdmin ? "Admin" : "Patient"}
+                  {isAdmin ? t("header.roleAdmin") : t("header.roleCustomer")}
                 </span>
               </div>
               <div className="fs-13 text-muted mb-2">{user.email}</div>
@@ -120,8 +120,7 @@ export const MobileMenu = () => {
                   className="btn btn-sm btn-outline-danger w-100 mb-2"
                   onClick={closeMobileMenu}
                 >
-                  <i className="fa-solid fa-gauge-high me-1"></i> Admin
-                  Dashboard
+                  <i className="fa-solid fa-gauge-high me-1"></i> {t("header.adminDashboard")}
                 </Link>
               )}
               <button
@@ -133,7 +132,7 @@ export const MobileMenu = () => {
                 }}
               >
                 <i className="fa-solid fa-arrow-right-from-bracket me-1"></i>{" "}
-                Sign Out
+                {t("header.signOut")}
               </button>
             </div>
           ) : (
@@ -145,8 +144,8 @@ export const MobileMenu = () => {
                 openAuthModal("login");
               }}
             >
-              <span className="btn-text">Sign In / Register</span>
-              <span>Sign In / Register</span>
+              <span className="btn-text">{t("header.signIn")} / {t("header.register")}</span>
+              <span>{t("header.signIn")} / {t("header.register")}</span>
             </button>
           )}
           <LanguageSwitcher />

@@ -9,7 +9,7 @@ import { useCartContext } from "../../providers/CartContext";
 import LanguageSwitcher from "../ui/LanguageSwitcher";
 
 export const Header = () => {
-  const { openCart, openWishlist, wishlistCount, toggleMobileMenu } = useCartContext();
+  const { openCart, cartCount, openWishlist, wishlistCount, toggleMobileMenu } = useCartContext();
   const { user, isAdmin, openAuthModal, logout } = useAuth();
   const { t } = useTranslation();
   const isSticky = useStickyHeader(130);
@@ -74,11 +74,11 @@ export const Header = () => {
                     type="button"
                     className="button-block border-0 bg-transparent p-0 d-flex align-items-center gap-2"
                     onClick={handleUserClick}
-                    aria-label={user ? "User Menu" : "Sign In / Register"}
+                    aria-label={user ? t("header.userMenu") : `${t("header.signIn")} / ${t("header.register")}`}
                     title={
                       user
-                        ? `${user.fullName} (${user.role === "ROLE_ADMIN" || user.role === "ADMIN" ? "ADMIN" : "CUSTOMER"})`
-                        : "Sign In / Register"
+                        ? `${user.fullName} (${isAdmin ? t("header.roleAdmin") : t("header.roleCustomer")})`
+                        : `${t("header.signIn")} / ${t("header.register")}`
                     }
                   >
                     <svg
@@ -102,7 +102,7 @@ export const Header = () => {
                         className="fw-600 fs-13 d-none d-md-inline-block color-primary text-truncate"
                         style={{ maxWidth: 120 }}
                       >
-                        Hi, {user.fullName || "User"}!
+                        {t("header.greeting", { name: user.fullName || t("header.roleCustomer") })}
                       </span>
                     )}
                   </button>
@@ -112,7 +112,7 @@ export const Header = () => {
                     <div className="user-menu-dropdown">
                       <div className="user-menu-header">
                         <div className="user-menu-name">
-                          {user.fullName || "User"}
+                          {user.fullName || t("header.user")}
                         </div>
                         <div className="user-menu-email">{user.email}</div>
                         <span
@@ -120,7 +120,7 @@ export const Header = () => {
                             isAdmin ? "user-role-admin" : "user-role-patient"
                           }`}
                         >
-                          {isAdmin ? "Admin" : "Customer"}
+                          {isAdmin ? t("header.roleAdmin") : t("header.roleCustomer")}
                         </span>
                       </div>
                       <Link
@@ -129,7 +129,7 @@ export const Header = () => {
                         onClick={() => setShowUserMenu(false)}
                       >
                         <i className="fa-regular fa-user color-primary"></i>
-                        <span>My Profile</span>
+                        <span>{t("header.profile")}</span>
                       </Link>
                       {!isAdmin && (
                         <Link
@@ -149,7 +149,7 @@ export const Header = () => {
                             onClick={() => setShowUserMenu(false)}
                           >
                             <i className="fa-solid fa-gauge-high color-primary"></i>
-                            <span>Admin Dashboard</span>
+                            <span>{t("header.adminDashboard")}</span>
                           </Link>
                           <Link
                             to="/admin/users"
@@ -157,7 +157,7 @@ export const Header = () => {
                             onClick={() => setShowUserMenu(false)}
                           >
                             <i className="fa-solid fa-users-gear color-primary"></i>
-                            <span>User Management</span>
+                            <span>{t("header.userManagement")}</span>
                           </Link>
                           <Link
                             to="/admin/products"
@@ -173,7 +173,7 @@ export const Header = () => {
                             onClick={() => setShowUserMenu(false)}
                           >
                             <i className="fa-solid fa-layer-group color-primary"></i>
-                            <span>Category Management</span>
+                            <span>{t("header.categoryManagement")}</span>
                           </Link>
                           <Link
                             to="/admin/brands"
@@ -181,7 +181,7 @@ export const Header = () => {
                             onClick={() => setShowUserMenu(false)}
                           >
                             <i className="fa-solid fa-certificate color-primary"></i>
-                            <span>Brand Management</span>
+                            <span>{t("header.brandManagement")}</span>
                           </Link>
                         </>
                       )}
@@ -194,7 +194,7 @@ export const Header = () => {
                         }}
                       >
                         <i className="fa-solid fa-arrow-right-from-bracket"></i>
-                        <span>Sign Out</span>
+                        <span>{t("header.signOut")}</span>
                       </button>
                     </div>
                   )}
@@ -247,6 +247,7 @@ export const Header = () => {
                   href="#sidebar-cart"
                   className="button-block cart-button"
                   onClick={openCart}
+                  aria-label={`${t("cart.title")} (${cartCount})`}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -260,6 +261,7 @@ export const Header = () => {
                       fill="#1E1F20"
                     />
                   </svg>
+                  {cartCount > 0 && <span className="cart-count-badge">{cartCount > 99 ? "99+" : cartCount}</span>}
                 </a>
               </div>
 
@@ -267,7 +269,7 @@ export const Header = () => {
                 href="#mobile-menu"
                 className="main-menu__toggler mobile-nav__toggler d-lg-none"
                 onClick={toggleMobileMenu}
-                aria-label="Toggle mobile menu"
+                aria-label={t("header.mobileMenu")}
               >
                 <img src="/assets/media/icons/menu-2.png" alt="" />
               </a>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import OtpVerificationStep from "../../components/auth/OtpVerificationStep";
 import TitleBanner from "../../components/shared/TitleBanner";
@@ -11,6 +12,7 @@ import {
 } from "../../utils/validation";
 
 export const ForgotPasswordPage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { showToast } = useToast();
 
@@ -42,13 +44,11 @@ export const ForgotPasswordPage = () => {
       await authService.sendForgotPasswordOtp({ email: email.trim() });
       setIsSubmitting(false);
       setStep(2);
-      showToast("Verification code has been sent to your email.", "success");
+      showToast(t("notifications.otpSent"), "success");
     } catch (err) {
       setIsSubmitting(false);
       showToast(
-        err?.response?.data?.message ||
-          err.message ||
-          "Failed to send reset code. Please check your email.",
+        t("notifications.resetCodeSendFailed"),
         "error",
       );
     }
@@ -60,13 +60,11 @@ export const ForgotPasswordPage = () => {
     try {
       await authService.sendForgotPasswordOtp({ email: email.trim() });
       setIsResending(false);
-      showToast("A new verification code has been resent.", "success");
+      showToast(t("notifications.otpResent"), "success");
     } catch (err) {
       setIsResending(false);
       showToast(
-        err?.response?.data?.message ||
-          err.message ||
-          "Failed to resend OTP. Please wait before retrying.",
+        t("notifications.otpResendFailed"),
         "error",
       );
     }
@@ -88,15 +86,13 @@ export const ForgotPasswordPage = () => {
       setIsSubmitting(false);
       setStep(3);
       showToast(
-        "Code verified successfully! Now set your new password.",
+        t("notifications.codeVerified"),
         "success",
       );
     } catch (err) {
       setIsSubmitting(false);
       showToast(
-        err?.response?.data?.message ||
-          err.message ||
-          "Invalid or expired OTP code.",
+        t("notifications.invalidOtp"),
         "error",
       );
     }
@@ -124,7 +120,7 @@ export const ForgotPasswordPage = () => {
 
       setIsSubmitting(false);
       showToast(
-        "Password reset successfully! Redirecting to Sign In in 2 seconds...",
+        t("notifications.passwordResetDelayed"),
         "success",
       );
       setTimeout(() => {
@@ -133,9 +129,7 @@ export const ForgotPasswordPage = () => {
     } catch (err) {
       setIsSubmitting(false);
       showToast(
-        err?.response?.data?.message ||
-          err.message ||
-          "Failed to reset password. Please check your OTP code.",
+        t("notifications.passwordResetFailed"),
         "error",
       );
     }
