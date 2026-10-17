@@ -32,11 +32,11 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     long countCartItemsByProductId(@org.springframework.data.repository.query.Param("productId") Long productId);
 
     @Override
-    @EntityGraph(attributePaths = {"category", "brand"})
+    @EntityGraph(attributePaths = { "category", "brand" })
     Page<Product> findAll(@Nullable Specification<Product> spec, Pageable pageable);
 
     @Override
-    @EntityGraph(attributePaths = {"category", "brand"})
+    @EntityGraph(attributePaths = { "category", "brand" })
     Optional<Product> findById(Long id);
 
     @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)

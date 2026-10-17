@@ -175,6 +175,21 @@ export const AdminLayout = () => {
               </Link>
             </li>
 
+            {/* 5. Voucher Management */}
+            <li className="admin-nav-item">
+              <Link
+                to="/admin/vouchers"
+                className={`admin-nav-link ${
+                  isActive("/admin/vouchers") ? "active" : ""
+                }`}
+                title="Voucher Management"
+              >
+                <i className="fa-solid fa-ticket"></i>
+                <span>Voucher Management</span>
+              </Link>
+            </li>
+
+            {/* 6. Order Management */}
             <li className="admin-nav-item">
               <Link
                 to="/admin/orders"
