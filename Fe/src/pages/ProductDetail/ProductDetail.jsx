@@ -1,26 +1,55 @@
 // Migrated from: product-detail.html, lines 205-1705
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / input self-closing, gallery thumbnail active state, tab switcher state, i18n support
-import { useState } from "react";
-import { Link } from "react-router-dom";
+// API integration: useParams to read product ID, fetch real data from /api/products/:id
+import { useState, useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
+import { getProductById, getProductImage } from "../../services/productService";
 
 export const ProductDetail = () => {
-  const { openCart, openQuickView, openCompare } = useCartContext();
+  const { openCart, openQuickView } = useCartContext();
   const { t } = useTranslation();
+  const { id } = useParams();
+
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("review");
   const [quantity, setQuantity] = useState(1);
 
-  const galleryImages = [
-    "/assets/media/products/large-image-1.png",
+  // API state
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(!!id);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+    getProductById(id)
+      .then((res) => setProduct(res.data))
+      .catch(() => setError("Không thể tải thông tin sản phẩm."))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const formatCurrency = (amount) => {
+    if (amount == null) return "";
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
+
+  // Use standardized product image matching product name and id
+  const primaryImage = getProductImage(product);
+
+  const galleryImages = [primaryImage,
     "/assets/media/products/large-image-2.png",
     "/assets/media/products/large-image-3.png",
     "/assets/media/products/large-image-4.png",
   ];
 
   const thumbImages = [
-    "/assets/media/products/nav-image-1.png",
+    primaryImage,
     "/assets/media/products/nav-image-2.png",
     "/assets/media/products/nav-image-3.png",
     "/assets/media/products/nav-image-4.png",
@@ -56,6 +85,47 @@ export const ProductDetail = () => {
       badge: "Sale",
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="text-center py-80">
+        <div
+          className="spinner-border"
+          role="status"
+          style={{ color: "var(--color-primary, #e57c32)", width: "3rem", height: "3rem" }}
+        >
+          <span className="visually-hidden">Đang tải...</span>
+        </div>
+        <p className="mt-16 dark-gray">Đang tải sản phẩm...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-80">
+        <p style={{ color: "red" }}>{error}</p>
+        <Link
+          to="/shop"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            padding: "10px 24px",
+            backgroundColor: "#e57c32",
+            color: "#ffffff",
+            borderRadius: "30px",
+            fontWeight: "600",
+            fontSize: "14px",
+            textDecoration: "none",
+            marginTop: "16px",
+            boxShadow: "0 4px 12px rgba(229, 124, 50, 0.25)",
+          }}
+        >
+          Quay lại cửa hàng
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -102,35 +172,25 @@ export const ProductDetail = () => {
             <div className="col-lg-6">
               <div className="product-text-container">
                 <h3 className="medium-black fw-700 mb-16">
-                  Classic Ballpoint Pens
+                  {product?.name ?? "Classic Ballpoint Pens"}
                 </h3>
                 <div className="d-flex align-items-center gap-8 mb-16">
                   <span className="color-primary">★★★★★</span>
                   <p className="dark-gray fw-500">(02 {t("common.reviews")})</p>
                 </div>
                 <div className="d-flex align-items-center gap-16 mb-24">
-                  <h4 className="color-primary fw-700">$59.00</h4>
-                  <h5 className="light-gray text-decoration-line-through fw-500">
-                    $75.00
-                  </h5>
+                  <h4 className="color-primary fw-700">
+                    {product ? formatCurrency(product.price) : "$59.00"}
+                  </h4>
                 </div>
                 <p className="quick-view-text mb-24">
-                  The Clean Wave Washing Machine Automatic Washing Machine is
-                  engineered to make laundry effortless with its advanced
-                  cleaning technology. Featuring multiple wash cycles, water
-                  level sensors, and a quiet motor...
+                  {product?.description || "Sản phẩm văn phòng phẩm chất lượng cao, bền đẹp và tiện lợi."}
                 </p>
-                <p className="fw-500 mb-16">
-                  Hurry! Only <span className="color-primary">35/100</span>{" "}
-                  units left in stock!
-                </p>
-                <div className="progress mb-24" style={{ height: "8px" }}>
-                  <div
-                    className="progress-bar bg-primary"
-                    role="progressbar"
-                    style={{ width: "35%" }}
-                  ></div>
-                </div>
+                {product?.stockQuantity != null && (
+                  <p className="fw-500 mb-16">
+                    Còn lại: <span className="color-primary fw-700">{product.stockQuantity}</span> sản phẩm trong kho!
+                  </p>
+                )}
                 <p className="fw-500 medium-black mb-8">
                   {t("common.quantity")}:
                 </p>
@@ -537,26 +597,6 @@ export const ProductDetail = () => {
                             onClick={(e) => openQuickView(prod, e)}
                           >
                             <i className="fa-regular fa-eye"></i>
-                          </a>
-                        </li>
-                        <li>
-                          <a
-                            href="#compare"
-                            className="zui-wrapper-button"
-                            onClick={openCompare}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="17"
-                              viewBox="0 0 16 17"
-                              fill="none"
-                            >
-                              <path
-                                d="M12.979 16.5293C12.8173 16.5293 12.6557 16.4669 12.5333 16.3425C12.2913 16.0964 12.2947 15.7007 12.5408 15.4586L14.6415 13.393C14.7584 13.2759 14.8228 13.1207 14.8228 12.9558C14.8228 12.7913 14.7588 12.6366 14.6426 12.5197L12.5432 10.4773C11.9709 9.87765 12.8002 9.02596 13.4148 9.5813L15.5176 11.627C15.5194 11.6288 15.5213 11.6305 15.523 11.6323C15.8775 11.9858 16.0728 12.4558 16.0727 12.9558C16.0727 13.4559 15.8775 13.9259 15.523 14.2793C15.522 14.2803 15.521 14.2813 15.5199 14.2823L13.4172 16.35C13.2955 16.4696 13.1372 16.5293 12.979 16.5293ZM12.979 13.5293H3.82275C1.755 13.5293 0.0727539 11.8471 0.0727539 9.7793V8.18555C0.103473 7.35718 1.29232 7.3578 1.32275 8.18555V9.7793C1.32275 11.1578 2.44425 12.2793 3.82275 12.2793H12.979C13.8074 12.31 13.8068 13.4989 12.979 13.5293ZM15.4478 9.49805C15.1026 9.49805 14.8228 9.21824 14.8228 8.87305V7.2793C14.8228 5.9008 13.7013 4.7793 12.3228 4.7793H3.1665C2.33813 4.74858 2.33875 3.55974 3.1665 3.5293H12.3228C14.3905 3.5293 16.0728 5.21155 16.0728 7.2793V8.87305C16.0728 9.21824 15.7929 9.49805 15.4478 9.49805ZM3.16644 7.6543C3.00938 7.6543 2.85216 7.59549 2.73069 7.47727L0.627879 5.43162C0.626035 5.42983 0.624223 5.42805 0.622441 5.42624C0.267973 5.07283 0.0727539 4.60283 0.0727539 4.1028C0.0727539 3.60277 0.267973 3.13274 0.622441 2.77937C0.623473 2.77833 0.624473 2.77733 0.625504 2.77633L2.72832 0.708647C2.97444 0.466647 3.37016 0.46996 3.61216 0.716085C3.85416 0.96221 3.85085 1.35793 3.60472 1.59993L1.50397 3.66562C1.26438 3.89593 1.26388 4.30799 1.50285 4.5389L3.60232 6.5813C3.84972 6.82199 3.85516 7.21768 3.61447 7.46512C3.492 7.59102 3.32925 7.6543 3.16644 7.6543Z"
-                                fill="#363636"
-                              />
-                            </svg>
                           </a>
                         </li>
                       </ul>

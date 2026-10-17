@@ -50,15 +50,10 @@ export const AuthProvider = ({ children }) => {
         isAdmin: isUserAdmin,
       };
     } catch (error) {
-      const status = error?.response?.status;
       const message =
         error?.response?.data?.message ||
         error?.message ||
         "Invalid email or password. Please try again.";
-
-      if (status === 403 || message.toLowerCase().includes("blocked")) {
-        throw new Error("Account is blocked. Please contact administrator.");
-      }
       throw new Error(message);
     }
   };

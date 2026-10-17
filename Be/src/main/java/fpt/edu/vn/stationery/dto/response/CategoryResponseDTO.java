@@ -14,6 +14,8 @@ public class CategoryResponseDTO {
     private Long categoryId;
     private String name;
     private String description;
+    private String status;
+    private Long productCount;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

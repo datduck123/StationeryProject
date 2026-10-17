@@ -14,19 +14,19 @@ public interface UserMapper {
 
     @Mapping(target = "id", source = "userId")
     @Mapping(target = "userId", source = "userId")
-    @Mapping(target = "role", expression = "java((user.getIsAdmin() != null && user.getIsAdmin() == 1) ? \"ROLE_ADMIN\" : \"ROLE_CUSTOMER\")")
+    @Mapping(target = "role", expression = "java(user.getRoleName())")
     @Mapping(target = "status", expression = "java(user.getStatus() != null ? user.getStatus().name() : \"ACTIVE\")")
     UserResponseDTO toUserResponseDTO(User user);
 
     List<UserResponseDTO> toUserResponseDTOList(List<User> users);
 
     @Mapping(target = "id", source = "userId")
-    @Mapping(target = "role", expression = "java((user.getIsAdmin() != null && user.getIsAdmin() == 1) ? \"ROLE_ADMIN\" : \"ROLE_CUSTOMER\")")
+    @Mapping(target = "role", expression = "java(user.getRoleName())")
     UserResponse toResponse(User user);
 
     List<UserResponse> toResponseList(List<User> users);
 
     @Mapping(target = "id", source = "userId")
-    @Mapping(target = "role", expression = "java((user.getIsAdmin() != null && user.getIsAdmin() == 1) ? \"ROLE_ADMIN\" : \"ROLE_CUSTOMER\")")
+    @Mapping(target = "role", expression = "java(user.getRoleName())")
     UserProfileResponseDTO toProfileResponseDTO(User user);
 }

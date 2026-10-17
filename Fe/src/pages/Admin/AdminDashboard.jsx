@@ -132,9 +132,8 @@ export const AdminDashboard = () => {
             title="Làm mới toàn bộ dữ liệu dashboard"
           >
             <i
-              className={`fa-solid fa-rotate-right me-1 ${
-                kpiLoading || chartLoading || recentOrdersLoading ? "fa-spin" : ""
-              }`}
+              className={`fa-solid fa-rotate-right me-1 ${kpiLoading || chartLoading || recentOrdersLoading ? "fa-spin" : ""
+                }`}
             ></i>
             Làm mới
           </button>
@@ -219,7 +218,7 @@ export const AdminDashboard = () => {
 
         <div className="col-md-3 col-sm-6">
           <Link
-            to="/admin/vouchers"
+            to="/shop"
             className="text-decoration-none card border-0 shadow-sm rounded-3 p-3 bg-white h-100 hover-card"
           >
             <div className="d-flex align-items-center gap-3">

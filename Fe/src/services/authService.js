@@ -28,7 +28,7 @@ export const authService = {
     const { token, email, fullName, role, userId } = response.data;
     if (token) {
       localStorage.setItem(TOKEN_STORAGE_KEY, token);
-      const user = { userId, email, fullName, role, token };
+      const user = { userId, email, fullName, role };
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
       return user;
     }
@@ -42,7 +42,7 @@ export const authService = {
     try {
       await api.post("/auth/logout");
     } catch {
-      // ignore network errors on logout
+      console.warn("Logout failed, but clearing local storage anyway.");
     } finally {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
