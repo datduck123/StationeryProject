@@ -7,6 +7,7 @@ import AdminDashboard from "../pages/Admin/AdminDashboard";
 import AdminOrderManagement from "../pages/Admin/AdminOrderManagement";
 import AdminProductManagement from "../pages/Admin/AdminProductManagement";
 import AdminUserManagement from "../pages/Admin/AdminUserManagement";
+import AdminVoucherManagement from "../pages/Admin/AdminVoucherManagement";
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 import LoginPage from "../pages/Auth/LoginPage";
 import Cart from "../pages/Cart/Cart";
@@ -33,10 +34,12 @@ export const AppRoutes = () => {
         }
       >
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUserManagement />} />
         <Route path="/admin/products" element={<AdminProductManagement />} />
         <Route path="/admin/categories" element={<AdminCategoryManagement />} />
         <Route path="/admin/brands" element={<AdminBrandManagement />} />
+        <Route path="/admin/vouchers" element={<AdminVoucherManagement />} />
         <Route path="/admin/orders" element={<AdminOrderManagement />} />
         <Route path="/admin/orders/:id" element={<AdminOrderManagement />} />
       </Route>

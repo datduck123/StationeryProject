@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import jakarta.persistence.LockModeType;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -23,5 +25,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("select u from User u where u.userId = :userId")
     Optional<User> findByIdForUpdate(@Param("userId") Long userId);
     boolean existsByEmail(String email);
+
     long countByStatus(UserStatus status);
+
+    List<User> findByCreatedAtGreaterThanEqualOrderByCreatedAtAsc(LocalDateTime startDate);
 }
