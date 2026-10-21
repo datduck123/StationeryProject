@@ -16,6 +16,9 @@ public class OrderTableNamingStrategy extends CamelCaseToUnderscoresNamingStrate
     @Override
     public Identifier toPhysicalTableName(Identifier name, JdbcEnvironment jdbcEnvironment) {
         if (name != null) {
+            for (String table : new String[]{"CartItems", "Reviews", "Payments", "Vouchers"}) {
+                if (table.equalsIgnoreCase(name.getText())) return Identifier.toIdentifier(table, true);
+            }
             if ("OrderItems".equalsIgnoreCase(name.getText())) {
                 return Identifier.toIdentifier("OrderItems", true);
             }

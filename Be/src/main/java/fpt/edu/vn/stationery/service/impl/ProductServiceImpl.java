@@ -186,7 +186,7 @@ public class ProductServiceImpl implements ProductService {
             throw new BadRequestException("Invalid product ID: " + id);
         }
 
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         // Keep existing SKU if not provided, otherwise update it
@@ -230,7 +230,7 @@ public class ProductServiceImpl implements ProductService {
             throw new BadRequestException("Invalid product ID: " + id);
         }
 
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         if (productRepository.countOrderItemsByProductId(id) > 0) {
@@ -251,7 +251,7 @@ public class ProductServiceImpl implements ProductService {
             throw new BadRequestException("Invalid product ID: " + id);
         }
 
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         product.setStockQuantity(request.getStockQuantity());

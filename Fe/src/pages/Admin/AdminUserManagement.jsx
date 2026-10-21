@@ -6,6 +6,19 @@ import adminUserService from "../../services/adminUserService";
 import "../../styles/admin.css";
 import { validateAdminUserForm } from "../../utils/validation";
 
+const getPageNumbers = (current, total) => {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, "...", total];
+  }
+  if (current >= total - 3) {
+    return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
+};
+
 export const AdminUserManagement = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -314,9 +327,9 @@ export const AdminUserManagement = () => {
         </button>
       </div>
 
-      {/* Top Banner Stats - Designed like Category Management */}
+      {/* Top Banner Stats */}
       <div className="row g-3 mb-4">
-        {/* Card 1: Total Users */}
+        {/* Total Users */}
         <div className="col-xl-3 col-sm-6">
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
@@ -345,7 +358,7 @@ export const AdminUserManagement = () => {
           </div>
         </div>
 
-        {/* Card 2: Active Users */}
+        {/* Active Users */}
         <div className="col-xl-3 col-sm-6">
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
@@ -369,7 +382,7 @@ export const AdminUserManagement = () => {
           </div>
         </div>
 
-        {/* Card 3: Inactive Users */}
+        {/* Inactive Users */}
         <div className="col-xl-3 col-sm-6">
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
@@ -393,7 +406,7 @@ export const AdminUserManagement = () => {
           </div>
         </div>
 
-        {/* Card 4: Blocked Users */}
+        {/* Blocked Users */}
         <div className="col-xl-3 col-sm-6">
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
@@ -418,7 +431,7 @@ export const AdminUserManagement = () => {
         </div>
       </div>
 
-      {/* TOOLBAR CARD (Clean horizontal layout, uniform search, filters, and sort) */}
+      {/* TOOLBAR CARD */}
       <div className="admin-card mb-4">
         <div className="d-flex flex-wrap align-items-center gap-3">
           {/* Live Auto Search */}
@@ -660,7 +673,7 @@ export const AdminUserManagement = () => {
           </span>
 
           {totalPages > 1 && (
-            <div className="btn-group btn-group-sm">
+            <div className="btn-group btn-group-sm" role="group" aria-label="User pagination">
               <button
                 type="button"
                 className="btn btn-light border"
@@ -670,21 +683,25 @@ export const AdminUserManagement = () => {
               >
                 &lt;
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i).map(
-                (pageNum) => (
+              {getPageNumbers(page + 1, totalPages).map((item, idx) =>
+                item === "..." ? (
+                  <span key={`ellipsis-${idx}`} className="btn btn-light border disabled px-2">
+                    ...
+                  </span>
+                ) : (
                   <button
-                    key={pageNum}
+                    key={item}
                     type="button"
                     className={`btn ${
-                      pageNum === page
-                        ? "btn-dark bg-color-primary border-0 fw-700"
+                      item - 1 === page
+                        ? "btn-dark bg-color-primary border-0 fw-700 text-white"
                         : "btn-light border"
                     }`}
-                    onClick={() => setPage(pageNum)}
+                    onClick={() => setPage(item - 1)}
                   >
-                    {pageNum + 1}
+                    {item}
                   </button>
-                ),
+                )
               )}
               <button
                 type="button"
@@ -1031,7 +1048,7 @@ export const AdminUserManagement = () => {
         </div>
       )}
 
-      {/* --- 3. EDIT USER MODAL (With input icons & Status edit: ACTIVE / INACTIVE / BLOCKED) --- */}
+      {/* --- 3. EDIT USER MODAL --- */}
       {isEditModalOpen && (
         <div
           className="modal fade show d-block"
@@ -1158,7 +1175,7 @@ export const AdminUserManagement = () => {
                   </div>
                 </div>
 
-                {/* Role & Status (Can edit ACTIVE / INACTIVE / BLOCKED) */}
+                {/* Role & Status */}
                 <div className="row">
                   <div className="col-sm-6 mb-3">
                     <label className="form-label fw-600 mb-1">Role *</label>

@@ -5,16 +5,58 @@ import cartService from "../services/cartService";
 
 const CartContext = createContext();
 
+const extractMessage = (error, fallback) =>
+  error?.response?.data?.message || error?.response?.data?.error || error?.message || fallback;
+
+const normalizeCartItem = (item) => {
+  const product = item?.product || {};
+  const quantity = Number(item?.quantity || 0);
+  const unitPrice = Number(item?.unitPrice ?? item?.price ?? product?.price ?? 0);
+  return {
+    ...item,
+    cartItemId: item?.cartItemId ?? item?.id,
+    productId: item?.productId ?? product?.productId ?? product?.id,
+    productName: item?.productName ?? item?.name ?? item?.title ?? product?.name ?? "",
+    imageUrl: item?.imageUrl ?? item?.productImage ?? product?.imageUrl,
+    quantity,
+    unitPrice,
+    subtotal: Number(item?.subtotal ?? unitPrice * quantity),
+    stockQuantity: Number(
+      item?.stockQuantity ?? item?.currentStock ?? item?.availableStock ?? product?.stockQuantity ?? Number.MAX_SAFE_INTEGER,
+    ),
+  };
+};
+
+const normalizeCart = (payload) => {
+  const raw = payload?.data ?? payload ?? {};
+  const rawItems = Array.isArray(raw)
+    ? raw
+    : raw?.items ?? raw?.cartItems ?? raw?.content ?? [];
+  const items = Array.isArray(rawItems) ? rawItems.map(normalizeCartItem) : [];
+  const computedSubtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
+  return {
+    ...raw,
+    items,
+    subtotal: Number(raw?.subtotal ?? raw?.total ?? computedSubtotal),
+    totalItems: Number(
+      raw?.totalItems ?? raw?.totalItemsCount ?? items.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+    ),
+  };
+};
+
 export const CartProvider = ({ children }) => {
   const { user, openAuthModal } = useAuth();
   const { showToast } = useToast();
 
   // Drawer / UI State
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-  const [isCompareOpen, setIsCompareOpen] = useState(false);
-  const [compareList, setCompareList] = useState([]);
+  const [cart, setCart] = useState(() => normalizeCart(null));
+  const [cartLoading, setCartLoading] = useState(false);
+  const [cartError, setCartError] = useState("");
+  const [pendingItemIds, setPendingItemIds] = useState(() => new Set());
 
   // Cart API State
   const [cart, setCart] = useState(null);
@@ -55,30 +97,43 @@ export const CartProvider = ({ children }) => {
     setIsCompareOpen(true);
   };
 
-  const addCompareProduct = (product) => {
-    if (!product) return;
-    setCompareList((prev) => {
-      const prodId = product.id || product.productId;
-      if (prev.some((p) => (p.id || p.productId) === prodId)) {
-        return prev;
-      }
-      if (prev.length >= 2) {
-        return [prev[0], product];
-      }
-      return [...prev, product];
-    });
-  };
+  const updateCartItem = useCallback(async (cartItemId, quantity) => {
+    const safeQuantity = Number(quantity);
+    if (!cartItemId || !Number.isInteger(safeQuantity) || safeQuantity < 1) return false;
+    setPending(cartItemId, true);
+    try {
+      await cartService.updateItem(cartItemId, safeQuantity);
+      await refreshCart({ silent: true });
+      return true;
+    } catch (error) {
+      showToast?.(extractMessage(error, t("commerce.cartQuantityError")), "error");
+      return false;
+    } finally {
+      setPending(cartItemId, false);
+    }
+  }, [refreshCart, setPending, showToast, t]);
 
-  const removeCompareProduct = (productId) => {
-    setCompareList((prev) => prev.filter((p) => (p.id || p.productId) !== productId));
-  };
+  const removeCartItem = useCallback(async (cartItemId) => {
+    if (!cartItemId) return false;
+    setPending(cartItemId, true);
+    try {
+      await cartService.removeItem(cartItemId);
+      await refreshCart({ silent: true });
+      showToast?.(t("commerce.cartRemoveSuccess"), "info");
+      return true;
+    } catch (error) {
+      showToast?.(extractMessage(error, t("commerce.cartRemoveError")), "error");
+      return false;
+    } finally {
+      setPending(cartItemId, false);
+    }
+  }, [refreshCart, setPending, showToast, t]);
 
   const closeCompare = (e) => {
     if (e && typeof e.preventDefault === "function") e.preventDefault();
     setIsCompareOpen(false);
   };
 
-  // Lock body scroll when mobile menu is opened
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.body.classList.add("locked");
@@ -266,5 +321,4 @@ export const CartProvider = ({ children }) => {
   );
 };
 
-export const useCartContext = () => useContext(CartContext);
 export default CartContext;

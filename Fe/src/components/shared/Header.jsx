@@ -74,11 +74,11 @@ export const Header = () => {
                     type="button"
                     className="button-block border-0 bg-transparent p-0 d-flex align-items-center gap-2"
                     onClick={handleUserClick}
-                    aria-label={user ? "User Menu" : "Sign In / Register"}
+                    aria-label={user ? t("header.userMenu") : `${t("header.signIn")} / ${t("header.register")}`}
                     title={
                       user
-                        ? `${user.fullName} (${user.role === "ROLE_ADMIN" || user.role === "ADMIN" ? "ADMIN" : "CUSTOMER"})`
-                        : "Sign In / Register"
+                        ? `${user.fullName} (${isAdmin ? t("header.roleAdmin") : t("header.roleCustomer")})`
+                        : `${t("header.signIn")} / ${t("header.register")}`
                     }
                   >
                     <svg
@@ -102,7 +102,7 @@ export const Header = () => {
                         className="fw-600 fs-13 d-none d-md-inline-block color-primary text-truncate"
                         style={{ maxWidth: 120 }}
                       >
-                        Hi, {user.fullName || "User"}!
+                        {t("header.greeting", { name: user.fullName || t("header.roleCustomer") })}
                       </span>
                     )}
                   </button>
@@ -112,7 +112,7 @@ export const Header = () => {
                     <div className="user-menu-dropdown">
                       <div className="user-menu-header">
                         <div className="user-menu-name">
-                          {user.fullName || "User"}
+                          {user.fullName || t("header.user")}
                         </div>
                         <div className="user-menu-email">{user.email}</div>
                         <span
@@ -120,7 +120,7 @@ export const Header = () => {
                             isAdmin ? "user-role-admin" : "user-role-patient"
                           }`}
                         >
-                          {isAdmin ? "Admin" : "Customer"}
+                          {isAdmin ? t("header.roleAdmin") : t("header.roleCustomer")}
                         </span>
                       </div>
                       <Link
@@ -129,7 +129,7 @@ export const Header = () => {
                         onClick={() => setShowUserMenu(false)}
                       >
                         <i className="fa-regular fa-user color-primary"></i>
-                        <span>My Profile</span>
+                        <span>{t("header.profile")}</span>
                       </Link>
                       {!isAdmin && (
                         <Link
@@ -149,7 +149,7 @@ export const Header = () => {
                             onClick={() => setShowUserMenu(false)}
                           >
                             <i className="fa-solid fa-gauge-high color-primary"></i>
-                            <span>Admin Dashboard</span>
+                            <span>{t("header.adminDashboard")}</span>
                           </Link>
                           <Link
                             to="/admin/users"
@@ -157,7 +157,7 @@ export const Header = () => {
                             onClick={() => setShowUserMenu(false)}
                           >
                             <i className="fa-solid fa-users-gear color-primary"></i>
-                            <span>User Management</span>
+                            <span>{t("header.userManagement")}</span>
                           </Link>
                           <Link
                             to="/admin/products"
@@ -173,7 +173,7 @@ export const Header = () => {
                             onClick={() => setShowUserMenu(false)}
                           >
                             <i className="fa-solid fa-layer-group color-primary"></i>
-                            <span>Category Management</span>
+                            <span>{t("header.categoryManagement")}</span>
                           </Link>
                           <Link
                             to="/admin/brands"
@@ -181,7 +181,7 @@ export const Header = () => {
                             onClick={() => setShowUserMenu(false)}
                           >
                             <i className="fa-solid fa-certificate color-primary"></i>
-                            <span>Brand Management</span>
+                            <span>{t("header.brandManagement")}</span>
                           </Link>
                         </>
                       )}
@@ -194,12 +194,55 @@ export const Header = () => {
                         }}
                       >
                         <i className="fa-solid fa-arrow-right-from-bracket"></i>
-                        <span>Sign Out</span>
+                        <span>{t("header.signOut")}</span>
                       </button>
                     </div>
                   )}
                 </div>
                 <LanguageSwitcher className="mx-2" />
+                <button
+                  type="button"
+                  className="button-block border-0 bg-transparent p-0 position-relative me-3 d-flex align-items-center justify-content-center"
+                  onClick={openWishlist}
+                  aria-label="Wishlist"
+                  title="Danh sách yêu thích"
+                  style={{ cursor: "pointer", width: "40px", height: "40px" }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="19"
+                    viewBox="0 0 24 24"
+                    fill={wishlistCount > 0 ? "#e9613f" : "none"}
+                    stroke={wishlistCount > 0 ? "#e9613f" : "#1E1F20"}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                  </svg>
+                  {wishlistCount > 0 && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: "2px",
+                        right: "2px",
+                        backgroundColor: "#e9613f",
+                        color: "#fff",
+                        borderRadius: "50%",
+                        width: "18px",
+                        height: "18px",
+                        fontSize: "10px",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {wishlistCount > 9 ? "9+" : wishlistCount}
+                    </span>
+                  )}
+                </button>
                 <a
                   href="#sidebar-cart"
                   className="button-block cart-button position-relative"
@@ -249,7 +292,7 @@ export const Header = () => {
                 href="#mobile-menu"
                 className="main-menu__toggler mobile-nav__toggler d-lg-none"
                 onClick={toggleMobileMenu}
-                aria-label="Toggle mobile menu"
+                aria-label={t("header.mobileMenu")}
               >
                 <img src="/assets/media/icons/menu-2.png" alt="" />
               </a>
@@ -259,9 +302,9 @@ export const Header = () => {
       </div>
       <div className="header-center">
         <div className="container-2">
-          <div className="row align-items-center justify-content-between">
-            <div className="col-lg-6 d-lg-flex d-none">
-              <nav className="navigation d-flex align-items-center">
+          <div className="row align-items-center justify-content-center">
+            <div className="col-12 d-lg-flex d-none justify-content-center">
+              <nav className="navigation d-flex align-items-center justify-content-center">
                 <div className="menu-button-right">
                   <div className="main-menu__nav">
                     <ul className="main-menu__list">
@@ -310,37 +353,6 @@ export const Header = () => {
                   </div>
                 </div>
               </nav>
-            </div>
-            <div className="col-xl-3 col-lg-5 col-md-12 order-lg-3 order-3">
-              <form action="#" onSubmit={(e) => e.preventDefault()}>
-                <div className="search-block">
-                  <input
-                    type="search"
-                    className="input-search form-control"
-                    name="search"
-                    id="search"
-                    placeholder={t("header.searchPlaceholder")}
-                  />
-                  <button
-                    type="submit"
-                    id="magnifying-btn"
-                    className="button-block"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      viewBox="0 0 20 20"
-                      fill="none"
-                    >
-                      <path
-                        d="M8.11719 0C12.593 0 16.2344 3.64137 16.2344 8.11719C16.2344 10.1445 15.4873 12.0007 14.2539 13.4247L19.8284 18.9998C20.0572 19.2286 20.0572 19.5996 19.8284 19.8284C19.5995 20.0573 19.2286 20.0572 18.9997 19.8284L13.4254 14.2534C12.0012 15.4871 10.1448 16.2344 8.11719 16.2344C3.64137 16.2344 0 12.593 0 8.11719C0 3.64137 3.64137 0 8.11719 0ZM8.11719 15.0625C11.9469 15.0625 15.0625 11.9468 15.0625 8.11719C15.0625 4.28754 11.9468 1.17188 8.11719 1.17188C4.28754 1.17188 1.17188 4.28754 1.17188 8.11719C1.17188 11.9468 4.28754 15.0625 8.11719 15.0625Z"
-                        fill="white"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </form>
             </div>
           </div>
         </div>

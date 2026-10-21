@@ -5,7 +5,19 @@ import { useState, useEffect } from "react";
 import { Link, useSearchParams, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
-import { getProductById, getProductImage } from "../../services/productService";
+import { getProductById, getProductImage, getProducts } from "../../services/productService";
+import ProductReviewsList from "../../components/reviews/ProductReviewsList";
+import "../../styles/reviews.css";
+
+const ReviewStars = ({ rating, label }) => {
+  const filled = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
+  return (
+    <span className="product-review-stars" aria-label={label}>
+      <span aria-hidden="true">{"★".repeat(filled)}</span>
+      <span className="empty" aria-hidden="true">{"★".repeat(5 - filled)}</span>
+    </span>
+  );
+};
 
 export const ProductDetail = () => {
   const [searchParams] = useSearchParams();
@@ -22,9 +34,16 @@ export const ProductDetail = () => {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(!!id);
   const [error, setError] = useState(null);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [averageRating, setAverageRating] = useState(0);
+  const handleRatingUpdated = useCallback(({ averageRating: avg, reviewCount: count }) => {
+    setAverageRating(avg);
+    setReviewCount(count);
+  }, []);
 
   useEffect(() => {
     if (!id) return;
+    setQuantity(1);
     setLoading(true);
     setError(null);
     getProductById(id)
@@ -57,36 +76,16 @@ export const ProductDetail = () => {
     "/assets/media/products/nav-image-4.png",
   ];
 
-  const relatedProducts = [
-    {
-      id: 1,
-      title: "Daily Planner Pro",
-      image: "/assets/media/products/product-1.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 2,
-      title: "SmoothFlow Pens",
-      image: "/assets/media/products/product-2.png",
-      price: "$15.00",
-      badge: "Sale",
-    },
-    {
-      id: 3,
-      title: "Premium Bags",
-      image: "/assets/media/products/product-3.png",
-      price: "$45.00",
-      badge: "Sale",
-    },
-    {
-      id: 4,
-      title: "Premium Letter Paper",
-      image: "/assets/media/products/product-4.png",
-      price: "$20.00",
-      badge: "Sale",
-    },
-  ];
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  useEffect(() => {
+    let active = true;
+    getProducts({ size: 5 }).then((response) => {
+      const payload = response.data?.data ?? response.data;
+      const list = Array.isArray(payload) ? payload : payload?.content ?? [];
+      if (active) setRelatedProducts(list.filter((item) => String(item.productId ?? item.id) !== String(id)).slice(0, 4).map((item) => ({ ...item, id: item.productId ?? item.id, title: item.name, image: getProductImage(item) })));
+    }).catch(() => { if (active) setRelatedProducts([]); });
+    return () => { active = false; };
+  }, [id]);
 
   if (loading) {
     return (
@@ -176,9 +175,11 @@ export const ProductDetail = () => {
                 <h3 className="medium-black fw-700 mb-16">
                   {product?.name ?? "Classic Ballpoint Pens"}
                 </h3>
-                <div className="d-flex align-items-center gap-8 mb-16">
-                  <span className="color-primary">★★★★★</span>
-                  <p className="dark-gray fw-500">(02 {t("common.reviews")})</p>
+                <div className="product-review-summary mb-16">
+                  <ReviewStars rating={averageRating} label={t("reviews.ratingOutOfFive", { rating: averageRating.toFixed(1) })} />
+                  <p className="dark-gray fw-500 mb-0">
+                    {t("reviews.summary", { rating: averageRating.toFixed(1), count: reviewCount })}
+                  </p>
                 </div>
                 <div className="d-flex align-items-center gap-16 mb-24">
                   <h4 className="color-primary fw-700">
@@ -228,7 +229,8 @@ export const ProductDetail = () => {
                     <button
                       className="increment"
                       type="button"
-                      onClick={() => setQuantity((q) => q + 1)}
+                      disabled={quantity >= (product?.stockQuantity ?? 1)}
+                      onClick={() => setQuantity((q) => Math.min(product?.stockQuantity ?? 1, q + 1))}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -264,6 +266,7 @@ export const ProductDetail = () => {
                     <Link
                       to="/checkout.html"
                       className="w-100 text-center cus-btn"
+                      onClick={async (event) => { event.preventDefault(); if (await addToCart(product, quantity, { open: false })) navigate("/checkout"); }}
                     >
                       <span className="btn-text">
                         {t("productDetail.buyNow")}
@@ -354,7 +357,7 @@ export const ProductDetail = () => {
                   }`}
                   onClick={() => setActiveTab("review")}
                 >
-                  {t("productDetail.reviewsTab")}
+                  {t("productDetail.reviewsTab", { count: reviewCount })}
                 </button>
               </li>
             </ul>
@@ -386,169 +389,12 @@ export const ProductDetail = () => {
                 </div>
               )}
               {activeTab === "review" && (
-                <div className="tab-pane fade show active">
-                  <div className="review-box mb-48">
-                    <div className="comment-box mb-24">
-                      <img
-                        src="/assets/media/users/user-2.png"
-                        alt=""
-                        className="br-4"
-                      />
-                      <div className="block">
-                        <div className="top-row mb-16">
-                          <div className="info">
-                            <h6 className="fw-600 medium-black">
-                              Ethan Clarke
-                            </h6>
-                          </div>
-                          <div className="rating-star mb-12">
-                            <p className="color-star">★★★★★</p>
-                          </div>
-                        </div>
-                        <p>
-                          Lorem ipsum dolor sit amet consectetur. Est morbi cum
-                          bibendum id eleifend ultrices enim nec. Vitae morbi
-                          mus imperdiet tincidunt ultrices hendrerit. Lobortis
-                          donec massa fermentum aliquet sapien. Magna risus
-                          donec aliquam diam aliquet consectetur.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="hr-line bg-light-gray mb-24"></div>
-                    <div className="comment-box">
-                      <img
-                        src="/assets/media/users/user-3.png"
-                        alt=""
-                        className="br-4"
-                      />
-                      <div className="block">
-                        <div className="top-row mb-16">
-                          <div className="info">
-                            <h6 className="fw-600 medium-black">
-                              Sophia Reynolds
-                            </h6>
-                          </div>
-                          <div className="rating-star mb-12">
-                            <p className="color-star">★★★★★</p>
-                          </div>
-                        </div>
-                        <p>
-                          Lorem ipsum dolor sit amet consectetur. Est morbi cum
-                          bibendum id eleifend ultrices enim nec. Vitae morbi
-                          mus imperdiet tincidunt ultrices hendrerit. Lobortis
-                          donec massa fermentum aliquet sapien. Magna risus
-                          donec aliquam diam aliquet consectetur.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="review-form">
-                    <h5 className="medium-black fw-600 mb-16">
-                      Write a Review
-                    </h5>
-                    <p className="mb-24">
-                      Your email address will not be published. Required fields
-                      are marked.
-                    </p>
-
-                    <p className="mb-8">Your Rating</p>
-                    <div className="star-rating mb-32">
-                      <input type="radio" id="1-star" name="rating" value="1" />
-                      <label htmlFor="1-star" className="star">
-                        &#9733;
-                      </label>
-                      <input
-                        type="radio"
-                        id="2-stars"
-                        name="rating"
-                        value="2"
-                      />
-                      <label htmlFor="2-stars" className="star">
-                        &#9733;
-                      </label>
-                      <input
-                        type="radio"
-                        id="3-stars"
-                        defaultChecked
-                        name="rating"
-                        value="3"
-                      />
-                      <label htmlFor="3-stars" className="star">
-                        &#9733;
-                      </label>
-                      <input
-                        type="radio"
-                        id="4-stars"
-                        name="rating"
-                        value="4"
-                      />
-                      <label htmlFor="4-stars" className="star">
-                        &#9733;
-                      </label>
-                      <input
-                        type="radio"
-                        id="5-stars"
-                        name="rating"
-                        value="5"
-                      />
-                      <label htmlFor="5-stars" className="star">
-                        &#9733;
-                      </label>
-                    </div>
-                    <p className="medium-black fw-600 mb-16">Your Review</p>
-                    <form
-                      method="post"
-                      action="#"
-                      className="form-group product-form"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        alert("Review submitted successfully!");
-                      }}
-                    >
-                      <div className="row">
-                        <div className="col-sm-12">
-                          <div className="input-block mb-24">
-                            <textarea
-                              className="form-control"
-                              name="message"
-                              id="comment"
-                              rows="4"
-                              placeholder="Write Your Review here..."
-                            ></textarea>
-                          </div>
-                        </div>
-                        <div className="col-sm-6">
-                          <div className="input-block mb-24">
-                            <input
-                              type="text"
-                              className="form-control"
-                              placeholder="Name"
-                            />
-                          </div>
-                        </div>
-                        <div className="col-sm-6">
-                          <div className="input-block mb-24">
-                            <input
-                              type="email"
-                              className="form-control"
-                              placeholder="Email"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="cus-checkBox mb-32">
-                        <input type="checkbox" id="remember" defaultChecked />
-                        <label htmlFor="remember">
-                          Save my name, email, and website in this browser for
-                          the next time I comment.
-                        </label>
-                      </div>
-                      <button type="submit" className="cus-btn">
-                        <span className="btn-text">Submit</span>
-                        <span>Submit</span>
-                      </button>
-                    </form>
-                  </div>
+                <div className="tab-pane fade show active p-24 bg-white br-12">
+                  <ProductReviewsList
+                    productId={id}
+                    productName={product?.name}
+                    onRatingUpdated={handleRatingUpdated}
+                  />
                 </div>
               )}
             </div>
@@ -601,32 +447,12 @@ export const ProductDetail = () => {
                             <i className="fa-regular fa-eye"></i>
                           </a>
                         </li>
-                        <li>
-                          <a
-                            href="#compare"
-                            className="zui-wrapper-button"
-                            onClick={openCompare}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="16"
-                              height="17"
-                              viewBox="0 0 16 17"
-                              fill="none"
-                            >
-                              <path
-                                d="M12.979 16.5293C12.8173 16.5293 12.6557 16.4669 12.5333 16.3425C12.2913 16.0964 12.2947 15.7007 12.5408 15.4586L14.6415 13.393C14.7584 13.2759 14.8228 13.1207 14.8228 12.9558C14.8228 12.7913 14.7588 12.6366 14.6426 12.5197L12.5432 10.4773C11.9709 9.87765 12.8002 9.02596 13.4148 9.5813L15.5176 11.627C15.5194 11.6288 15.5213 11.6305 15.523 11.6323C15.8775 11.9858 16.0728 12.4558 16.0727 12.9558C16.0727 13.4559 15.8775 13.9259 15.523 14.2793C15.522 14.2803 15.521 14.2813 15.5199 14.2823L13.4172 16.35C13.2955 16.4696 13.1372 16.5293 12.979 16.5293ZM12.979 13.5293H3.82275C1.755 13.5293 0.0727539 11.8471 0.0727539 9.7793V8.18555C0.103473 7.35718 1.29232 7.3578 1.32275 8.18555V9.7793C1.32275 11.1578 2.44425 12.2793 3.82275 12.2793H12.979C13.8074 12.31 13.8068 13.4989 12.979 13.5293ZM15.4478 9.49805C15.1026 9.49805 14.8228 9.21824 14.8228 8.87305V7.2793C14.8228 5.9008 13.7013 4.7793 12.3228 4.7793H3.1665C2.33813 4.74858 2.33875 3.55974 3.1665 3.5293H12.3228C14.3905 3.5293 16.0728 5.21155 16.0728 7.2793V8.87305C16.0728 9.21824 15.7929 9.49805 15.4478 9.49805ZM3.16644 7.6543C3.00938 7.6543 2.85216 7.59549 2.73069 7.47727L0.627879 5.43162C0.626035 5.42983 0.624223 5.42805 0.622441 5.42624C0.267973 5.07283 0.0727539 4.60283 0.0727539 4.1028C0.0727539 3.60277 0.267973 3.13274 0.622441 2.77937C0.623473 2.77833 0.624473 2.77733 0.625504 2.77633L2.72832 0.708647C2.97444 0.466647 3.37016 0.46996 3.61216 0.716085C3.85416 0.96221 3.85085 1.35793 3.60472 1.59993L1.50397 3.66562C1.26438 3.89593 1.26388 4.30799 1.50285 4.5389L3.60232 6.5813C3.84972 6.82199 3.85516 7.21768 3.61447 7.46512C3.492 7.59102 3.32925 7.6543 3.16644 7.6543Z"
-                                fill="#363636"
-                              />
-                            </svg>
-                          </a>
-                        </li>
                       </ul>
                     </div>
                     <Link
                       to="/cart.html"
                       className="cus-btn"
-                      onClick={openCart}
+                      onClick={(event) => { event.preventDefault(); addToCart(prod.id, 1); }}
                     >
                       <span className="btn-text">{t("common.addCart")}</span>
                       <span>{t("common.goToCart")}</span>
@@ -635,7 +461,7 @@ export const ProductDetail = () => {
                   <div className="product-desc">
                     <div>
                       <Link
-                        to="/product-detail.html"
+                        to={`/product/${prod.id}`}
                         className="product-title h6 fw-700 mb-8"
                       >
                         {prod.title}
@@ -643,7 +469,7 @@ export const ProductDetail = () => {
                       <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
                         <span className="color-primary">★★★★★</span>
                       </div>
-                      <h6 className="fw-700 color-primary">{prod.price}</h6>
+                      <h6 className="fw-700 color-primary">{formatCurrency(prod.price)}</h6>
                     </div>
                   </div>
                 </div>

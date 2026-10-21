@@ -20,7 +20,9 @@
     "quantity": "Quantity",
     "subtotal": "Subtotal",
     "total": "Total",
-    "close": "Close"
+    "close": "Close",
+    "previousPage": "Previous page",
+    "nextPage": "Next page"
   },
   "header": {
     "needHelp": "Need help? Call Us:",
@@ -37,7 +39,17 @@
     "register": "Register",
     "adminDashboard": "Admin Dashboard",
     "myOrders": "My Orders",
-    "signOut": "Sign Out"
+    "signOut": "Sign Out",
+    "greeting": "Hi, {{name}}!",
+    "userMenu": "User menu",
+    "profile": "My Profile",
+    "roleAdmin": "Admin",
+    "roleCustomer": "Customer",
+    "userManagement": "User Management",
+    "categoryManagement": "Category Management",
+    "brandManagement": "Brand Management",
+    "mobileMenu": "Open mobile menu",
+    "user": "User"
   },
   "footer": {
     "desc": "Integer turpis tortor, vehicula vel quam at, aliquet efficitur arcu nam vestibulu risus at faucibus.",
@@ -55,7 +67,11 @@
     "contactUs": "Contact Us",
     "myAccount": "My Account",
     "orderTracking": "Order Tracking",
-    "wishlist": "Wishlist"
+    "wishlist": "Wishlist",
+    "emailLabel": "Email",
+    "phoneLabel": "Phone",
+    "addressLabel": "Address",
+    "addressValue": "502 New Design St, Melbourne"
   },
   "home": {
     "heroTitle1": "Stationery That",
@@ -134,18 +150,239 @@
     "yourOrder": "Your Order",
     "cashOnDelivery": "Cash on delivery",
     "bankTransfer": "Direct bank transfer",
-    "placeOrder": "Place Order"
+    "placeOrder": "Place Order",
+    "orderPlaced": "Order placed successfully!"
   },
   "productDetail": {
     "title": "Product Detail",
     "description": "Description",
     "additionalInfo": "Additional Information",
-    "reviewsTab": "Reviews (02)",
+    "reviewsTab": "Reviews ({{count}})",
     "buyNow": "Buy Now",
     "relatedProducts": "Related Products",
     "share": "Share",
     "freeShipping": "Free shipping on orders over $50",
-    "satisfaction": "Satisfaction Guaranteed or money back"
+    "satisfaction": "Satisfaction Guaranteed or money back",
+    "reviewSubmitted": "Review submitted successfully!"
+  },
+  "reviews": {
+    "summary": "{{rating}}/5 from {{count}} reviews",
+    "ratingOutOfFive": "{{rating}} out of 5 stars",
+    "loading": "Loading reviews...",
+    "loadError": "Could not load product reviews.",
+    "retry": "Try again",
+    "empty": "This product has no reviews yet.",
+    "anonymous": "Customer",
+    "paginationLabel": "Review pagination",
+    "writeReview": "Write review",
+    "alreadyReviewed": "Reviewed",
+    "formTitle": "Review product",
+    "ratingLabel": "Your rating",
+    "starValue": "{{value}} stars",
+    "commentLabel": "Your review",
+    "commentPlaceholder": "Share your experience with this product...",
+    "commentRequired": "Please enter your review.",
+    "commentLength": "Your review must contain between 3 and 1000 characters.",
+    "commentCounter": "{{count}}/1000 characters",
+    "ratingBreakdown": "{{stars}} stars: {{percentage}}%",
+    "cancel": "Not now",
+    "submit": "Submit review",
+    "submitting": "Submitting...",
+    "submitSuccess": "Review submitted successfully!",
+    "submitError": "Could not submit your review. Please try again.",
+    "duplicate": "This order item has already been reviewed.",
+    "onlyPurchasedCanReview": "Only customers who purchased and received this product can leave a review.",
+    "writeReviewForProduct": "Write a Review"
+  },
+  "orders": {
+    "pageTitle": "My Orders",
+    "historyTitle": "Order history",
+    "historyDescription": "View products, payments and delivery status.",
+    "sortLabel": "Sort",
+    "continueShopping": "Continue shopping",
+    "loading": "Loading orders...",
+    "unableToDisplay": "Unable to display orders.",
+    "empty": "You do not have any orders yet.",
+    "noProducts": "No products",
+    "noInformation": "No information available",
+    "details": "Details",
+    "cancelOrder": "Cancel order",
+    "cancelling": "Cancelling...",
+    "confirmCancel": "Do you want to cancel order number {{number}}?",
+    "paginationSummary": "Showing {{shown}} / {{total}} orders",
+    "paginationLabel": "Order pagination",
+    "quantityPrice": "{{quantity}} × {{price}}",
+    "discountValue": "Discount {{amount}}",
+    "detailTitle": "Order details",
+    "backToOrders": "Back to orders",
+    "loadingDetail": "Loading order details...",
+    "items": "Items",
+    "delivery": "Delivery information",
+    "quantityEach": "Qty: {{quantity}} · {{price}} each",
+    "successPageTitle": "Order placed",
+    "successHeading": "Thank you for your order!",
+    "successOrderNumber": "Your order number is #{{id}}.",
+    "viewMyOrders": "View my orders",
+    "orderIdentity": "No. {{number}} · Order #{{id}}",
+    "placedAt": "Placed at",
+    "status": "Status",
+    "payment": "Payment",
+    "shipping": "Shipping / Phone",
+    "voucher": "Voucher / Discount",
+    "products": "Products",
+    "subtotal": "Subtotal",
+    "shippingFee": "Shipping fee",
+    "discount": "Discount",
+    "total": "Total",
+    "columns": {
+      "number": "No.",
+      "productsPrice": "Products / Unit price",
+      "status": "Status",
+      "payment": "Payment",
+      "shippingPhone": "Shipping / Phone",
+      "voucherDiscount": "Voucher / Discount",
+      "total": "Total",
+      "actions": "Actions"
+    },
+    "sort": {
+      "newest": "Newest first",
+      "oldest": "Oldest first",
+      "totalHighLow": "Total: high to low",
+      "totalLowHigh": "Total: low to high",
+      "idDescending": "Order ID: high to low",
+      "idAscending": "Order ID: low to high"
+    },
+    "statuses": {
+      "PENDING": "Pending",
+      "CONFIRMED": "Confirmed",
+      "SHIPPING": "Shipping",
+      "DELIVERED": "Delivered",
+      "CANCELLED": "Cancelled"
+    },
+    "paymentMethods": {
+      "COD": "Cash on delivery (COD)",
+      "ONLINE": "Online"
+    },
+    "paymentStatuses": {
+      "SUCCESS": "Paid",
+      "PENDING": "Unpaid",
+      "FAILED": "Payment failed",
+      "REFUNDED": "Refunded"
+    },
+    "shippingMethods": {
+      "STANDARD": "Standard",
+      "EXPRESS": "Express"
+    },
+    "toast": {
+      "loadError": "Could not load your orders. Please try again.",
+      "cancelSuccess": "Order number {{number}} was cancelled.",
+      "cancelError": "Could not cancel the order."
+    }
+  },
+  "adminOrders": {
+    "title": "Order Management",
+    "subtitle": "View, find and update customer orders.",
+    "searchPlaceholder": "Search by order ID, customer name or email...",
+    "loading": "Loading orders...",
+    "unableToDisplay": "Unable to display orders.",
+    "empty": "No orders found.",
+    "paginationSummary": "Showing {{from}}–{{to}} of {{total}} orders",
+    "paginationLabel": "Order pages",
+    "stats": {
+      "ariaLabel": "Order statistics",
+      "total": "Total orders",
+      "delivered": "Delivered orders",
+      "cancelled": "Cancelled orders",
+      "revenue": "Total revenue"
+    },
+    "filters": {
+      "allStatuses": "All statuses",
+      "status": "Filter by order status",
+      "sort": "Sort orders"
+    },
+    "columns": {
+      "number": "No.",
+      "customer": "Customer",
+      "date": "Date",
+      "status": "Status",
+      "items": "Items",
+      "total": "Total",
+      "actions": "Actions"
+    },
+    "actions": {
+      "details": "Details",
+      "editStatus": "Edit status"
+    },
+    "detail": {
+      "title": "Order #{{id}}",
+      "closeAria": "Close order details",
+      "loading": "Loading order details...",
+      "customer": "Customer",
+      "status": "Status",
+      "shipTo": "Ship to",
+      "items": "Items",
+      "total": "Total"
+    },
+    "statusEditor": {
+      "title": "Edit status · Order #{{id}}",
+      "closeAria": "Close status editor",
+      "current": "Current status",
+      "complete": "This order is complete. Its status cannot be changed.",
+      "change": "Change order status",
+      "choose": "Choose next status",
+      "saving": "Saving...",
+      "update": "Update status",
+      "confirmCancel": "Cancel order #{{id}}?"
+    },
+    "statusActions": {
+      "CONFIRMED": "Confirm order",
+      "SHIPPING": "Mark as shipping",
+      "DELIVERED": "Mark as delivered",
+      "CANCELLED": "Cancel order"
+    },
+    "toast": {
+      "statusUpdated": "Order #{{id}} is now {{status}}."
+    },
+    "errors": {
+      "loadOrders": "Could not load orders.",
+      "loadStats": "Could not load order statistics.",
+      "invalidOrderId": "Invalid order ID.",
+      "loadDetail": "Could not load order details.",
+      "updateStatus": "Could not update order status."
+    }
+  },
+  "toast": {
+    "success": "SUCCESS",
+    "error": "ERROR",
+    "warning": "WARNING",
+    "info": "INFO",
+    "close": "Close notification"
+  },
+  "notifications": {
+    "welcomeBack": "Welcome back!",
+    "loginFailed": "Login failed. Please verify your credentials.",
+    "invalidCredentials": "Invalid email or password.",
+    "otpSent": "Verification code has been sent to your email.",
+    "otpResent": "A new verification code has been resent.",
+    "otpResetSent": "Reset verification code sent! Please check your email.",
+    "otpResetResent": "A new verification code has been resent to your email.",
+    "otpRequired": "Please enter all 6 digits of the OTP code.",
+    "otpSendFailed": "Failed to send OTP. Please check your email.",
+    "resetCodeSendFailed": "Failed to send reset code. Please check your email.",
+    "otpResendFailed": "Failed to resend OTP. Please wait before retrying.",
+    "invalidOtp": "Invalid or expired OTP code.",
+    "accountRegistered": "Account registered successfully! Switching to sign in...",
+    "accountRegisteredRedirect": "Account registered successfully! Redirecting to Sign In...",
+    "noAccount": "No account found with this email.",
+    "codeVerified": "Code verified successfully! Now set your new password.",
+    "passwordReset": "Password reset successfully! Redirecting to Sign In...",
+    "passwordResetDelayed": "Password reset successfully! Redirecting to Sign In in 2 seconds...",
+    "passwordResetFailed": "Failed to reset password. Please check your OTP code.",
+    "profileLoadFailed": "Failed to load user profile.",
+    "profileUpdated": "Profile updated successfully!",
+    "profileUpdateFailed": "Failed to update profile.",
+    "passwordChanged": "Password changed successfully!",
+    "passwordChangeFailed": "Failed to change password. Please check your current password."
   },
   "modals": {
     "shoppingCart": "Shopping Cart",
@@ -153,5 +390,41 @@
     "checkout": "Checkout",
     "quickView": "Quick View",
     "compareProducts": "Compare Products"
+  },
+  "commerce": {
+    "signInCart": "Please sign in to view your cart.",
+    "signIn": "Sign in",
+    "retry": "Try again",
+    "loadingCart": "Loading cart...",
+    "emptyCart": "Your cart is empty",
+    "shippingAtCheckout": "Shipping and voucher discounts are calculated at checkout.",
+    "remove": "Remove",
+    "unavailable": "This product is unavailable",
+    "decrease": "Decrease quantity",
+    "increase": "Increase quantity",
+    "close": "Close",
+    "checkoutError": "Could not place your order. Please check your cart and try again.",
+    "orderCreated": "Your order has been placed.",
+    "recipient": "Recipient",
+    "phone": "Phone number",
+    "address": "Shipping address",
+    "shipping": "Shipping method",
+    "payment": "Payment method",
+    "onlineUnavailable": "Online payment is being integrated. You can place your order with cash on delivery.",
+    "note": "Order note (optional)",
+    "yourOrder": "Your order",
+    "removeVoucher": "Remove {{code}}",
+    "placingOrder": "Placing order...",
+    "placeOrder": "Place order",
+    "trackingCode": "Tracking code",
+    "trackingPending": "Pending assignment",
+    "cartAdded": "Product added to your cart.",
+    "cartAddError": "Could not add this product to your cart.",
+    "cartQuantityError": "Could not update the quantity.",
+    "cartRemoveSuccess": "Product removed from your cart.",
+    "cartRemoveError": "Could not remove this product.",
+    "cartClearError": "Could not clear your cart.",
+    "cartLoadError": "Could not load your cart.",
+    "productLoadError": "Could not load products."
   }
 }

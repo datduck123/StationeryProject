@@ -2,6 +2,9 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
+import { getProductImage } from "../../services/productService";
+import { formatOrderMoney } from "../../utils/orderFormatters";
+import "../../styles/checkout.css";
 
 export const SidebarCart = () => {
   const {
@@ -207,5 +210,4 @@ export const SidebarCart = () => {
     </>
   );
 };
-
 export default SidebarCart;

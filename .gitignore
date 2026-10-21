@@ -17,6 +17,8 @@ node_modules/
 **/node_modules/
 
 # Production builds
+**/target-dev/
+**/.dev-jwt-secret
 dist/
 **/dist/
 dist-ssr/

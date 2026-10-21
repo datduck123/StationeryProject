@@ -7,9 +7,9 @@ import AdminDashboard from "../pages/Admin/AdminDashboard";
 import AdminOrderManagement from "../pages/Admin/AdminOrderManagement";
 import AdminProductManagement from "../pages/Admin/AdminProductManagement";
 import AdminUserManagement from "../pages/Admin/AdminUserManagement";
+import AdminVoucherManagement from "../pages/Admin/AdminVoucherManagement";
 import ForgotPasswordPage from "../pages/Auth/ForgotPasswordPage";
 import LoginPage from "../pages/Auth/LoginPage";
-import RegisterPage from "../pages/Auth/RegisterPage";
 import Cart from "../pages/Cart/Cart";
 import Checkout from "../pages/Checkout/Checkout";
 import Home from "../pages/Home/Home";
@@ -34,10 +34,12 @@ export const AppRoutes = () => {
         }
       >
         <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUserManagement />} />
         <Route path="/admin/products" element={<AdminProductManagement />} />
         <Route path="/admin/categories" element={<AdminCategoryManagement />} />
         <Route path="/admin/brands" element={<AdminBrandManagement />} />
+        <Route path="/admin/vouchers" element={<AdminVoucherManagement />} />
         <Route path="/admin/orders" element={<AdminOrderManagement />} />
         <Route path="/admin/orders/:id" element={<AdminOrderManagement />} />
       </Route>
@@ -54,7 +56,7 @@ export const AppRoutes = () => {
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/cart.html" element={<Navigate to="/cart" replace />} />
-        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
         <Route path="/checkout.html" element={<Navigate to="/checkout" replace />} />
 
         <Route
@@ -72,7 +74,7 @@ export const AppRoutes = () => {
 
         {/* Authentication Routes */}
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/register" element={<Navigate to="/" replace />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         {/* Customer Profile Route (Protected) */}

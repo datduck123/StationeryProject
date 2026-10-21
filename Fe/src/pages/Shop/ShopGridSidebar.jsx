@@ -50,7 +50,6 @@ export const ShopGridSidebar = () => {
 
   // ── Filter / Pagination state ────────────────────────────────────────────
   const [keyword, setKeyword] = useState("");
-  const [searchInput, setSearchInput] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedBrandId, setSelectedBrandId] = useState(null);
   const [stockFilter, setStockFilter] = useState(null);
@@ -183,11 +182,6 @@ export const ShopGridSidebar = () => {
   }, [fetchProducts, fetchSidebarData]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    setCurrentPage(0);
-    setKeyword(searchInput.trim());
-  };
 
   const handleCategoryChange = (id) => {
     setSelectedCategoryId((prev) => (prev === id ? null : id));
@@ -215,35 +209,6 @@ export const ShopGridSidebar = () => {
   // ── Sidebar content (shared between desktop & mobile) ────────────────────
   const renderSidebarContent = (prefix = "desktop") => (
     <div className="sidebar">
-      {/* Search Bar */}
-      <form
-        className="search-bar-container mb-24"
-        onSubmit={handleSearchSubmit}
-      >
-        <div className="search-input-block">
-          <input
-            type="text"
-            name="search"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder={t("header.searchPlaceholder", "Search Here...")}
-          />
-        </div>
-        <button type="submit" aria-label="Search">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <path
-              d="M9.74062 0C15.1116 0 19.4812 4.36964 19.4812 9.74063C19.4812 12.1734 18.5847 14.4008 17.1047 16.1097L23.7941 22.7997C24.0687 23.0743 24.0686 23.5195 23.794 23.7941C23.5194 24.0687 23.0743 24.0686 22.7997 23.7941L16.1104 17.1041C14.4014 18.5845 12.1738 19.4813 9.74062 19.4813C4.36964 19.4813 0 15.1116 0 9.74063C0 4.36964 4.36964 0 9.74062 0ZM9.74062 18.075C14.3362 18.075 18.075 14.3362 18.075 9.74063C18.075 5.14505 14.3362 1.40625 9.74062 1.40625C5.14505 1.40625 1.40625 5.14505 1.40625 9.74063C1.40625 14.3362 5.14505 18.075 9.74062 18.075Z"
-              fill="white"
-            />
-          </svg>
-        </button>
-      </form>
 
       {/* Availability Filter */}
       <div
@@ -738,12 +703,10 @@ export const ShopGridSidebar = () => {
                   <p className="dark-gray mb-24" style={{ maxWidth: "420px", margin: "0 auto 20px", fontSize: "14px" }}>
                     Rất tiếc, không có sản phẩm nào khớp với từ khóa tìm kiếm hoặc khoảng giá bạn đã chọn.
                   </p>
-                  {(keyword || selectedCategoryId || selectedBrandId || minPrice !== null || maxPrice !== null || stockFilter !== null) && (
+                  {(selectedCategoryId || selectedBrandId || minPrice !== null || maxPrice !== null || stockFilter !== null) && (
                     <button
                       type="button"
                       onClick={() => {
-                        setKeyword("");
-                        setSearchInput("");
                         setSelectedCategoryId(null);
                         setSelectedBrandId(null);
                         setStockFilter(null);
@@ -781,7 +744,7 @@ export const ShopGridSidebar = () => {
                 <div className="row row-gap-4 mb-48">
                   {filteredProducts.map((prod) => {
                     const prodId = prod.id || prod.productId;
-                    const isWishlisted = wishlist.includes(prodId);
+                    const isWishlisted = isInWishlist(prodId);
                     const inStock = (prod.stockQuantity ?? prod.stock_quantity ?? 0) > 0;
                     return (
                       <div
@@ -826,14 +789,10 @@ export const ShopGridSidebar = () => {
                                 <li>
                                   <a
                                     href="#wishlist"
-                                    title={isWishlisted ? "Xóa yêu thích" : "Thêm yêu thích"}
+                                    title={isWishlisted ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
                                     onClick={(e) => {
                                       e.preventDefault();
-                                      setWishlist((prev) =>
-                                        prev.includes(prodId)
-                                          ? prev.filter((id) => id !== prodId)
-                                          : [...prev, prodId]
-                                      );
+                                      toggleWishlist(prod);
                                     }}
                                     style={{ color: isWishlisted ? "#e57c32" : undefined }}
                                   >
@@ -851,34 +810,6 @@ export const ShopGridSidebar = () => {
                                     }}
                                   >
                                     <i className="fa-regular fa-eye"></i>
-                                  </a>
-                                </li>
-                                {/* Compare - bar chart icon */}
-                                <li>
-                                  <a
-                                    href="#compare"
-                                    title="So sánh sản phẩm"
-                                    className="zui-wrapper-button"
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      addCompareProduct(prod);
-                                      openCompare(prod);
-                                    }}
-                                  >
-                                    <svg
-                                      width="17"
-                                      height="17"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="#363636"
-                                      strokeWidth="2.2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    >
-                                      <line x1="18" y1="20" x2="18" y2="10" />
-                                      <line x1="12" y1="20" x2="12" y2="4" />
-                                      <line x1="6" y1="20" x2="6" y2="14" />
-                                    </svg>
                                   </a>
                                 </li>
                               </ul>

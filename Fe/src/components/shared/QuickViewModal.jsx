@@ -1,7 +1,7 @@
 // Migrated from: index.html, lines 3380-3502
 // Fixed: uses real quickViewProduct fields (name, imageUrl, price, stockQuantity, sku, category, brand, description)
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
 import { getProductImage } from "../../services/productService";
@@ -12,9 +12,11 @@ const formatCurrency = (amount) => {
 };
 
 export const QuickViewModal = () => {
-  const { quickViewProduct, closeQuickView, openCart } = useCartContext();
+  const { quickViewProduct, closeQuickView, addToCart, pendingItemIds } = useCartContext();
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
+  useEffect(() => { setQuantity(1); }, [quickViewProduct]);
 
   if (!quickViewProduct) return null;
 
@@ -25,6 +27,11 @@ export const QuickViewModal = () => {
   const prodId = prod.id || prod.productId;
 
   const subtotal = formatCurrency((prod.price ?? 0) * quantity);
+
+  const handleViewDetail = () => {
+    closeQuickView();
+    navigate(`/product/${prodId}`);
+  };
 
   return (
     <>
@@ -230,7 +237,8 @@ export const QuickViewModal = () => {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setQuantity((q) => q + 1)}
+                    disabled={quantity >= stockQty}
+                    onClick={() => setQuantity((q) => Math.min(stockQty, q + 1))}
                     style={{
                       width: "36px",
                       height: "36px",
@@ -267,8 +275,8 @@ export const QuickViewModal = () => {
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
                 <button
                   type="button"
-                  disabled={!inStock}
-                  onClick={() => { openCart(); closeQuickView(); }}
+                  disabled={!inStock || pendingItemIds.has(String(prodId))}
+                  onClick={async () => { if (await addToCart(prodId, quantity)) closeQuickView(); }}
                   style={{
                     flex: 1,
                     padding: "11px 16px",
@@ -286,9 +294,9 @@ export const QuickViewModal = () => {
                 >
                   {t("common.addCart")}
                 </button>
-                <Link
-                  to={`/product/${prodId}`}
-                  onClick={closeQuickView}
+                <button
+                  type="button"
+                  onClick={handleViewDetail}
                   style={{
                     flex: 1,
                     padding: "11px 16px",
@@ -305,7 +313,7 @@ export const QuickViewModal = () => {
                   }}
                 >
                   Xem chi tiết
-                </Link>
+                </button>
               </div>
 
               {/* Meta info */}

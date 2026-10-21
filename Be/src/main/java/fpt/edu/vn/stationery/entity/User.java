@@ -49,6 +49,22 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    public Long getId() {
+        return this.userId;
+    }
+
+    public void setId(Long id) {
+        this.userId = id;
+    }
+
+    public boolean isAdminRole() {
+        return this.isAdmin != null && this.isAdmin == 1;
+    }
+
+    public String getRoleName() {
+        return isAdminRole() ? "ROLE_ADMIN" : "ROLE_CUSTOMER";
+    }
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) createdAt = LocalDateTime.now();

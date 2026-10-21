@@ -1,12 +1,12 @@
 package fpt.edu.vn.stationery.controller;
 
-import fpt.edu.vn.stationery.dto.request.LoginRequest;
+import fpt.edu.vn.stationery.dto.request.LoginRequestDTO;
 import fpt.edu.vn.stationery.dto.request.RegisterWithOtpDTO;
 import fpt.edu.vn.stationery.dto.request.ResetPasswordRequestDTO;
 import fpt.edu.vn.stationery.dto.request.SendOtpRequestDTO;
 import fpt.edu.vn.stationery.dto.request.VerifyOtpRequestDTO;
-import fpt.edu.vn.stationery.dto.response.AuthResponse;
-import fpt.edu.vn.stationery.service.UserService;
+import fpt.edu.vn.stationery.dto.response.LoginResponseDTO;
+import fpt.edu.vn.stationery.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,27 +23,27 @@ import java.util.Map;
 @Tag(name = "Authentication", description = "Customer and Admin Authentication APIs")
 public class AuthController {
 
-    private final UserService userService;
+    private final AuthService authService;
 
     @Operation(summary = "Send OTP for customer registration")
     @PostMapping("/register/send-otp")
     public ResponseEntity<Map<String, String>> sendRegisterOtp(@Valid @RequestBody SendOtpRequestDTO request) {
-        userService.sendRegisterOtp(request);
+        authService.sendRegisterOtp(request);
         return ResponseEntity.ok(Map.of("message", "Registration OTP sent successfully to " + request.getEmail()));
     }
 
     @Operation(summary = "Verify OTP and complete customer registration")
     @PostMapping("/register/verify-and-register")
     public ResponseEntity<Map<String, String>> verifyAndRegister(@Valid @RequestBody RegisterWithOtpDTO request) {
-        userService.verifyAndRegister(request);
+        authService.verifyAndRegister(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of("message", "Account registered successfully"));
     }
 
     @Operation(summary = "Login with email and password")
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(userService.login(request));
+    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
+        return ResponseEntity.ok(authService.login(request));
     }
 
     @Operation(summary = "Logout current user session")
@@ -55,22 +55,21 @@ public class AuthController {
     @Operation(summary = "Send OTP for forgot password")
     @PostMapping("/forgot-password/send-otp")
     public ResponseEntity<Map<String, String>> sendForgotPasswordOtp(@Valid @RequestBody SendOtpRequestDTO request) {
-        userService.sendForgotPasswordOtp(request);
+        authService.sendForgotPasswordOtp(request);
         return ResponseEntity.ok(Map.of("message", "Password reset OTP sent successfully to " + request.getEmail()));
     }
 
     @Operation(summary = "Verify OTP for forgot password")
     @PostMapping("/forgot-password/verify-otp")
     public ResponseEntity<Map<String, String>> verifyForgotPasswordOtp(@Valid @RequestBody VerifyOtpRequestDTO request) {
-        userService.verifyForgotPasswordOtp(request.getEmail(), request.getOtpCode());
-        return ResponseEntity.ok(Map.of("message", "OTP code verified successfully. Please enter your new password."));
+        authService.verifyForgotPasswordOtp(request.getEmail(), request.getOtpCode());
+        return ResponseEntity.ok(Map.of("message", "OTP verified successfully. You can now reset your password."));
     }
 
-    @Operation(summary = "Reset password using OTP")
+    @Operation(summary = "Reset password with OTP")
     @PostMapping("/forgot-password/reset")
     public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequestDTO request) {
-        userService.resetPassword(request);
-        return ResponseEntity.ok(Map.of("message", "Password reset successfully. You can now login with your new password."));
+        authService.resetPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Password has been reset successfully. Please login with your new password."));
     }
 }
-
