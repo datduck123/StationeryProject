@@ -12,9 +12,20 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler({DataIntegrityViolationException.class, PessimisticLockingFailureException.class})
+    public ResponseEntity<ErrorResponse> handleConcurrentUpdate(RuntimeException ex) {
+        log.warn("Database rejected a conflicting update", ex);
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(409, "The data changed while processing your request. Please refresh and try again.", LocalDateTime.now()));
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex) {
@@ -94,7 +105,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
+        log.error("Unhandled request failure", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse(500, ex.getMessage() != null ? ex.getMessage() : "Internal Server Error", LocalDateTime.now()));
+                .body(new ErrorResponse(500, "Unable to process your request. Please try again.", LocalDateTime.now()));
     }
 }

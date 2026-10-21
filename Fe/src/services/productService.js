@@ -1,4 +1,4 @@
-import api from "./api";
+import api, { API_BASE_URL } from "./api";
 
 /**
  * Fetch paginated, filtered, sorted product list.
@@ -133,7 +133,7 @@ export const adminDeleteBrand = (id) => api.delete(`/admin/brands/${id}`);
 export const getProductImage = (product) => {
   if (product?.imageUrl && !product.imageUrl.includes("example.com")) {
     if (product.imageUrl.startsWith("/uploads/")) {
-      return `http://localhost:8080${product.imageUrl}`;
+      return new URL(product.imageUrl, API_BASE_URL).href;
     }
     return product.imageUrl;
   }

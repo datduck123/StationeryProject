@@ -1,8 +1,10 @@
 // Migrated from: index.html, lines 198-2992
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / br / input self-closing, Link integration, CartContext integration, i18n support
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { getProducts, getProductImage } from "../../services/productService";
+import { formatOrderMoney } from "../../utils/orderFormatters";
 import CountdownTimer from "../../components/ui/CountdownTimer";
 import { useCartContext } from "../../providers/CartContext";
 
@@ -26,8 +28,9 @@ const RatingStars = () => (
   </div>
 );
 
-const ProductCard = ({ product, openCart, openQuickView, t }) => {
-  const { toggleWishlist, isInWishlist } = useCartContext();
+const ProductCard = ({ product, openQuickView, t }) => {
+  const { toggleWishlist, isInWishlist, addToCart } = useCartContext();
+  const { i18n } = useTranslation();
   const prodId = product.id || product.productId;
   const isWishlisted = isInWishlist(prodId);
   const normalizedProduct = {
@@ -85,7 +88,7 @@ const ProductCard = ({ product, openCart, openQuickView, t }) => {
         className="cus-btn"
         onClick={(e) => {
           e.preventDefault();
-          openCart();
+          addToCart(product, 1);
         }}
       >
         <span className="btn-text">{t("common.addCart")}</span>
@@ -100,11 +103,7 @@ const ProductCard = ({ product, openCart, openQuickView, t }) => {
         >
           {product.title}
         </Link>
-        <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
-          <RatingStars />
-          <p className="fw-500">(02)</p>
-        </div>
-        <h5 className="medium-black fw-700">{product.price}</h5>
+        <h5 className="medium-black fw-700">{formatOrderMoney(product.price, i18n.language)}</h5>
       </div>
     </div>
   </div>
@@ -112,13 +111,14 @@ const ProductCard = ({ product, openCart, openQuickView, t }) => {
 };
 
 export const Home = () => {
-  const { openCart, openQuickView } = useCartContext();
+  const [products, setProducts] = useState([]);
+  const { openQuickView } = useCartContext();
   const { t } = useTranslation();
 
   useEffect(() => {
     if (window.$ && window.$.fn && window.$.fn.slick) {
       const $featured = window.$(".featured-product-slider");
-      if ($featured.length && !$featured.hasClass("slick-initialized")) {
+      if ($featured.length && products.length > 0 && !$featured.hasClass("slick-initialized")) {
         $featured.slick({
           slidesToShow: 4,
           slidesToScroll: 1,
@@ -170,7 +170,7 @@ export const Home = () => {
         }
       }
     };
-  }, []);
+  }, [products]);
 
   const categories = [
     {
@@ -224,123 +224,17 @@ export const Home = () => {
     },
   ];
 
-  const featuredProducts = [
-    {
-      id: 1,
-      title: "Daily Planner Pro",
-      image: "/assets/media/products/product-1.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 2,
-      title: "SmoothFlow Pens",
-      image: "/assets/media/products/product-2.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 3,
-      title: "Premium Bags",
-      image: "/assets/media/products/product-3.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 4,
-      title: "Premium Letter Paper",
-      image: "/assets/media/products/product-4.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 5,
-      title: "Daily Planner Pro",
-      image: "/assets/media/products/product-1.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 6,
-      title: "SmoothFlow Pens",
-      image: "/assets/media/products/product-2.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 7,
-      title: "Premium Bags",
-      image: "/assets/media/products/product-3.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 8,
-      title: "Premium Letter Paper",
-      image: "/assets/media/products/product-4.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-  ];
-
-  const bestSellerProducts = [
-    {
-      id: 1,
-      title: "Classic Ballpoint Pens",
-      image: "/assets/media/products/product-5.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 2,
-      title: "Magnetic Paper Clips",
-      image: "/assets/media/products/product-6.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 3,
-      title: "Pen's Box",
-      image: "/assets/media/products/product-7.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 4,
-      title: "Calculator",
-      image: "/assets/media/products/product-8.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 5,
-      title: "Watercolor Paper Pad",
-      image: "/assets/media/products/product-9.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 6,
-      title: "Watercolor Paper Pad",
-      image: "/assets/media/products/product-10.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 7,
-      title: "Daily Planner Pro",
-      image: "/assets/media/products/product-11.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 8,
-      title: "Hardcover Notebook",
-      image: "/assets/media/products/product-12.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-  ];
+  useEffect(() => {
+    let active = true;
+    getProducts({ size: 16, sort: "productId,desc" }).then((response) => {
+      const payload = response.data?.data ?? response.data;
+      const list = Array.isArray(payload) ? payload : payload?.content ?? [];
+      if (active) setProducts(list.map((product) => ({ ...product, id: product.productId ?? product.id, title: product.name, image: getProductImage(product) })));
+    }).catch(() => { if (active) setProducts([]); });
+    return () => { active = false; };
+  }, []);
+  const featuredProducts = products.slice(0, 8);
+  const bestSellerProducts = products.slice(8).length ? products.slice(8) : products.slice(0, 8);
 
   const testimonials = [
     {
@@ -518,7 +412,6 @@ export const Home = () => {
               <ProductCard
                 key={prod.id}
                 product={prod}
-                openCart={openCart}
                 openQuickView={openQuickView}
                 t={t}
               />
@@ -658,8 +551,7 @@ export const Home = () => {
               >
                 <ProductCard
                   product={prod}
-                  openCart={openCart}
-                  openQuickView={openQuickView}
+                    openQuickView={openQuickView}
                   t={t}
                 />
               </div>

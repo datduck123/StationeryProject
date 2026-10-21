@@ -19,7 +19,7 @@ export const SidebarWishlist = () => {
     wishlist,
     removeFromWishlist,
     clearWishlist,
-    openCart,
+    addToCart,
   } = useCartContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -199,7 +199,7 @@ export const SidebarWishlist = () => {
                           style={{ fontSize: "12px", fontWeight: 500 }}
                           onClick={() => {
                             closeWishlist();
-                            openCart();
+                            addToCart(prodId, 1);
                           }}
                         >
                           <i className="fa-solid fa-cart-plus me-1"></i>
