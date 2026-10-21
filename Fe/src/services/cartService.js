@@ -1,26 +1,67 @@
 import api from "./api";
 
-const unwrap = (response) => response?.data?.data ?? response?.data ?? response;
-
-const cartService = {
-  async getCart(params = {}) {
-    return unwrap(await api.get("/cart", { params }));
+export const cartService = {
+  /**
+   * Lấy giỏ hàng người dùng hiện tại
+   * @param {string} shippingMethod (STANDARD | EXPRESS)
+   * @param {number|null} voucherId
+   */
+  async getCart(shippingMethod = "STANDARD", voucherId = null) {
+    const params = {};
+    if (shippingMethod) params.shippingMethod = shippingMethod;
+    if (voucherId) params.voucherId = voucherId;
+    const response = await api.get("/cart", { params });
+    return response.data;
   },
 
-  async addItem(productId, quantity = 1) {
-    return unwrap(await api.post("/cart/items", { productId, quantity }));
+  /**
+   * Thêm sản phẩm vào giỏ hàng
+   * @param {{ productId: number, quantity: number }} data
+   */
+  async addToCart({ productId, quantity = 1 }) {
+    const response = await api.post("/cart", {
+      productId: Number(productId),
+      quantity: Number(quantity),
+    });
+    return response.data;
   },
 
-  async updateItem(cartItemId, quantity) {
-    return unwrap(await api.put(`/cart/items/${cartItemId}`, { quantity }));
+  /**
+   * Cập nhật số lượng sản phẩm (+/-)
+   * @param {number} cartItemId
+   * @param {number} quantity
+   */
+  async updateQuantity(cartItemId, quantity) {
+    const response = await api.put(`/cart/${cartItemId}`, {
+      quantity: Number(quantity),
+    });
+    return response.data;
   },
 
+  /**
+   * Xóa một sản phẩm khỏi giỏ hàng
+   * @param {number} cartItemId
+   */
   async removeItem(cartItemId) {
-    return unwrap(await api.delete(`/cart/items/${cartItemId}`));
+    const response = await api.delete(`/cart/${cartItemId}`);
+    return response.data;
   },
 
-  async clear() {
-    return unwrap(await api.delete("/cart"));
+  /**
+   * Xóa sạch toàn bộ giỏ hàng
+   */
+  async clearCart() {
+    const response = await api.delete("/cart");
+    return response.data;
+  },
+
+  /**
+   * Tính toán trước giỏ hàng (ước tính giá, ship, kiểm tra tồn kho)
+   * @param {object} calculationRequest
+   */
+  async calculateCart(calculationRequest) {
+    const response = await api.post("/cart/calculate", calculationRequest);
+    return response.data;
   },
 };
 

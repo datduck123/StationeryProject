@@ -6,8 +6,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "CartItems", schema = "dbo",
-        uniqueConstraints = @UniqueConstraint(name = "UQ_CartItems_User_Product", columnNames = {"user_id", "product_id"}))
+@Table(name = "CartItems")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -38,14 +37,14 @@ public class CartItem {
     private LocalDateTime updatedAt;
 
     @PrePersist
-    void onCreate() {
+    protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();
         if (createdAt == null) createdAt = now;
         if (updatedAt == null) updatedAt = now;
     }
 
     @PreUpdate
-    void onUpdate() {
+    protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
 }

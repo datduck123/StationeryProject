@@ -1,8 +1,8 @@
 // Migrated from: product-detail.html, lines 205-1705
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / input self-closing, gallery thumbnail active state, tab switcher state, i18n support
 // API integration: useParams to read product ID, fetch real data from /api/products/:id
-import { useCallback, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useSearchParams, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
 import { getProductById, getProductImage, getProducts } from "../../services/productService";
@@ -20,10 +20,11 @@ const ReviewStars = ({ rating, label }) => {
 };
 
 export const ProductDetail = () => {
-  const { addToCart, openQuickView } = useCartContext();
-  const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const { id } = useParams();
-  const navigate = useNavigate();
+  const productId = id ? Number(id) : (searchParams.get("id") ? Number(searchParams.get("id")) : 1);
+  const { openCart, openQuickView, openCompare, addToCart } = useCartContext();
+  const { t } = useTranslation();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("review");
@@ -252,14 +253,14 @@ export const ProductDetail = () => {
                 </p>
                 <div className="row row-gap-2 mb-24">
                   <div className="col-sm-6">
-                    <Link
-                      to="/cart.html"
-                      className="w-100 text-center cus-btn-2"
-                      onClick={(event) => { event.preventDefault(); addToCart(product, quantity); }}
+                    <button
+                      type="button"
+                      className="w-100 text-center cus-btn-2 border-0"
+                      onClick={() => addToCart(productId, quantity, true)}
                     >
                       <span className="btn-text">{t("common.addCart")}</span>
                       <span>{t("common.addCart")}</span>
-                    </Link>
+                    </button>
                   </div>
                   <div className="col-sm-6">
                     <Link

@@ -10,10 +10,11 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class CartItemInputDTO {
-    @NotNull(message = "Product ID is required")
+
+    @NotNull(message = "Product ID cannot be null")
     private Long productId;
 
-    @NotNull(message = "Quantity is required")
+    @NotNull(message = "Quantity cannot be null")
     @Min(value = 1, message = "Quantity must be at least 1")
     private Integer quantity;
 }

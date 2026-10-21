@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/** Preserve SQL Server table names used by the order, cart, payment and review migrations. */
+/** Preserve exact table names in SQL Server (Orders, OrderItems, CartItems, Notifications). */
 @Component
 public class OrderTableNamingStrategy extends CamelCaseToUnderscoresNamingStrategy
         implements HibernatePropertiesCustomizer {
@@ -24,6 +24,9 @@ public class OrderTableNamingStrategy extends CamelCaseToUnderscoresNamingStrate
             }
             if ("Orders".equalsIgnoreCase(name.getText())) {
                 return Identifier.toIdentifier("Orders", true);
+            }
+            if ("CartItems".equalsIgnoreCase(name.getText())) {
+                return Identifier.toIdentifier("CartItems", true);
             }
             if ("Notifications".equalsIgnoreCase(name.getText())) {
                 return Identifier.toIdentifier("Notifications", true);

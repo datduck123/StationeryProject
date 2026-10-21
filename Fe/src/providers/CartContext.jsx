@@ -1,15 +1,7 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import cartService from "../services/cartService";
-import { useTranslation } from "react-i18next";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useAuth } from "./AuthContext";
 import { useToast } from "./ToastContext";
+import cartService from "../services/cartService";
 
 const CartContext = createContext();
 
@@ -53,10 +45,10 @@ const normalizeCart = (payload) => {
 };
 
 export const CartProvider = ({ children }) => {
-  const { t } = useTranslation();
   const { user, openAuthModal } = useAuth();
   const { showToast } = useToast();
 
+  // Drawer / UI State
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -66,85 +58,44 @@ export const CartProvider = ({ children }) => {
   const [cartError, setCartError] = useState("");
   const [pendingItemIds, setPendingItemIds] = useState(() => new Set());
 
-  const [wishlist, setWishlist] = useState(() => {
-    try {
-      const saved = localStorage.getItem("stationery_wishlist");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  // Cart API State
+  const [cart, setCart] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem("stationery_wishlist", JSON.stringify(wishlist));
-    } catch (error) {
-      console.warn("Failed to persist wishlist:", error);
-    }
-  }, [wishlist]);
+  const openCart = (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    setIsCartOpen(true);
+  };
 
-  const refreshCart = useCallback(async ({ silent = false } = {}) => {
-    if (!user) {
-      const empty = normalizeCart(null);
-      setCart(empty);
-      setCartError("");
-      return empty;
-    }
-    if (!silent) setCartLoading(true);
-    setCartError("");
-    try {
-      const nextCart = normalizeCart(await cartService.getCart());
-      setCart(nextCart);
-      return nextCart;
-    } catch (error) {
-      setCartError(extractMessage(error, t("commerce.cartLoadError")));
-      throw error;
-    } finally {
-      if (!silent) setCartLoading(false);
-    }
-  }, [t, user]);
+  const closeCart = (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    setIsCartOpen(false);
+  };
 
-  useEffect(() => {
-    refreshCart().catch(() => {});
-  }, [refreshCart]);
+  const toggleMobileMenu = (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    setIsMobileMenuOpen((prev) => !prev);
+  };
 
-  const requireCustomer = useCallback(() => {
-    if (user) return true;
-    showToast?.(t("commerce.signInCart"), "info");
-    openAuthModal?.("login");
-    return false;
-  }, [openAuthModal, showToast, t, user]);
+  const closeMobileMenu = (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    setIsMobileMenuOpen(false);
+  };
 
-  const setPending = useCallback((id, pending) => {
-    setPendingItemIds((current) => {
-      const next = new Set(current);
-      if (pending) next.add(String(id));
-      else next.delete(String(id));
-      return next;
-    });
-  }, []);
+  const openQuickView = (product, e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    setQuickViewProduct(product);
+  };
 
-  const addToCart = useCallback(async (productOrId, quantity = 1, options = {}) => {
-    if (!requireCustomer()) return false;
-    const productId = typeof productOrId === "object"
-      ? productOrId?.productId ?? productOrId?.id
-      : productOrId;
-    const safeQuantity = Math.max(1, Number(quantity) || 1);
-    if (!productId) return false;
-    setPending(productId, true);
-    try {
-      await cartService.addItem(productId, safeQuantity);
-      await refreshCart({ silent: true });
-      showToast?.(t("commerce.cartAdded"), "success");
-      if (options.open !== false) setIsCartOpen(true);
-      return true;
-    } catch (error) {
-      showToast?.(extractMessage(error, t("commerce.cartAddError")), "error");
-      return false;
-    } finally {
-      setPending(productId, false);
-    }
-  }, [refreshCart, requireCustomer, setPending, showToast, t]);
+  const closeQuickView = (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    setQuickViewProduct(null);
+  };
+
+  const openCompare = (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    setIsCompareOpen(true);
+  };
 
   const updateCartItem = useCallback(async (cartItemId, quantity) => {
     const safeQuantity = Number(quantity);
@@ -178,95 +129,196 @@ export const CartProvider = ({ children }) => {
     }
   }, [refreshCart, setPending, showToast, t]);
 
-  const clearCart = useCallback(async ({ server = true } = {}) => {
-    if (!user) {
-      setCart(normalizeCart(null));
-      return true;
-    }
-    setCartLoading(true);
-    try {
-      if (server) await cartService.clear();
-      setCart(normalizeCart(null));
-      return true;
-    } catch (error) {
-      showToast?.(extractMessage(error, t("commerce.cartClearError")), "error");
-      return false;
-    } finally {
-      setCartLoading(false);
-    }
-  }, [showToast, t, user]);
-
-  const openCart = useCallback((event) => {
-    event?.preventDefault?.();
-    if (!requireCustomer()) return;
-    setIsCartOpen(true);
-    refreshCart({ silent: true }).catch(() => {});
-  }, [refreshCart, requireCustomer]);
-  const closeCart = useCallback((event) => { event?.preventDefault?.(); setIsCartOpen(false); }, []);
-  const openWishlist = useCallback((event) => { event?.preventDefault?.(); setIsWishlistOpen(true); }, []);
-  const closeWishlist = useCallback((event) => { event?.preventDefault?.(); setIsWishlistOpen(false); }, []);
-
-  const isInWishlist = useCallback((productId) => Boolean(productId) && wishlist.some(
-    (item) => String(item.productId || item.id) === String(productId),
-  ), [wishlist]);
-
-  const toggleWishlist = useCallback((product) => {
-    if (!product) return;
-    const productId = product.productId || product.id;
-    if (!productId) return;
-    const exists = isInWishlist(productId);
-    setWishlist((current) => exists
-      ? current.filter((item) => String(item.productId || item.id) !== String(productId))
-      : [...current, product]);
-    showToast?.(
-      exists
-        ? `Đã xóa "${product.name || "Sản phẩm"}" khỏi danh sách yêu thích.`
-        : `Đã thêm "${product.name || "Sản phẩm"}" vào danh sách yêu thích!`,
-      exists ? "info" : "success",
-    );
-    if (!exists) setTimeout(() => setIsWishlistOpen(true), 300);
-  }, [isInWishlist, showToast]);
-
-  const removeFromWishlist = useCallback((productId) => {
-    setWishlist((current) => current.filter(
-      (item) => String(item.productId || item.id) !== String(productId),
-    ));
-  }, []);
-  const clearWishlist = useCallback(() => setWishlist([]), []);
-  const toggleMobileMenu = useCallback((event) => { event?.preventDefault?.(); setIsMobileMenuOpen((value) => !value); }, []);
-  const closeMobileMenu = useCallback((event) => { event?.preventDefault?.(); setIsMobileMenuOpen(false); }, []);
-  const openQuickView = useCallback((product, event) => { event?.preventDefault?.(); setQuickViewProduct(product); }, []);
-  const closeQuickView = useCallback((event) => { event?.preventDefault?.(); setQuickViewProduct(null); }, []);
+  const closeCompare = (e) => {
+    if (e && typeof e.preventDefault === "function") e.preventDefault();
+    setIsCompareOpen(false);
+  };
 
   useEffect(() => {
-    document.body.classList.toggle("locked", isMobileMenuOpen || isCartOpen || isWishlistOpen);
-    return () => document.body.classList.remove("locked");
-  }, [isCartOpen, isMobileMenuOpen, isWishlistOpen]);
+    if (isMobileMenuOpen) {
+      document.body.classList.add("locked");
+    } else {
+      document.body.classList.remove("locked");
+    }
+  }, [isMobileMenuOpen]);
 
-  const value = useMemo(() => ({
-    isCartOpen, openCart, closeCart,
-    cart, cartItems: cart.items, cartCount: cart.totalItems, cartSubtotal: cart.subtotal,
-    cartLoading, cartError, pendingItemIds, refreshCart, addToCart, updateCartItem,
-    removeCartItem, clearCart,
-    isWishlistOpen, openWishlist, closeWishlist, wishlist, wishlistCount: wishlist.length,
-    toggleWishlist, removeFromWishlist, clearWishlist, isInWishlist,
-    isMobileMenuOpen, toggleMobileMenu, closeMobileMenu,
-    quickViewProduct, openQuickView, closeQuickView,
-  }), [
-    addToCart, cart, cartError, cartLoading, clearCart, clearWishlist, closeCart,
-    closeMobileMenu, closeQuickView, closeWishlist, isCartOpen, isInWishlist,
-    isMobileMenuOpen, isWishlistOpen, openCart, openQuickView, openWishlist,
-    pendingItemIds, refreshCart, removeCartItem, removeFromWishlist, toggleMobileMenu,
-    toggleWishlist, updateCartItem, wishlist,
-  ]);
+  /**
+   * Fetch current user's cart from backend
+   */
+  const fetchCart = useCallback(async () => {
+    if (!user) {
+      setCart(null);
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const data = await cartService.getCart();
+      setCart(data);
+      if (data?.notifications && data.notifications.length > 0) {
+        data.notifications.forEach((msg) => showToast(msg, "warning", 3000));
+      }
+    } catch (err) {
+      // 401 handled by interceptor, ignore empty or new cart failures
+      if (err?.response?.status !== 401 && err?.response?.status !== 403) {
+        console.error("Failed to load cart:", err);
+      }
+      setCart(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, showToast]);
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
-};
+  // Load cart when user logs in / changes
+  useEffect(() => {
+    fetchCart();
+  }, [fetchCart]);
 
-export const useCartContext = () => {
-  const context = useContext(CartContext);
-  if (!context) throw new Error("useCartContext must be used within CartProvider");
-  return context;
+  /**
+   * Add item to cart
+   */
+  const addToCart = async (productId, quantity = 1, showDrawer = true) => {
+    if (!user) {
+      showToast("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!", "warning");
+      if (openAuthModal) openAuthModal("login");
+      return false;
+    }
+
+    setIsLoading(true);
+    try {
+      const updatedCart = await cartService.addToCart({
+        productId,
+        quantity: Math.max(1, Number(quantity) || 1),
+      });
+      setCart(updatedCart);
+      showToast("Đã thêm sản phẩm vào giỏ hàng thành công!", "success");
+      if (showDrawer) {
+        setIsCartOpen(true);
+      }
+      return true;
+    } catch (err) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Không thể thêm sản phẩm vào giỏ hàng.";
+      showToast(message, "error", 3000);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  /**
+   * Update item quantity (+/-)
+   */
+  const updateQuantity = async (cartItemId, quantity) => {
+    if (!user) return false;
+    if (quantity < 1) {
+      return removeItem(cartItemId);
+    }
+
+    try {
+      const updatedCart = await cartService.updateQuantity(cartItemId, quantity);
+      setCart(updatedCart);
+      return true;
+    } catch (err) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Không thể cập nhật số lượng.";
+      showToast(message, "error", 2500);
+      // Re-fetch to sync real state
+      fetchCart();
+      return false;
+    }
+  };
+
+  /**
+   * Remove single item from cart
+   */
+  const removeItem = async (cartItemId) => {
+    if (!user) return false;
+    try {
+      const updatedCart = await cartService.removeItem(cartItemId);
+      setCart(updatedCart);
+      showToast("Đã xóa sản phẩm khỏi giỏ hàng.", "info");
+      return true;
+    } catch (err) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Không thể xóa sản phẩm.";
+      showToast(message, "error");
+      return false;
+    }
+  };
+
+  /**
+   * Clear entire cart
+   */
+  const clearCart = async (showNotification = true) => {
+    if (!user) return false;
+    try {
+      const updatedCart = await cartService.clearCart();
+      setCart(updatedCart);
+      if (showNotification) showToast("Đã xóa sạch giỏ hàng.", "info");
+      return true;
+    } catch (err) {
+      showToast("Không thể xóa toàn bộ giỏ hàng.", "error");
+      return false;
+    }
+  };
+
+  const items = cart?.items || [];
+  const cartCount =
+    cart?.totalItemsCount ??
+    items.reduce(
+      (sum, item) => sum + (item.finalQuantity || item.requestedQuantity || 0),
+      0,
+    );
+  const cartSubtotal = cart?.subtotal ? Number(cart.subtotal) : 0;
+  const cartShippingFee = cart?.shippingFee ? Number(cart.shippingFee) : 0;
+  const cartDiscount = cart?.discountAmount ? Number(cart.discountAmount) : 0;
+  const cartTotal = cart?.totalCost ? Number(cart.totalCost) : 0;
+
+  return (
+    <CartContext.Provider
+      value={{
+        // UI Drawers & Modals
+        isCartOpen,
+        openCart,
+        closeCart,
+        isMobileMenuOpen,
+        toggleMobileMenu,
+        closeMobileMenu,
+        quickViewProduct,
+        openQuickView,
+        closeQuickView,
+        isCompareOpen,
+        openCompare,
+        closeCompare,
+        // Cart Data & Actions
+        cart,
+        setCart,
+        items,
+        cartCount,
+        cartSubtotal,
+        cartShippingFee,
+        cartDiscount,
+        cartTotal,
+        isLoading,
+        fetchCart,
+        addToCart,
+        updateQuantity,
+        removeItem,
+        clearCart,
+        compareList,
+        addCompareProduct,
+        removeCompareProduct,
+      }}
+    >
+      {children}
+    </CartContext.Provider>
+  );
 };
 
 export default CartContext;

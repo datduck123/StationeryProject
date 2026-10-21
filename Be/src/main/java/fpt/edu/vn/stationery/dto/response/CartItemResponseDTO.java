@@ -10,20 +10,34 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class CartItemResponseDTO {
+
     private Long cartItemId;
+
     private Long productId;
+
     private String productName;
+
     private String sku;
+
     private String imageUrl;
+
     private BigDecimal unitPrice;
-    private Integer quantity;
+
     private Integer requestedQuantity;
-    private Integer finalQuantity;
+
     private Integer currentStock;
+
+    private Integer finalQuantity;
+
     private BigDecimal subtotal;
+
     private BigDecimal weightKg;
+
     private BigDecimal itemTotalWeightKg;
+
     private boolean available;
+
     private boolean stockAdjusted;
+
     private String message;
 }

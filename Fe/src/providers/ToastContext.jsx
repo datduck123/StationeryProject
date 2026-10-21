@@ -18,7 +18,6 @@ const ToastItem = ({ toast, onRemove }) => {
       setRemainingMs((prev) => {
         if (prev <= interval) {
           clearInterval(timer);
-          onRemove(toast.id);
           return 0;
         }
         return prev - interval;
@@ -26,7 +25,13 @@ const ToastItem = ({ toast, onRemove }) => {
     }, interval);
 
     return () => clearInterval(timer);
-  }, [toast.id, totalDuration, onRemove]);
+  }, [totalDuration]);
+
+  useEffect(() => {
+    if (remainingMs <= 0) {
+      onRemove(toast.id);
+    }
+  }, [remainingMs, onRemove, toast.id]);
 
   const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
   const progressPercent = Math.max(0, Math.min(100, (remainingMs / totalDuration) * 100));

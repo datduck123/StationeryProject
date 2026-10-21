@@ -39,6 +39,16 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(404, ex.getMessage(), LocalDateTime.now()));
     }
 
+    @ExceptionHandler(CartStockConflictException.class)
+    public ResponseEntity<Map<String, Object>> handleCartStockConflict(CartStockConflictException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 409);
+        body.put("message", ex.getMessage());
+        body.put("cart", ex.getCartResponse());
+        body.put("timestamp", LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ErrorResponse> handleDuplicate(DuplicateResourceException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

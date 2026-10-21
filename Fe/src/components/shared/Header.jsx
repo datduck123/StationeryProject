@@ -9,7 +9,7 @@ import { useCartContext } from "../../providers/CartContext";
 import LanguageSwitcher from "../ui/LanguageSwitcher";
 
 export const Header = () => {
-  const { openCart, cartCount, openWishlist, wishlistCount, toggleMobileMenu } = useCartContext();
+  const { openCart, toggleMobileMenu, cartCount } = useCartContext();
   const { user, isAdmin, openAuthModal, logout } = useAuth();
   const { t } = useTranslation();
   const isSticky = useStickyHeader(130);
@@ -245,9 +245,10 @@ export const Header = () => {
                 </button>
                 <a
                   href="#sidebar-cart"
-                  className="button-block cart-button"
+                  className="button-block cart-button position-relative"
                   onClick={openCart}
-                  aria-label={`${t("cart.title")} (${cartCount})`}
+                  title="Giỏ hàng"
+                  aria-label="Giỏ hàng"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -261,7 +262,29 @@ export const Header = () => {
                       fill="#1E1F20"
                     />
                   </svg>
-                  {cartCount > 0 && <span className="cart-count-badge">{cartCount > 99 ? "99+" : cartCount}</span>}
+                  {cartCount > 0 && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: "-5px",
+                        right: "-5px",
+                        backgroundColor: "#e53935",
+                        color: "#fff",
+                        fontSize: "11px",
+                        fontWeight: "700",
+                        width: "18px",
+                        height: "18px",
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        lineHeight: 1,
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                      }}
+                    >
+                      {cartCount > 99 ? "99+" : cartCount}
+                    </span>
+                  )}
                 </a>
               </div>
 

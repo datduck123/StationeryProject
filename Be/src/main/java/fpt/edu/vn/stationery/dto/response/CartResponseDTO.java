@@ -12,22 +12,31 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class CartResponseDTO {
+
     @Builder.Default
     private List<CartItemResponseDTO> items = new ArrayList<>();
+
     @Builder.Default
     private BigDecimal subtotal = BigDecimal.ZERO;
+
     @Builder.Default
     private BigDecimal shippingFee = BigDecimal.ZERO;
+
     @Builder.Default
     private BigDecimal discountAmount = BigDecimal.ZERO;
+
     @Builder.Default
     private BigDecimal totalCost = BigDecimal.ZERO;
+
     @Builder.Default
     private BigDecimal totalWeightKg = BigDecimal.ZERO;
+
     private String shippingMethod;
-    private String voucherCode;
+
     private boolean stockChanged;
+
     private int totalItemsCount;
+
     @Builder.Default
     private List<String> notifications = new ArrayList<>();
 }

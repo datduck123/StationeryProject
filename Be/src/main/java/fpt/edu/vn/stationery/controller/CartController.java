@@ -1,8 +1,13 @@
 package fpt.edu.vn.stationery.controller;
 
+import fpt.edu.vn.stationery.dto.request.CartCalculationRequestDTO;
 import fpt.edu.vn.stationery.dto.request.CartItemInputDTO;
 import fpt.edu.vn.stationery.dto.request.UpdateCartItemRequestDTO;
 import fpt.edu.vn.stationery.dto.response.CartResponseDTO;
+import fpt.edu.vn.stationery.entity.User;
+import fpt.edu.vn.stationery.exception.BadRequestException;
+import fpt.edu.vn.stationery.repository.UserRepository;
+import fpt.edu.vn.stationery.service.CartCalculationService;
 import fpt.edu.vn.stationery.service.CartService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -17,45 +22,88 @@ import java.security.Principal;
 @RestController
 @RequestMapping("/api/cart")
 @RequiredArgsConstructor
-@Tag(name = "Customer - Cart", description = "Authenticated customer's persistent cart")
+@Tag(name = "Cart", description = "Cart management and inventory synchronization")
 @SecurityRequirement(name = "bearerAuth")
 public class CartController {
+
     private final CartService cartService;
+    private final CartCalculationService cartCalculationService;
+    private final UserRepository userRepository;
 
-    @Operation(summary = "Get the current customer's cart")
+    @Operation(summary = "Get user's database cart with price calculations")
     @GetMapping
-    public ResponseEntity<CartResponseDTO> getCart(
-            Principal principal,
+    public ResponseEntity<CartResponseDTO> getMyCart(
             @RequestParam(defaultValue = "STANDARD") String shippingMethod,
-            @RequestParam(required = false) String voucherCode) {
-        return ResponseEntity.ok(cartService.getCart(principal.getName(), shippingMethod, voucherCode));
+            @RequestParam(required = false) Long voucherId,
+            Principal principal) {
+        Long userId = resolveRequiredUserId(principal);
+        CartResponseDTO response = cartService.getCart(userId, shippingMethod, voucherId);
+        return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Add a product to the current customer's cart")
-    @PostMapping({"/items", ""})
-    public ResponseEntity<CartResponseDTO> addItem(
-            Principal principal, @Valid @RequestBody CartItemInputDTO request) {
-        return ResponseEntity.ok(cartService.addItem(principal.getName(), request));
+    @Operation(summary = "Add product to cart (Validates stock before adding)")
+    @PostMapping
+    public ResponseEntity<CartResponseDTO> addToCart(
+            @Valid @RequestBody CartItemInputDTO request,
+            Principal principal) {
+        Long userId = resolveRequiredUserId(principal);
+        CartResponseDTO response = cartService.addToCart(userId, request);
+        return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Set the quantity of one cart item")
-    @PutMapping({"/items/{cartItemId}", "/{cartItemId}"})
-    public ResponseEntity<CartResponseDTO> updateItem(
-            Principal principal,
+    @Operation(summary = "Update cart item quantity (+/-)")
+    @PutMapping("/{cartItemId}")
+    public ResponseEntity<CartResponseDTO> updateCartItem(
             @PathVariable Long cartItemId,
-            @Valid @RequestBody UpdateCartItemRequestDTO request) {
-        return ResponseEntity.ok(cartService.updateItem(principal.getName(), cartItemId, request.getQuantity()));
+            @Valid @RequestBody UpdateCartItemRequestDTO request,
+            Principal principal) {
+        Long userId = resolveRequiredUserId(principal);
+        CartResponseDTO response = cartService.updateCartItem(userId, cartItemId, request.getQuantity());
+        return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Remove one cart item")
-    @DeleteMapping({"/items/{cartItemId}", "/{cartItemId}"})
-    public ResponseEntity<CartResponseDTO> removeItem(Principal principal, @PathVariable Long cartItemId) {
-        return ResponseEntity.ok(cartService.removeItem(principal.getName(), cartItemId));
+    @Operation(summary = "Remove an item from cart")
+    @DeleteMapping("/{cartItemId}")
+    public ResponseEntity<CartResponseDTO> removeCartItem(
+            @PathVariable Long cartItemId,
+            Principal principal) {
+        Long userId = resolveRequiredUserId(principal);
+        CartResponseDTO response = cartService.removeCartItem(userId, cartItemId);
+        return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Clear the current customer's cart")
+    @Operation(summary = "Clear all items from cart")
     @DeleteMapping
-    public ResponseEntity<CartResponseDTO> clear(Principal principal) {
-        return ResponseEntity.ok(cartService.clear(principal.getName()));
+    public ResponseEntity<CartResponseDTO> clearCart(Principal principal) {
+        Long userId = resolveRequiredUserId(principal);
+        CartResponseDTO response = cartService.clearCart(userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Calculate cart totals without modifying cart: Subtotal, Shipping Fee, and Stock Check")
+    @PostMapping("/calculate")
+    public ResponseEntity<CartResponseDTO> calculateCart(
+            @Valid @RequestBody(required = false) CartCalculationRequestDTO request,
+            Principal principal) {
+        Long userId = resolveUserId(principal);
+        CartResponseDTO response = cartCalculationService.calculate(request, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    private Long resolveRequiredUserId(Principal principal) {
+        Long userId = resolveUserId(principal);
+        if (userId == null) {
+            throw new BadRequestException("Người dùng chưa được xác thực hoặc không tìm thấy tài khoản");
+        }
+        return userId;
+    }
+
+    private Long resolveUserId(Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            return null;
+        }
+        return userRepository.findByEmail(principal.getName())
+                .map(User::getUserId)
+                .orElse(null);
     }
 }

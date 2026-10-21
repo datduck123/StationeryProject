@@ -30,12 +30,8 @@ const formatCurrency = (amount) => {
 };
 
 export const ShopGridSidebar = () => {
-  const {
-    addToCart,
-    openQuickView,
-    toggleWishlist,
-    isInWishlist,
-  } = useCartContext();
+  const { openCart, openQuickView, openCompare, addToCart, addCompareProduct } = useCartContext();
+  const [wishlist, setWishlist] = useState([]);
   const { t } = useTranslation();
 
   // ── Sidebar accordion state ──────────────────────────────────────────────
@@ -823,7 +819,7 @@ export const ShopGridSidebar = () => {
                               className="cus-btn"
                               onClick={(e) => {
                                 e.preventDefault();
-                                addToCart(prod, 1);
+                                addToCart(prodId, 1, true);
                               }}
                             >
                               <span className="btn-text">
