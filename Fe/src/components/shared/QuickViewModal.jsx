@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
 import { getProductImage } from "../../services/productService";
+import ProductRatingSold from "./ProductRatingSold";
 
 const formatCurrency = (amount) => {
   if (amount == null) return "—";
@@ -153,18 +154,8 @@ export const QuickViewModal = () => {
                   .join(" · ")}
               </p>
 
-              {/* Stars */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  marginBottom: "16px",
-                }}
-              >
-                <span style={{ color: "#f59e0b", fontSize: "16px" }}>★★★★★</span>
-                <span style={{ fontSize: "13px", color: "#6b7280" }}>(02 đánh giá)</span>
-              </div>
+              {/* Stars & Sold count (Lazada style) */}
+              <ProductRatingSold product={prod} variant="quickview" className="mb-16" />
 
               {/* Price */}
               <div style={{ marginBottom: "16px" }}>

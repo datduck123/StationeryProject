@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
 import { getProductById, getProductImage, getProducts } from "../../services/productService";
 import ProductReviewsList from "../../components/reviews/ProductReviewsList";
+import ProductRatingSold from "../../components/shared/ProductRatingSold";
 import "../../styles/reviews.css";
 
 const ReviewStars = ({ rating, label }) => {
@@ -177,20 +178,18 @@ export const ProductDetail = () => {
                 <h3 className="medium-black fw-700 mb-16">
                   {product?.name ?? "Classic Ballpoint Pens"}
                 </h3>
-                <div className="product-review-summary mb-16">
-                  <ReviewStars rating={averageRating} label={t("reviews.ratingOutOfFive", { rating: averageRating.toFixed(1) })} />
-                  <p className="dark-gray fw-500 mb-0">
-                    {t("reviews.summary", { rating: averageRating.toFixed(1), count: reviewCount })}
-                  </p>
-                </div>
+                <ProductRatingSold
+                  product={product}
+                  rating={averageRating}
+                  reviewCount={reviewCount}
+                  variant="detail"
+                  className="mb-16"
+                />
                 <div className="d-flex align-items-center gap-16 mb-24">
                   <h4 className="color-primary fw-700">
                     {product ? formatCurrency(product.price) : "$59.00"}
                   </h4>
                 </div>
-                <p className="quick-view-text mb-24">
-                  {product?.description || "Sản phẩm văn phòng phẩm chất lượng cao, bền đẹp và tiện lợi."}
-                </p>
                 {product?.stockQuantity != null && (
                   <p className="fw-500 mb-16">
                     Còn lại: <span className="color-primary fw-700">{product.stockQuantity}</span> sản phẩm trong kho!
@@ -367,7 +366,12 @@ export const ProductDetail = () => {
             <div className="tab-content">
               {activeTab === "desc" && (
                 <div className="tab-pane fade show active p-24 bg-white br-12">
-                  <p className="mb-16">{t("footer.desc")}</p>
+                  <p
+                    className="mb-0 dark-gray"
+                    style={{ whiteSpace: "pre-line", lineHeight: "1.8", fontSize: "15px" }}
+                  >
+                    {product?.description || "Chưa có mô tả chi tiết cho sản phẩm này."}
+                  </p>
                 </div>
               )}
               {activeTab === "additional" && (
@@ -375,17 +379,31 @@ export const ProductDetail = () => {
                   <table className="table table-bordered mb-0">
                     <tbody>
                       <tr>
-                        <th style={{ width: "200px" }}>Weight</th>
-                        <td>0.5 kg</td>
+                        <th style={{ width: "200px" }}>Mã sản phẩm (SKU)</th>
+                        <td>{product?.sku || `SKU-${productId}`}</td>
                       </tr>
+                      {product?.brand?.name && (
+                        <tr>
+                          <th>Thương hiệu</th>
+                          <td>{product.brand.name}</td>
+                        </tr>
+                      )}
+                      {product?.category?.name && (
+                        <tr>
+                          <th>Danh mục</th>
+                          <td>{product.category.name}</td>
+                        </tr>
+                      )}
                       <tr>
-                        <th>Dimensions</th>
-                        <td>15 x 20 x 2 cm</td>
+                        <th>Trọng lượng</th>
+                        <td>{product?.weightKg ?? product?.weight ?? "0.1"} kg</td>
                       </tr>
-                      <tr>
-                        <th>Material</th>
-                        <td>Recycled Paper, Premium Ink</td>
-                      </tr>
+                      {product?.stockQuantity != null && (
+                        <tr>
+                          <th>Tình trạng kho</th>
+                          <td>{product.stockQuantity > 0 ? `Còn hàng (${product.stockQuantity})` : "Hết hàng"}</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -468,9 +486,7 @@ export const ProductDetail = () => {
                       >
                         {prod.title}
                       </Link>
-                      <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
-                        <span className="color-primary">★★★★★</span>
-                      </div>
+                      <ProductRatingSold product={prod} variant="card" className="mb-8" />
                       <h6 className="fw-700 color-primary">{formatCurrency(prod.price)}</h6>
                     </div>
                   </div>

@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { getProducts, getProductImage } from "../../services/productService";
+import { getFeaturedProducts, getBestSellerProducts, getProductImage } from "../../services/productService";
 import { formatOrderMoney } from "../../utils/orderFormatters";
 import CountdownTimer from "../../components/ui/CountdownTimer";
+import ProductRatingSold from "../../components/shared/ProductRatingSold";
 import { useCartContext } from "../../providers/CartContext";
 
 const RatingStars = () => (
@@ -103,6 +104,7 @@ const ProductCard = ({ product, openQuickView, t }) => {
         >
           {product.title}
         </Link>
+        <ProductRatingSold product={product} variant="card" className="mb-8" />
         <h5 className="medium-black fw-700">{formatOrderMoney(product.price, i18n.language)}</h5>
       </div>
     </div>
@@ -111,14 +113,15 @@ const ProductCard = ({ product, openQuickView, t }) => {
 };
 
 export const Home = () => {
-  const [products, setProducts] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [bestSellerProducts, setBestSellerProducts] = useState([]);
   const { openQuickView } = useCartContext();
   const { t } = useTranslation();
 
   useEffect(() => {
     if (window.$ && window.$.fn && window.$.fn.slick) {
       const $featured = window.$(".featured-product-slider");
-      if ($featured.length && products.length > 0 && !$featured.hasClass("slick-initialized")) {
+      if ($featured.length && featuredProducts.length > 0 && !$featured.hasClass("slick-initialized")) {
         $featured.slick({
           slidesToShow: 4,
           slidesToScroll: 1,
@@ -170,7 +173,37 @@ export const Home = () => {
         }
       }
     };
-  }, [products]);
+  }, [featuredProducts]);
+
+  /** Normalize a raw API product into the shape ProductCard expects. */
+  const normalizeProduct = (product) => ({
+    ...product,
+    id: product.productId ?? product.id,
+    title: product.name,
+    image: getProductImage(product),
+  });
+
+  useEffect(() => {
+    let active = true;
+    // Featured: top-rated products
+    getFeaturedProducts(8)
+      .then((response) => {
+        const list = Array.isArray(response.data) ? response.data : [];
+        if (active) setFeaturedProducts(list.map(normalizeProduct));
+      })
+      .catch(() => { if (active) setFeaturedProducts([]); });
+
+    // Best Seller: top-sold products
+    getBestSellerProducts(8)
+      .then((response) => {
+        const list = Array.isArray(response.data) ? response.data : [];
+        if (active) setBestSellerProducts(list.map(normalizeProduct));
+      })
+      .catch(() => { if (active) setBestSellerProducts([]); });
+
+    return () => { active = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const categories = [
     {
@@ -223,18 +256,6 @@ export const Home = () => {
       delay: "400ms",
     },
   ];
-
-  useEffect(() => {
-    let active = true;
-    getProducts({ size: 16, sort: "productId,desc" }).then((response) => {
-      const payload = response.data?.data ?? response.data;
-      const list = Array.isArray(payload) ? payload : payload?.content ?? [];
-      if (active) setProducts(list.map((product) => ({ ...product, id: product.productId ?? product.id, title: product.name, image: getProductImage(product) })));
-    }).catch(() => { if (active) setProducts([]); });
-    return () => { active = false; };
-  }, []);
-  const featuredProducts = products.slice(0, 8);
-  const bestSellerProducts = products.slice(8).length ? products.slice(8) : products.slice(0, 8);
 
   const testimonials = [
     {
@@ -421,6 +442,42 @@ export const Home = () => {
       </section>
       {/* FEATURED PRODUCT END */}
 
+      {/* BEST SELLER START */}
+      <section className="best-seller-sec py-40">
+        <img
+          src="/assets/media/images/element-1.png"
+          alt=""
+          className="element-1"
+        />
+        <div className="container-2">
+          <div
+            className="heading mb-48 text-center wow fadeInUp animated"
+            data-wow-delay="400ms"
+          >
+            <h2 className="medium-black fw-700 mb-16">
+              <span className="color-primary">{t("home.bestSeller")}</span>{" "}
+              {t("home.bestSellerHighlight")}
+            </h2>
+            <p>{t("home.bestSellerSubtitle")}</p>
+          </div>
+          <div className="row row-gap-4">
+            {bestSellerProducts.map((prod) => (
+              <div
+                key={prod.id}
+                className="col-xl-3 col-lg-4 col-md-6 col-sm-6"
+              >
+                <ProductCard
+                  product={prod}
+                  openQuickView={openQuickView}
+                  t={t}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* BEST SELLER END */}
+
       {/* COLLECTION GRIDS START */}
       <section className="collection-grid-sec py-40">
         <div className="container-2">
@@ -524,42 +581,6 @@ export const Home = () => {
         </div>
       </section>
       {/* INNER BANNER END */}
-
-      {/* BEST SELLER START */}
-      <section className="best-seller-sec py-40">
-        <img
-          src="/assets/media/images/element-1.png"
-          alt=""
-          className="element-1"
-        />
-        <div className="container-2">
-          <div
-            className="heading mb-48 text-center wow fadeInUp animated"
-            data-wow-delay="400ms"
-          >
-            <h2 className="medium-black fw-700 mb-16">
-              <span className="color-primary">{t("home.bestSeller")}</span>{" "}
-              {t("home.bestSellerHighlight")}
-            </h2>
-            <p>{t("home.bestSellerSubtitle")}</p>
-          </div>
-          <div className="row row-gap-4">
-            {bestSellerProducts.map((prod) => (
-              <div
-                key={prod.id}
-                className="col-xl-3 col-lg-4 col-md-6 col-sm-6"
-              >
-                <ProductCard
-                  product={prod}
-                    openQuickView={openQuickView}
-                  t={t}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      {/* BEST SELLER END */}
 
       {/* INNER BANNER 2 START */}
       <section

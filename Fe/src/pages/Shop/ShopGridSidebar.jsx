@@ -9,6 +9,7 @@ import PriceSlider from "../../components/ui/PriceSlider";
 import CustomDropdown from "../../components/ui/CustomDropdown";
 import { useCartContext } from "../../providers/CartContext";
 import { getProducts, getCategories, getBrands, getProductImage } from "../../services/productService";
+import ProductRatingSold from "../../components/shared/ProductRatingSold";
 import { onProductChange } from "../../utils/syncEvents";
 
 const SORT_OPTIONS = [
@@ -859,10 +860,7 @@ export const ShopGridSidebar = () => {
                                   {prod.category.name}
                                 </p>
                               )}
-                              <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
-                                <span className="color-primary">★★★★★</span>
-                                <p className="fw-500">(02)</p>
-                              </div>
+                              <ProductRatingSold product={prod} variant="card" className="mb-8" />
                               <h5 className="medium-black fw-700">
                                 {formatCurrency(prod.price)}
                               </h5>

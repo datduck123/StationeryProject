@@ -32,6 +32,20 @@ export const getProducts = (params = {}) => {
 export const getProductById = (id) => api.get(`/products/${id}`);
 
 /**
+ * Fetch top featured products ordered by average review rating.
+ * @param {number} limit - max number of products (default 8)
+ */
+export const getFeaturedProducts = (limit = 8) =>
+  api.get("/products/featured", { params: { limit } });
+
+/**
+ * Fetch best-selling products ordered by sold count descending.
+ * @param {number} limit - max number of products (default 8)
+ */
+export const getBestSellerProducts = (limit = 8) =>
+  api.get("/products/bestseller", { params: { limit } });
+
+/**
  * Fetch all public categories.
  */
 export const getCategories = () => api.get("/categories");
