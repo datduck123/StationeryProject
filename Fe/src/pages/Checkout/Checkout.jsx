@@ -71,12 +71,16 @@ export const Checkout = () => {
     setIsSubmitting(true);
     try {
       const response = await checkoutService.validateCheckout(formData);
-      showToast(response.message || "Khởi tạo đơn hàng thành công!", "success");
+      showToast(response.message || "Đặt hàng thành công!", "success");
       
-      // Redirect to Order History page
+      // Redirect to Order Detail or History page
       await clearCart(false);
-      setTimeout(() => navigate("/account/orders"), 2000);
-      
+      const targetOrderId = response?.orderId || response?.data?.orderId;
+      if (targetOrderId) {
+        setTimeout(() => navigate(`/account/orders/${targetOrderId}`), 1200);
+      } else {
+        setTimeout(() => navigate("/account/orders"), 1200);
+      }
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || "Lỗi khi xử lý đơn hàng";
       showToast(message, "error", 5000);

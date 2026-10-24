@@ -3,32 +3,43 @@ import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
 import { useToast } from "../../providers/ToastContext";
 import cartService from "../../services/cartService";
-
-const AVAILABLE_VOUCHERS = [
-  {
-    id: 1,
-    title: "Voucher #1 - Giảm 10%",
-    discountDesc: "Giảm 10% giá trị đơn hàng (Tối đa 50.000 đ)",
-    minOrderText: "Đơn hàng tối thiểu từ 100.000 đ",
-    minOrder: 100
-  },
-  {
-    id: 2,
-    title: "Voucher #2 - Giảm 15.000 đ",
-    discountDesc: "Giảm trực tiếp 15.000 đ vào đơn hàng",
-    minOrderText: "Đơn hàng tối thiểu từ 50.000 đ",
-    minOrder: 50
-  }
-];
+import voucherService from "../../services/voucherService";
 
 export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
   const { t } = useTranslation();
   const { cart, setCart } = useCartContext();
   const { showToast } = useToast();
 
+  const [vouchers, setVouchers] = useState([]);
+  const [loadingVouchers, setLoadingVouchers] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const dropdownRef = useRef(null);
+
+  // Load real active vouchers from Database
+  useEffect(() => {
+    let active = true;
+    setLoadingVouchers(true);
+    voucherService
+      .getActiveVouchers()
+      .then((data) => {
+        if (active) {
+          const list = Array.isArray(data) ? data : (data?.data ?? []);
+          setVouchers(list.filter(v => v.isActive !== false && v.status !== "INACTIVE"));
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch vouchers from DB:", err);
+        if (active) setVouchers([]);
+      })
+      .finally(() => {
+        if (active) setLoadingVouchers(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -43,20 +54,53 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
     };
   }, []);
 
-  const handleSelectVoucher = async (voucherId) => {
+  const formatVoucherTitle = (voucher) => {
+    if (voucher.discountPercent) {
+      return `${voucher.code} - Giảm ${voucher.discountPercent}%`;
+    }
+    if (voucher.discountAmount) {
+      return `${voucher.code} - Giảm ${Number(voucher.discountAmount).toLocaleString("vi-VN")} đ`;
+    }
+    return voucher.code;
+  };
+
+  const formatVoucherDesc = (voucher) => {
+    if (voucher.discountPercent) {
+      const maxText = voucher.maxDiscount ? ` (Tối đa ${Number(voucher.maxDiscount).toLocaleString("vi-VN")} đ)` : "";
+      return `Giảm ${voucher.discountPercent}% giá trị đơn hàng${maxText}`;
+    }
+    if (voucher.discountAmount) {
+      return `Giảm trực tiếp ${Number(voucher.discountAmount).toLocaleString("vi-VN")} đ vào đơn hàng`;
+    }
+    return `Mã ưu đãi ${voucher.code}`;
+  };
+
+  const formatVoucherMinOrder = (voucher) => {
+    if (voucher.minOrderAmount && Number(voucher.minOrderAmount) > 0) {
+      return `Đơn hàng tối thiểu từ ${Number(voucher.minOrderAmount).toLocaleString("vi-VN")} đ`;
+    }
+    return "Không giới hạn đơn hàng tối thiểu";
+  };
+
+  const handleSelectVoucher = async (targetVoucher) => {
     if (isApplyingVoucher) return;
 
-    // Bấm lại mã đang chọn -> hủy chọn
+    const voucherId = targetVoucher ? (targetVoucher.voucherId ?? targetVoucher.id) : null;
     const targetVoucherId = formData.voucherId === voucherId ? null : voucherId;
+    const targetVoucherCode = targetVoucherId && targetVoucher ? targetVoucher.code : "";
 
     setIsApplyingVoucher(true);
     try {
       const data = await cartService.getCart(formData.shippingMethod, targetVoucherId);
       setCart(data);
-      setFormData(prev => ({ ...prev, voucherId: targetVoucherId }));
+      setFormData(prev => ({
+        ...prev,
+        voucherId: targetVoucherId,
+        voucherCode: targetVoucherCode
+      }));
 
       if (targetVoucherId) {
-        showToast(`Áp dụng Voucher ID: ${targetVoucherId} thành công!`, "success");
+        showToast(`Áp dụng Voucher ${targetVoucherCode || targetVoucherId} thành công!`, "success");
       } else {
         showToast("Đã hủy áp dụng mã giảm giá", "info");
       }
@@ -76,7 +120,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
 
   if (!cart) return null;
 
-  const selectedVoucher = AVAILABLE_VOUCHERS.find(v => v.id === formData.voucherId);
+  const selectedVoucher = vouchers.find(v => (v.voucherId ?? v.id) === formData.voucherId);
 
   return (
     <div className="checkout-sidebar">
@@ -96,10 +140,10 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
               {selectedVoucher ? (
                 <div>
                   <div className="fw-600 dark-black" style={{ fontSize: "14px" }}>
-                    Voucher ID: {selectedVoucher.id} - {selectedVoucher.title}
+                    {formatVoucherTitle(selectedVoucher)}
                   </div>
                   <span className="badge bg-success-subtle text-success" style={{ fontSize: "11px" }}>
-                    ✓ Đang áp dụng
+                    ✓ Đang áp dụng (ID: {selectedVoucher.voucherId ?? selectedVoucher.id})
                   </span>
                 </div>
               ) : formData.voucherId ? (
@@ -134,7 +178,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
             style={{ maxHeight: "320px", overflowY: "auto", position: "relative", zIndex: 10 }}
           >
             <div className="text-muted mb-2 fw-500" style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Danh sách mã voucher (chọn theo ID):
+              Danh sách mã voucher khả dụng:
             </div>
 
             {/* Option: Không sử dụng mã giảm giá */}
@@ -157,41 +201,55 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
               </label>
             </div>
 
-            {/* Danh sách các mã voucher lần lượt theo ID */}
-            {AVAILABLE_VOUCHERS.map((voucher) => {
-              const isSelected = formData.voucherId === voucher.id;
-              return (
-                <div
-                  key={voucher.id}
-                  className={`p-2 br-8 mb-2 d-flex align-items-start gap-2 border ${isSelected ? "border-danger bg-light" : "border-light"}`}
-                  style={{ cursor: "pointer", transition: "background-color 0.15s" }}
-                  onClick={() => handleSelectVoucher(voucher.id)}
-                >
-                  <input
-                    type="radio"
-                    id={`voucher-opt-${voucher.id}`}
-                    name="voucherOption"
-                    checked={isSelected}
-                    onChange={() => handleSelectVoucher(voucher.id)}
-                    style={{ marginTop: "3px", accentColor: "#e9613f", cursor: "pointer" }}
-                  />
-                  <label htmlFor={`voucher-opt-${voucher.id}`} className="m-0 w-100" style={{ cursor: "pointer" }}>
-                    <div className="d-flex align-items-center justify-content-between mb-1">
-                      <span className="fw-600 dark-black" style={{ fontSize: "14px" }}>{voucher.title}</span>
-                      <span className="badge bg-danger-subtle text-danger" style={{ fontSize: "11px" }}>
-                        ID: {voucher.id}
-                      </span>
-                    </div>
-                    <div className="color-primary fw-500" style={{ fontSize: "13px" }}>
-                      {voucher.discountDesc}
-                    </div>
-                    <div className="text-muted" style={{ fontSize: "12px" }}>
-                      <i className="fa-regular fa-clock me-1"></i>{voucher.minOrderText}
-                    </div>
-                  </label>
-                </div>
-              );
-            })}
+            {/* Danh sách các mã voucher từ database */}
+            {loadingVouchers ? (
+              <div className="text-center py-3 text-muted" style={{ fontSize: "13px" }}>
+                <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                Đang tải danh sách voucher từ database...
+              </div>
+            ) : vouchers.length === 0 ? (
+              <div className="text-center py-3 text-muted" style={{ fontSize: "13px" }}>
+                Hiện không có mã giảm giá nào khả dụng.
+              </div>
+            ) : (
+              vouchers.map((voucher) => {
+                const vId = voucher.voucherId ?? voucher.id;
+                const isSelected = formData.voucherId === vId;
+                return (
+                  <div
+                    key={vId}
+                    className={`p-2 br-8 mb-2 d-flex align-items-start gap-2 border ${isSelected ? "border-danger bg-light" : "border-light"}`}
+                    style={{ cursor: "pointer", transition: "background-color 0.15s" }}
+                    onClick={() => handleSelectVoucher(voucher)}
+                  >
+                    <input
+                      type="radio"
+                      id={`voucher-opt-${vId}`}
+                      name="voucherOption"
+                      checked={isSelected}
+                      onChange={() => handleSelectVoucher(voucher)}
+                      style={{ marginTop: "3px", accentColor: "#e9613f", cursor: "pointer" }}
+                    />
+                    <label htmlFor={`voucher-opt-${vId}`} className="m-0 w-100" style={{ cursor: "pointer" }}>
+                      <div className="d-flex align-items-center justify-content-between mb-1">
+                        <span className="fw-600 dark-black" style={{ fontSize: "14px" }}>
+                          {formatVoucherTitle(voucher)}
+                        </span>
+                        <span className="badge bg-danger-subtle text-danger" style={{ fontSize: "11px" }}>
+                          ID: {vId}
+                        </span>
+                      </div>
+                      <div className="color-primary fw-500" style={{ fontSize: "13px" }}>
+                        {formatVoucherDesc(voucher)}
+                      </div>
+                      <div className="text-muted" style={{ fontSize: "12px" }}>
+                        <i className="fa-regular fa-clock me-1"></i>{formatVoucherMinOrder(voucher)}
+                      </div>
+                    </label>
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
 
@@ -200,7 +258,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
           <div className="mt-2 d-flex align-items-center justify-content-between text-success" style={{ fontSize: "13px" }}>
             <span>
               <i className="fa-solid fa-circle-check me-1"></i>
-              Đã kích hoạt Voucher ID: <strong>{formData.voucherId}</strong>
+              Đã kích hoạt Voucher: <strong>{selectedVoucher ? selectedVoucher.code : `ID #${formData.voucherId}`}</strong>
             </span>
             <button
               type="button"
