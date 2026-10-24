@@ -2,7 +2,7 @@
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / input self-closing, accordion states, mobile filter drawer state, i18n support
 // API integration: replaced mock data with real /api/products, /api/categories/public, /api/brands/public calls
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import TitleBanner from "../../components/shared/TitleBanner";
 import PriceSlider from "../../components/ui/PriceSlider";
@@ -30,8 +30,15 @@ const formatCurrency = (amount) => {
 };
 
 export const ShopGridSidebar = () => {
-  const { openCart, openQuickView, openCompare, addToCart, addCompareProduct } = useCartContext();
-  const [wishlist, setWishlist] = useState([]);
+  const {
+    openCart,
+    openQuickView,
+    openCompare,
+    addToCart,
+    addCompareProduct,
+    toggleWishlist,
+    isInWishlist,
+  } = useCartContext();
   const { t } = useTranslation();
 
   // ── Sidebar accordion state ──────────────────────────────────────────────
@@ -49,7 +56,15 @@ export const ShopGridSidebar = () => {
   };
 
   // ── Filter / Pagination state ────────────────────────────────────────────
-  const [keyword, setKeyword] = useState("");
+  const [searchParams] = useSearchParams();
+  const urlKeyword = searchParams.get("keyword") || searchParams.get("search") || "";
+  const [keyword, setKeyword] = useState(urlKeyword);
+
+  useEffect(() => {
+    const q = searchParams.get("keyword") || searchParams.get("search") || "";
+    setKeyword(q);
+    setCurrentPage(0);
+  }, [searchParams]);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedBrandId, setSelectedBrandId] = useState(null);
   const [stockFilter, setStockFilter] = useState(null);

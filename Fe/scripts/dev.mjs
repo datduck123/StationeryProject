@@ -58,19 +58,33 @@ function canConnect(port, host) {
   });
 }
 
-for (const port of [fePort, bePort]) {
-  const listening = await Promise.all([
-    canConnect(port, '127.0.0.1'),
-    canConnect(port, '::1'),
-  ]);
-  if (listening.some(Boolean)) {
-    console.error(`[dev] Port ${port} is already in use. Set FE_PORT/BE_PORT to unused ports or stop the project's existing process before running npm run dev again.`);
-    process.exit(1);
-  }
+const isFeListening = (await Promise.all([
+  canConnect(fePort, '127.0.0.1'),
+  canConnect(fePort, '::1'),
+])).some(Boolean);
+
+const isBeListening = (await Promise.all([
+  canConnect(bePort, '127.0.0.1'),
+  canConnect(bePort, '::1'),
+])).some(Boolean);
+
+if (isFeListening && isBeListening) {
+  console.log(`[dev] Both Backend (port ${bePort}) and Frontend (port ${fePort}) are already running.`);
+  console.log(`[dev] You can access the app at: http://localhost:${fePort}`);
+  process.exit(0);
 }
 
-const processes = [
-  {
+if (isFeListening) {
+  console.error(`[dev] Port ${fePort} (Frontend) is already in use. Set FE_PORT to an unused port or stop that process before running npm run dev.`);
+  process.exit(1);
+}
+
+const processes = [];
+
+if (isBeListening) {
+  console.log(`[dev] Backend is already running on port ${bePort}. Skipping BE launch and starting Frontend on port ${fePort}...`);
+} else {
+  processes.push({
     name: 'BE',
     command: isWindows ? (process.env.ComSpec || 'cmd.exe') : './mvnw',
     // Use a separate Maven output directory so another Java process cannot
@@ -79,14 +93,15 @@ const processes = [
       ? ['/d', '/s', '/c', `mvnw.cmd -Pdev-isolated "-Dspring-boot.run.arguments=--server.port=${bePort}" spring-boot:run`]
       : ['-Pdev-isolated', `-Dspring-boot.run.arguments=--server.port=${bePort}`, 'spring-boot:run'],
     cwd: beDir,
-  },
-  {
-    name: 'FE',
-    command: process.execPath,
-    args: [path.join(feDir, 'node_modules', 'vite', 'bin', 'vite.js'), '--port', String(fePort), '--strictPort'],
-    cwd: feDir,
-  },
-];
+  });
+}
+
+processes.push({
+  name: 'FE',
+  command: process.execPath,
+  args: [path.join(feDir, 'node_modules', 'vite', 'bin', 'vite.js'), '--port', String(fePort), '--strictPort'],
+  cwd: feDir,
+});
 
 const children = processes.map(({ name, command, args, cwd }) => {
   const child = spawn(command, args, {

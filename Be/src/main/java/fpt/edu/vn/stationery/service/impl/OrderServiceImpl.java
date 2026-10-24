@@ -118,7 +118,7 @@ public class OrderServiceImpl implements OrderService {
             if (!voucher.isUsableAt(LocalDateTime.now(), subtotal)) {
                 throw new BadRequestException("Voucher is inactive, expired, depleted, or requires a higher subtotal");
             }
-            discount = voucher.getDiscountAmount().min(subtotal);
+            discount = voucher.calculateDiscount(subtotal);
         }
         String shippingMethod = request.getShippingMethod() == null ? "STANDARD" : request.getShippingMethod();
         String paymentMethod = request.getPaymentMethod() == null ? "COD" : request.getPaymentMethod();

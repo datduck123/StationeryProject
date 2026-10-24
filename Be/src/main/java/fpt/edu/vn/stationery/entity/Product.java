@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Product {
 
     @Id
@@ -41,7 +40,6 @@ public class Product {
     private BigDecimal weightKg;
 
     @Column(name = "stock_quantity", nullable = false)
-    @Builder.Default
     private Integer stockQuantity = 0;
 
     @Column(name = "description", columnDefinition = "NVARCHAR(1000)")
@@ -52,7 +50,6 @@ public class Product {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
-    @Builder.Default
     private ProductStatus status = ProductStatus.ACTIVE;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -60,6 +57,26 @@ public class Product {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Builder
+    public Product(Long productId, Category category, Brand brand, String sku, String name,
+                   BigDecimal price, BigDecimal weightKg, Integer stockQuantity, Integer stock,
+                   String description, String imageUrl, ProductStatus status,
+                   LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this.productId = productId;
+        this.category = category;
+        this.brand = brand;
+        this.sku = sku;
+        this.name = name;
+        this.price = price;
+        this.weightKg = weightKg;
+        this.stockQuantity = stock != null ? stock : (stockQuantity != null ? stockQuantity : 0);
+        this.description = description;
+        this.imageUrl = imageUrl;
+        this.status = status != null ? status : ProductStatus.ACTIVE;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+    }
 
     @PrePersist
     protected void onCreate() {
@@ -74,5 +91,13 @@ public class Product {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    public Integer getStock() {
+        return stockQuantity;
+    }
+
+    public void setStock(Integer stock) {
+        this.stockQuantity = stock;
     }
 }

@@ -14,6 +14,7 @@ import jakarta.persistence.LockModeType;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -46,4 +47,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Product p where p.productId = :productId")
     Optional<Product> findByIdForUpdate(@Param("productId") Long productId);
+
+    @EntityGraph(attributePaths = {"category", "brand"})
+    @Query("SELECT p FROM Product p WHERE p.stockQuantity <= :maxStock ORDER BY p.stockQuantity ASC")
+    List<Product> findByStockLessThanEqualOrderByStockAsc(@Param("maxStock") Integer maxStock);
 }

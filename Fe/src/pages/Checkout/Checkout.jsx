@@ -73,8 +73,7 @@ export const Checkout = () => {
       const response = await checkoutService.validateCheckout(formData);
       showToast(response.message || "Khởi tạo đơn hàng thành công!", "success");
       
-      // In a real flow, we would redirect to a success page or payment gateway (like VNPAY)
-      // Redirect to Order History page as requested
+      // Redirect to Order History page
       await clearCart(false);
       setTimeout(() => navigate("/account/orders"), 2000);
       
@@ -91,9 +90,9 @@ export const Checkout = () => {
     }
   };
 
-  useEffect(() => {
-    voucherService.getActiveVouchers().then(setVouchers).catch(() => setVouchers([]));
-  }, []);
+  return (
+    <>
+      <TitleBanner title={t("checkout.title")} />
 
       {/* Customer Container Start */}
       {!user && (
@@ -159,22 +158,10 @@ export const Checkout = () => {
             </div>
           </form>
         </div>
-        <aside className="commerce-panel commerce-summary">
-          <h4 className="mb-3">{t("commerce.yourOrder")}</h4>
-          {items.map((item) => <div className="commerce-order-item" key={item.cartItemId}><div><strong>{item.productName}</strong><p>{item.quantity} × {money(item.unitPrice)}</p></div><strong>{money(item.subtotal)}</strong></div>)}
-          <label htmlFor="checkout-voucher" className="fw-bold mb-2">{t("cart.couponCode")}</label>
-          <div className="d-flex gap-2 mb-2"><input id="checkout-voucher" className="form-control" list="checkout-vouchers" maxLength={50} value={voucherInput} disabled={submitting} onChange={(event) => setVoucherInput(event.target.value.toUpperCase())} /><button type="button" className="btn btn-outline-primary" disabled={submitting || loading} onClick={() => { const code = voucherInput.trim().toUpperCase(); if (code === voucherCode) setQuoteVersion((version) => version + 1); else setVoucherCode(code); }}>{t("cart.applyCoupon")}</button></div>
-          <datalist id="checkout-vouchers">{vouchers.map((voucher) => <option key={voucher.voucherId ?? voucher.code} value={voucher.code}>{money(voucher.discountAmount)}</option>)}</datalist>
-          {voucherCode && <button type="button" className="btn btn-link btn-sm p-0 mb-3" onClick={() => { setVoucherCode(""); setVoucherInput(""); }}>{t("commerce.removeVoucher", { code: voucherCode })}</button>}
-          <div className="commerce-total-row"><span>{t("cart.subtotal")}</span><span>{money(quote?.subtotal)}</span></div>
-          <div className="commerce-total-row"><span>{t("orders.shippingFee")}</span><span>{money(quote?.shippingFee)}</span></div>
-          <div className="commerce-total-row"><span>{t("orders.discount")}</span><span>−{money(quote?.discountAmount)}</span></div>
-          <div className="commerce-total-row commerce-grand-total"><strong>{t("orders.total")}</strong><strong>{money(quote?.totalCost)}</strong></div>
-          {(quote?.notifications || []).map((message, index) => <p key={index} className="text-warning small">{message}</p>)}
-          <button type="submit" className="btn btn-primary w-100" disabled={submitting || loading || !items.length || Boolean(error) || items.some((item) => item.available === false)}>{submitting ? t("commerce.placingOrder") : t("commerce.placeOrder")}</button>
-        </aside>
-      </form>}
-    </div></section>
-  </>;
+      </section>
+      {/* Billing Details End */}
+    </>
+  );
 };
+
 export default Checkout;
