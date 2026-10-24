@@ -1,8 +1,8 @@
 // Migrated from: product-detail.html, lines 205-1705
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / input self-closing, gallery thumbnail active state, tab switcher state, i18n support
 // API integration: useParams to read product ID, fetch real data from /api/products/:id
-import { useState, useEffect } from "react";
-import { Link, useSearchParams, useParams } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
 import { getProductById, getProductImage, getProducts } from "../../services/productService";
@@ -22,7 +22,9 @@ const ReviewStars = ({ rating, label }) => {
 export const ProductDetail = () => {
   const [searchParams] = useSearchParams();
   const { id } = useParams();
-  const productId = id ? Number(id) : (searchParams.get("id") ? Number(searchParams.get("id")) : 1);
+  const navigate = useNavigate();
+  const rawId = id || searchParams.get("id");
+  const productId = rawId ? Number(rawId) : 1;
   const { openCart, openQuickView, openCompare, addToCart } = useCartContext();
   const { t } = useTranslation();
 
@@ -32,7 +34,7 @@ export const ProductDetail = () => {
 
   // API state
   const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(!!id);
+  const [loading, setLoading] = useState(!!productId);
   const [error, setError] = useState(null);
   const [reviewCount, setReviewCount] = useState(0);
   const [averageRating, setAverageRating] = useState(0);
@@ -42,15 +44,15 @@ export const ProductDetail = () => {
   }, []);
 
   useEffect(() => {
-    if (!id) return;
+    if (!productId) return;
     setQuantity(1);
     setLoading(true);
     setError(null);
-    getProductById(id)
-      .then((res) => setProduct(res.data))
+    getProductById(productId)
+      .then((res) => setProduct(res.data?.data ?? res.data))
       .catch(() => setError("Không thể tải thông tin sản phẩm."))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [productId]);
 
   const formatCurrency = (amount) => {
     if (amount == null) return "";
@@ -82,10 +84,10 @@ export const ProductDetail = () => {
     getProducts({ size: 5 }).then((response) => {
       const payload = response.data?.data ?? response.data;
       const list = Array.isArray(payload) ? payload : payload?.content ?? [];
-      if (active) setRelatedProducts(list.filter((item) => String(item.productId ?? item.id) !== String(id)).slice(0, 4).map((item) => ({ ...item, id: item.productId ?? item.id, title: item.name, image: getProductImage(item) })));
+      if (active) setRelatedProducts(list.filter((item) => String(item.productId ?? item.id) !== String(productId)).slice(0, 4).map((item) => ({ ...item, id: item.productId ?? item.id, title: item.name, image: getProductImage(item) })));
     }).catch(() => { if (active) setRelatedProducts([]); });
     return () => { active = false; };
-  }, [id]);
+  }, [productId]);
 
   if (loading) {
     return (
@@ -249,7 +251,7 @@ export const ProductDetail = () => {
                 </div>
                 <p className="medium-black fw-500 mb-24">
                   {t("common.sku")}:{" "}
-                  <span className="dark-gray fw-400">AK-251-KT</span>
+                  <span className="dark-gray fw-400">{product?.sku || `SKU-${productId}`}</span>
                 </p>
                 <div className="row row-gap-2 mb-24">
                   <div className="col-sm-6">
@@ -391,7 +393,7 @@ export const ProductDetail = () => {
               {activeTab === "review" && (
                 <div className="tab-pane fade show active p-24 bg-white br-12">
                   <ProductReviewsList
-                    productId={id}
+                    productId={productId}
                     productName={product?.name}
                     onRatingUpdated={handleRatingUpdated}
                   />
@@ -421,7 +423,7 @@ export const ProductDetail = () => {
                     <span className="sale-label subtitle fw-400 white">
                       {prod.badge === "Sale" ? t("common.sale") : prod.badge}
                     </span>
-                    <Link to="/product-detail.html" className="image">
+                    <Link to={`/product/${prod.id}`} className="image">
                       <img
                         src={prod.image}
                         className="product-image"

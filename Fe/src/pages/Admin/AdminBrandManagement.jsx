@@ -587,38 +587,46 @@ export const AdminBrandManagement = () => {
         </div>
       </div>
 
-      {/* Main Table Card */}
-      <div className="bg-white rounded-3 border shadow-sm p-4">
-        {/* Filter Toolbar */}
-        <div className="row g-3 mb-3">
-          <div className="col-md-4 col-lg-4">
-            <div className="position-relative">
-              <input
-                type="text"
-                className="form-control ps-4"
-                style={{ borderRadius: "20px", fontSize: "13px" }}
-                placeholder="Search brand name, country or info..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <i
-                className="fa-solid fa-magnifying-glass position-absolute text-muted"
-                style={{
-                  left: "14px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  fontSize: "12px",
+      {/* TOOLBAR CARD (Clean horizontal layout, uniform search, filters, and sort synchronized with Product & Category Management) */}
+      <div className="admin-card mb-4">
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          {/* Live Auto Search */}
+          <div className="admin-search-box" style={{ flex: "1 1 250px", maxWidth: "380px" }}>
+            <i className="fa-solid fa-magnifying-glass text-muted fs-13"></i>
+            <input
+              type="text"
+              placeholder="Search brand, country..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(0);
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setPage(0);
                 }}
-              ></i>
-            </div>
+                title="Clear search"
+              >
+                <i className="fa-solid fa-xmark fs-13"></i>
+              </button>
+            )}
           </div>
 
-          <div className="col-md-3 col-lg-3">
+          {/* Filter Controls Group */}
+          <div className="d-flex flex-wrap align-items-center gap-2 ms-auto">
+            {/* Country Filter */}
             <select
-              className="form-select"
-              style={{ borderRadius: "20px", fontSize: "13px" }}
+              className="admin-select-sm"
+              style={{ minWidth: "160px" }}
               value={countryFilter}
-              onChange={(e) => setCountryFilter(e.target.value)}
+              onChange={(e) => {
+                setCountryFilter(e.target.value);
+                setPage(0);
+              }}
             >
               <option value="ALL">All Countries ({countries.length})</option>
               {countries.map((c) => (
@@ -627,27 +635,31 @@ export const AdminBrandManagement = () => {
                 </option>
               ))}
             </select>
-          </div>
 
-          <div className="col-md-3 col-lg-2">
+            {/* Status Filter */}
             <select
-              className="form-select"
-              style={{ borderRadius: "20px", fontSize: "13px" }}
+              className="admin-select-sm"
+              style={{ minWidth: "135px" }}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
             >
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active Only</option>
               <option value="INACTIVE">Inactive Only</option>
             </select>
-          </div>
 
-          <div className="col-md-2 col-lg-3">
+            {/* Sort dropdown */}
             <select
-              className="form-select"
-              style={{ borderRadius: "20px", fontSize: "13px" }}
+              className="admin-select-sm"
+              style={{ minWidth: "165px" }}
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setPage(0);
+              }}
             >
               <option value="name-asc">Sort: Name (A-Z)</option>
               <option value="name-desc">Sort: Name (Z-A)</option>
@@ -656,11 +668,14 @@ export const AdminBrandManagement = () => {
             </select>
           </div>
         </div>
+      </div>
 
+      {/* Main Table Card */}
+      <div className="admin-card">
         {/* Table */}
         <div className="table-responsive">
-          <table className="table table-hover align-middle mb-0">
-            <thead className="table-light">
+          <table className="admin-table align-middle mb-0">
+            <thead>
               <tr className="fs-12 text-uppercase text-muted">
                 <th>Brand Name</th>
                 <th>Country</th>

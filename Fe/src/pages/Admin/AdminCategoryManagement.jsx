@@ -501,13 +501,13 @@ export const AdminCategoryManagement = () => {
 
       {/* TOOLBAR CARD (Clean horizontal layout, uniform search, filters, and sort like User Management) */}
       <div className="admin-card mb-4">
-        <div className="d-flex flex-wrap align-items-center gap-3">
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
           {/* Live Auto Search */}
-          <div className="admin-search-box">
+          <div className="admin-search-box" style={{ flex: "1 1 260px", maxWidth: "380px" }}>
             <i className="fa-solid fa-magnifying-glass text-muted fs-13"></i>
             <input
               type="text"
-              placeholder="Search by category name, slug or description..."
+              placeholder="Search category name, slug..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -525,36 +525,39 @@ export const AdminCategoryManagement = () => {
             )}
           </div>
 
-          {/* Status Filter */}
-          <select
-            className="admin-select-sm"
-            style={{ width: "140px" }}
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-          </select>
+          {/* Filter Controls Group */}
+          <div className="d-flex flex-wrap align-items-center gap-2 ms-auto">
+            {/* Status Filter */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "140px" }}
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
 
-          {/* Sort dropdown */}
-          <select
-            className="admin-select-sm"
-            style={{ width: "160px" }}
-            value={sortBy}
-            onChange={(e) => {
-              setSortBy(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="name-asc">Name (A-Z)</option>
-            <option value="name-desc">Name (Z-A)</option>
-            <option value="id-desc">Newest First</option>
-            <option value="id-asc">Oldest First</option>
-          </select>
+            {/* Sort dropdown */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "165px" }}
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="name-asc">Name (A-Z)</option>
+              <option value="name-desc">Name (Z-A)</option>
+              <option value="id-desc">Newest First</option>
+              <option value="id-asc">Oldest First</option>
+            </select>
+          </div>
         </div>
       </div>
 
