@@ -35,7 +35,7 @@ export const ShippingAddressForm = ({ formData, setFormData, errors }) => {
               type="text"
               name="fullName"
               className={`form-control form-control-2 ${errors.fullName ? "is-invalid" : ""}`}
-              placeholder="Họ và tên"
+              placeholder={t("checkout.fullName", "Full Name")}
               value={formData.fullName}
               onChange={handleChange}
             />
@@ -50,7 +50,7 @@ export const ShippingAddressForm = ({ formData, setFormData, errors }) => {
               type="email"
               name="email"
               className="form-control form-control-2"
-              placeholder="Email (không bắt buộc)"
+              placeholder={t("checkout.emailOptional", "Email (Optional)")}
               value={formData.email}
               onChange={handleChange}
             />
@@ -62,7 +62,7 @@ export const ShippingAddressForm = ({ formData, setFormData, errors }) => {
               type="tel"
               name="phoneNumber"
               className={`form-control form-control-2 ${errors.phoneNumber ? "is-invalid" : ""}`}
-              placeholder="Số điện thoại"
+              placeholder={t("checkout.phoneNumber", "Phone Number")}
               value={formData.phoneNumber}
               onChange={handleChange}
             />
@@ -77,7 +77,7 @@ export const ShippingAddressForm = ({ formData, setFormData, errors }) => {
               type="text"
               name="shippingAddress"
               className={`form-control form-control-2 ${errors.shippingAddress ? "is-invalid" : ""}`}
-              placeholder="Địa chỉ nhận hàng (Số nhà, Đường, Phường, Quận, Thành phố)"
+              placeholder={t("checkout.shippingAddressPlaceholder", "Delivery address (House no, Street, Ward, District, City)")}
               value={formData.shippingAddress}
               onChange={handleChange}
             />
@@ -91,7 +91,7 @@ export const ShippingAddressForm = ({ formData, setFormData, errors }) => {
             <textarea
               name="orderNotes"
               className="form-control form-control-2"
-              placeholder="Ghi chú đơn hàng (VD: Giao giờ hành chính)"
+              placeholder={t("checkout.orderNotesPlaceholder", "Order notes (e.g. deliver during office hours)")}
               rows={4}
               value={formData.orderNotes}
               onChange={handleChange}

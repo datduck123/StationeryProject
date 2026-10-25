@@ -30,7 +30,7 @@ export const Cart = () => {
             <div className="alert alert-warning mb-24 d-flex flex-column gap-2" role="alert">
               <div className="d-flex align-items-center gap-2 fw-600">
                 <i className="fa-solid fa-triangle-exclamation text-warning fs-5"></i>
-                <span>Cập nhật tồn kho sản phẩm:</span>
+                <span>{t("cart.stockUpdateAlert", "Stock quantity update:")}</span>
               </div>
               <ul className="mb-0 ps-4">
                 {cart.notifications.map((msg, idx) => (
@@ -45,9 +45,9 @@ export const Cart = () => {
               <div className="mb-24">
                 <i className="fa-solid fa-cart-shopping text-muted" style={{ fontSize: "64px" }}></i>
               </div>
-              <h4 className="fw-700 medium-black mb-12">Giỏ hàng của bạn đang trống</h4>
+              <h4 className="fw-700 medium-black mb-12">{t("cart.emptyCart", "Your cart is empty")}</h4>
               <p className="text-muted mb-0">
-                Bạn chưa có sản phẩm nào trong giỏ hàng. Hãy khám phá và thêm các món đồ văn phòng phẩm ưng ý nhé!
+                {t("cart.emptyCartDetail", "You have no items in your cart. Start exploring and add some great stationery products!")}
               </p>
             </div>
           ) : (
@@ -163,8 +163,8 @@ export const Cart = () => {
                 <div className="table-bottom-row bg-white mt-24 d-flex justify-content-between align-items-center flex-wrap gap-12">
                   <div className="d-flex gap-12 align-items-center">
                     <Link to="/shop" className="cus-btn">
-                      <span className="text-btn">{t("common.goToShop") || "Tiếp tục mua hàng"}</span>
-                      <span>{t("common.goToShop") || "Tiếp tục mua hàng"}</span>
+                      <span className="text-btn">{t("common.goToShop", "Continue Shopping")}</span>
+                      <span>{t("common.goToShop", "Continue Shopping")}</span>
                     </Link>
                     <button
                       type="button"
@@ -173,7 +173,7 @@ export const Cart = () => {
                       disabled={isLoading}
                     >
                       <i className="fa-regular fa-trash-can me-2"></i>
-                      Xóa toàn bộ giỏ
+                      {t("cart.clearCart", "Clear entire cart")}
                     </button>
                   </div>
                 </div>
@@ -184,13 +184,13 @@ export const Cart = () => {
                 <div className="checkout-box bg-semi-white p-24 br-20 border">
                   <div className="checkout-title mb-20 border-bottom pb-12">
                     <h5 className="fw-600 font-primary medium-black m-0">
-                      {t("cart.cartTotals") || "Tóm tắt đơn hàng"}
+                      {t("cart.cartTotals", "Cart Totals")}
                     </h5>
                   </div>
                   <div className="bottom-box">
                     <div className="d-flex justify-content-between align-items-center mb-16">
                       <span className="font-sec fw-500 medium-black">
-                        {t("cart.subtotal") || "Tạm tính"}
+                        {t("cart.subtotal", "Subtotal")}
                       </span>
                       <span className="fw-600 medium-black">
                         {cartSubtotal.toLocaleString("vi-VN")} đ
@@ -199,11 +199,11 @@ export const Cart = () => {
 
                     <div className="d-flex justify-content-between align-items-center mb-16">
                       <span className="font-sec fw-500 medium-black">
-                        {t("cart.delivery") || "Phí vận chuyển"}
+                        {t("cart.delivery", "Shipping Fee")}
                       </span>
                       <span className="fw-600 text-success">
                         {cartShippingFee === 0
-                          ? "Miễn phí"
+                          ? t("cart.freeShipping", "Free")
                           : `${cartShippingFee.toLocaleString("vi-VN")} đ`}
                       </span>
                     </div>
@@ -211,7 +211,7 @@ export const Cart = () => {
                     {cartDiscount > 0 && (
                       <div className="d-flex justify-content-between align-items-center mb-16">
                         <span className="font-sec fw-500 medium-black">
-                          {t("cart.discount") || "Giảm giá Voucher"}
+                          {t("cart.discount", "Discount")}
                         </span>
                         <span className="fw-600 text-danger">
                           -{cartDiscount.toLocaleString("vi-VN")} đ
@@ -223,7 +223,7 @@ export const Cart = () => {
 
                     <div className="d-flex justify-content-between align-items-center mb-24">
                       <h5 className="font-sec fw-700 medium-black m-0">
-                        {t("common.total") || "Tổng cộng"}
+                        {t("common.total", "Total")}
                       </h5>
                       <h4 className="font-sec fw-700 color-primary m-0">
                         {cartTotal.toLocaleString("vi-VN")} đ
@@ -232,9 +232,9 @@ export const Cart = () => {
 
                     <Link to="/checkout" className="cus-btn w-100 text-center py-3">
                       <span className="text-btn">
-                        {t("cart.proceedToCheckout") || "Tiến hành thanh toán"}
+                        {t("cart.proceedToCheckout", "Proceed to Checkout")}
                       </span>
-                      <span>{t("cart.proceedToCheckout") || "Tiến hành thanh toán"}</span>
+                      <span>{t("cart.proceedToCheckout", "Proceed to Checkout")}</span>
                     </Link>
                   </div>
                 </div>

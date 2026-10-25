@@ -21,12 +21,12 @@ export const getProductMetrics = (product, fallbackRating, fallbackReviewCount) 
 /**
  * Format sold count in Vietnamese / Lazada standard (e.g. 0, 15, 1.2k, 15k)
  */
-export const formatSoldCount = (count) => {
+export const formatSoldCount = (count, language = "vi") => {
   const num = Number(count) || 0;
   if (num >= 1000) {
     return `${(num / 1000).toFixed(1).replace(".0", "")}k`;
   }
-  return num.toLocaleString("vi-VN");
+  return num.toLocaleString(String(language).startsWith("en") ? "en-US" : "vi-VN");
 };
 
 /**
@@ -44,9 +44,10 @@ export const ProductRatingSold = ({
   className = "",
   showBrand = true,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { rating, reviewCount, soldCount } = getProductMetrics(product, propRating, propReviewCount);
   const roundedStars = reviewCount > 0 ? Math.min(5, Math.max(1, Math.round(rating))) : 0;
+  const formattedSold = formatSoldCount(soldCount, i18n.language);
 
   if (variant === "detail") {
     return (
@@ -61,7 +62,7 @@ export const ProductRatingSold = ({
               <div
                 className="d-flex"
                 style={{ color: "#ffb800", fontSize: "15px", letterSpacing: "1px" }}
-                aria-label={`${rating.toFixed(1)} / 5 sao`}
+                aria-label={`${rating.toFixed(1)} / 5 ${t("reviews.stars", "sao")}`}
               >
                 {"★".repeat(roundedStars)}
                 <span style={{ color: "#e2e8f0" }}>{"★".repeat(5 - roundedStars)}</span>
@@ -70,7 +71,7 @@ export const ProductRatingSold = ({
                 {rating.toFixed(1)}
               </span>
               <span className="text-muted">
-                ({reviewCount} {t("reviews.count", "đánh giá")})
+                ({reviewCount} {t("reviews.count", "reviews")})
               </span>
             </>
           ) : (
@@ -81,7 +82,7 @@ export const ProductRatingSold = ({
               >
                 {"★".repeat(5)}
               </div>
-              <span className="text-muted">Chưa có đánh giá</span>
+              <span className="text-muted">{t("reviews.noReviews", "No reviews yet")}</span>
             </>
           )}
         </div>
@@ -90,9 +91,9 @@ export const ProductRatingSold = ({
 
         {/* Sold Count */}
         <div className="d-flex align-items-center gap-6">
-          <span className="dark-gray fw-500">Đã bán:</span>
-          <span className="fw-700 text-dark" style={{ fontSize: "15px" }}>
-            {formatSoldCount(soldCount)}
+          <span className="dark-gray fw-500">{t("reviews.soldCountLabel", "Sold:")}</span>
+          <span className="fw-700 text-dark ms-1" style={{ fontSize: "15px" }}>
+            {formattedSold}
           </span>
         </div>
 
@@ -101,8 +102,8 @@ export const ProductRatingSold = ({
           <>
             <span style={{ color: "#cbd5e1" }}>|</span>
             <div className="d-flex align-items-center gap-6">
-              <span className="dark-gray">Thương hiệu:</span>
-              <span className="fw-600 color-primary">{product.brand.name}</span>
+              <span className="dark-gray">{t("common.brandLabel", "Brand:")}</span>
+              <span className="fw-600 color-primary ms-1">{product.brand.name}</span>
             </div>
           </>
         )}
@@ -134,14 +135,16 @@ export const ProductRatingSold = ({
               <div className="d-flex" style={{ color: "#e2e8f0", fontSize: "14px" }}>
                 {"★".repeat(5)}
               </div>
-              <span className="text-muted" style={{ fontSize: "12px" }}>Chưa có đánh giá</span>
+              <span className="text-muted" style={{ fontSize: "12px" }}>
+                {t("reviews.noReviews", "No reviews yet")}
+              </span>
             </>
           )}
         </div>
         <span style={{ color: "#cbd5e1" }}>·</span>
         <div className="d-flex align-items-center gap-4">
-          <span className="text-muted">Đã bán</span>
-          <span className="fw-700 text-dark">{formatSoldCount(soldCount)}</span>
+          <span className="text-muted">{t("reviews.sold", "Sold")}</span>
+          <span className="fw-700 text-dark">{formattedSold}</span>
         </div>
       </div>
     );
@@ -163,11 +166,13 @@ export const ProductRatingSold = ({
         </>
       ) : (
         <span className="text-muted" style={{ fontSize: "11px" }}>
-          Chưa có đánh giá
+          {t("reviews.noReviews", "No reviews yet")}
         </span>
       )}
       <span style={{ color: "#cbd5e1" }}>·</span>
-      <span className="dark-gray fw-500">Đã bán {formatSoldCount(soldCount)}</span>
+      <span className="dark-gray fw-500">
+        {t("reviews.soldCount", { count: formattedSold, defaultValue: `${formattedSold} sold` })}
+      </span>
     </div>
   );
 };

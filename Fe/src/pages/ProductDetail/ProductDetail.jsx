@@ -8,6 +8,7 @@ import { useCartContext } from "../../providers/CartContext";
 import { getProductById, getProductImage, getProducts } from "../../services/productService";
 import ProductReviewsList from "../../components/reviews/ProductReviewsList";
 import ProductRatingSold from "../../components/shared/ProductRatingSold";
+import { formatOrderMoney } from "../../utils/orderFormatters";
 import "../../styles/reviews.css";
 
 const ReviewStars = ({ rating, label }) => {
@@ -26,8 +27,8 @@ export const ProductDetail = () => {
   const navigate = useNavigate();
   const rawId = id || searchParams.get("id");
   const productId = rawId ? Number(rawId) : 1;
-  const { openCart, openQuickView, openCompare, addToCart } = useCartContext();
-  const { t } = useTranslation();
+  const { openCart, openQuickView, openCompare, addToCart, isInWishlist, toggleWishlist } = useCartContext();
+  const { t, i18n } = useTranslation();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("review");
@@ -51,7 +52,7 @@ export const ProductDetail = () => {
     setError(null);
     getProductById(productId)
       .then((res) => setProduct(res.data?.data ?? res.data))
-      .catch(() => setError("Không thể tải thông tin sản phẩm."))
+      .catch(() => setError(t("commerce.productLoadError", "Could not load products.")))
       .finally(() => setLoading(false));
   }, [productId]);
 
@@ -98,9 +99,9 @@ export const ProductDetail = () => {
           role="status"
           style={{ color: "var(--color-primary, #e57c32)", width: "3rem", height: "3rem" }}
         >
-          <span className="visually-hidden">Đang tải...</span>
+          <span className="visually-hidden">{t("common.loading", "Loading...")}</span>
         </div>
-        <p className="mt-16 dark-gray">Đang tải sản phẩm...</p>
+        <p className="mt-16 dark-gray">{t("common.loading", "Loading...")}</p>
       </div>
     );
   }
@@ -125,7 +126,7 @@ export const ProductDetail = () => {
             boxShadow: "0 4px 12px rgba(229, 124, 50, 0.25)",
           }}
         >
-          Quay lại cửa hàng
+          {t("common.goToShop", "Go to Shop")}
         </Link>
       </div>
     );
@@ -187,12 +188,14 @@ export const ProductDetail = () => {
                 />
                 <div className="d-flex align-items-center gap-16 mb-24">
                   <h4 className="color-primary fw-700">
-                    {product ? formatCurrency(product.price) : "$59.00"}
+                    {product ? formatOrderMoney(product.price, i18n.language) : "$59.00"}
                   </h4>
                 </div>
                 {product?.stockQuantity != null && (
                   <p className="fw-500 mb-16">
-                    Còn lại: <span className="color-primary fw-700">{product.stockQuantity}</span> sản phẩm trong kho!
+                    {t("productDetail.remainingStock", "Remaining:")}{" "}
+                    <span className="color-primary fw-700">{product.stockQuantity}</span>{" "}
+                    {t("productDetail.itemsInStock", "items in stock!")}
                   </p>
                 )}
                 <p className="fw-500 medium-black mb-8">
@@ -370,7 +373,7 @@ export const ProductDetail = () => {
                     className="mb-0 dark-gray"
                     style={{ whiteSpace: "pre-line", lineHeight: "1.8", fontSize: "15px" }}
                   >
-                    {product?.description || "Chưa có mô tả chi tiết cho sản phẩm này."}
+                    {product?.description || t("productDetail.noDescription", "No detailed description available for this product.")}
                   </p>
                 </div>
               )}
@@ -379,29 +382,29 @@ export const ProductDetail = () => {
                   <table className="table table-bordered mb-0">
                     <tbody>
                       <tr>
-                        <th style={{ width: "200px" }}>Mã sản phẩm (SKU)</th>
+                        <th style={{ width: "200px" }}>{t("productDetail.skuCode", "SKU Code")}</th>
                         <td>{product?.sku || `SKU-${productId}`}</td>
                       </tr>
                       {product?.brand?.name && (
                         <tr>
-                          <th>Thương hiệu</th>
+                          <th>{t("common.brand", "Brand")}</th>
                           <td>{product.brand.name}</td>
                         </tr>
                       )}
                       {product?.category?.name && (
                         <tr>
-                          <th>Danh mục</th>
+                          <th>{t("common.categories", "Categories")}</th>
                           <td>{product.category.name}</td>
                         </tr>
                       )}
                       <tr>
-                        <th>Trọng lượng</th>
+                        <th>{t("productDetail.weight", "Weight")}</th>
                         <td>{product?.weightKg ?? product?.weight ?? "0.1"} kg</td>
                       </tr>
                       {product?.stockQuantity != null && (
                         <tr>
-                          <th>Tình trạng kho</th>
-                          <td>{product.stockQuantity > 0 ? `Còn hàng (${product.stockQuantity})` : "Hết hàng"}</td>
+                          <th>{t("productDetail.stockStatus", "Stock Status")}</th>
+                          <td>{product.stockQuantity > 0 ? `${t("common.inStock", "In Stock")} (${product.stockQuantity})` : t("common.outOfStock", "Out of Stock")}</td>
                         </tr>
                       )}
                     </tbody>
@@ -453,15 +456,21 @@ export const ProductDetail = () => {
                         <li>
                           <a
                             href="#wishlist"
-                            onClick={(e) => e.preventDefault()}
+                            title={isInWishlist(prod.id) ? t("wishlist.remove", "Remove from wishlist") : t("wishlist.add", "Add to wishlist")}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              toggleWishlist(prod);
+                            }}
+                            style={{ color: isInWishlist(prod.id) ? "#e57c32" : undefined }}
                           >
-                            <i className="fa-light fa-heart"></i>
+                            <i className={isInWishlist(prod.id) ? "fa-solid fa-heart" : "fa-light fa-heart"} style={{ color: isInWishlist(prod.id) ? "#e57c32" : undefined }}></i>
                           </a>
                         </li>
                         <li>
                           <a
                             href="#quickview"
                             className="btn"
+                            title={t("modals.quickView", "Quick View")}
                             onClick={(e) => openQuickView(prod, e)}
                           >
                             <i className="fa-regular fa-eye"></i>
@@ -487,7 +496,7 @@ export const ProductDetail = () => {
                         {prod.title}
                       </Link>
                       <ProductRatingSold product={prod} variant="card" className="mb-8" />
-                      <h6 className="fw-700 color-primary">{formatCurrency(prod.price)}</h6>
+                      <h6 className="fw-700 color-primary">{formatOrderMoney(prod.price, i18n.language)}</h6>
                     </div>
                   </div>
                 </div>

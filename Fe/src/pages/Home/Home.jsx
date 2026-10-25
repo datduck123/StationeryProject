@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { getFeaturedProducts, getBestSellerProducts, getProductImage } from "../../services/productService";
+import { getFeaturedProducts, getBestSellerProducts, getProductImage, getBrands, getProducts } from "../../services/productService";
 import { formatOrderMoney } from "../../utils/orderFormatters";
 import CountdownTimer from "../../components/ui/CountdownTimer";
 import ProductRatingSold from "../../components/shared/ProductRatingSold";
@@ -56,7 +56,7 @@ const ProductCard = ({ product, openQuickView, t }) => {
             <li>
               <a
                 href="#wishlist"
-                title={isWishlisted ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
+                title={isWishlisted ? t("wishlist.remove", "Remove from wishlist") : t("wishlist.add", "Add to wishlist")}
                 onClick={(e) => {
                   e.preventDefault();
                   toggleWishlist(normalizedProduct);
@@ -73,7 +73,7 @@ const ProductCard = ({ product, openQuickView, t }) => {
               <a
                 href="#quickview"
                 className="btn"
-                title="Xem nhanh"
+                title={t("modals.quickView", "Quick View")}
                 onClick={(e) => {
                   e.preventDefault();
                   openQuickView(normalizedProduct, e);
@@ -115,6 +115,8 @@ const ProductCard = ({ product, openQuickView, t }) => {
 export const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [bestSellerProducts, setBestSellerProducts] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [brandsLoaded, setBrandsLoaded] = useState(false);
   const { openQuickView } = useCartContext();
   const { t } = useTranslation();
 
@@ -201,61 +203,52 @@ export const Home = () => {
       })
       .catch(() => { if (active) setBestSellerProducts([]); });
 
+    // Brands from DB
+    Promise.allSettled([getBrands(), getProducts({ size: 100 })])
+      .then(([brandSettled, prodSettled]) => {
+        if (!active) return;
+        const brandRes = brandSettled.status === "fulfilled" ? brandSettled.value : null;
+        const prodRes = prodSettled.status === "fulfilled" ? prodSettled.value : null;
+
+        // API /brands trả về array trực tiếp
+        const rawBrands = brandRes && Array.isArray(brandRes.data)
+          ? brandRes.data
+          : (brandRes?.data?.data ?? brandRes?.data?.content ?? []);
+
+        // API /products trả về { content, totalPages, ... }
+        const rawProds = prodRes?.data?.content ?? (Array.isArray(prodRes?.data) ? prodRes.data : []);
+        const delays = ["200ms", "300ms", "400ms", "500ms", "600ms", "700ms", "800ms"];
+        const mapped = rawBrands.map((b, index) => {
+          const bid = b.brandId ?? b.id;
+          const prodsBrand = rawProds.filter((p) => {
+            const pbid = p.brand?.brandId ?? p.brand?.id ?? p.brandId;
+            return pbid === bid;
+          });
+          const firstProdImg = prodsBrand.length > 0 ? getProductImage(prodsBrand[0]) : null;
+          const fallback = `/assets/media/collection/collection-${(index % 7) + 1}.png`;
+          return {
+            id: bid,
+            name: b.name ?? b.brandName,
+            count: prodsBrand.length,
+            image: firstProdImg || fallback,
+            delay: delays[index % delays.length],
+          };
+        });
+        setBrands(mapped);
+        setBrandsLoaded(true);
+      })
+      .catch((err) => {
+        console.error("Failed to load brands:", err);
+        if (active) {
+          setBrands([]);
+          setBrandsLoaded(true);
+        }
+      });
+
     return () => { active = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const categories = [
-    {
-      id: 1,
-      name: "Book Pin",
-      count: "12",
-      image: "/assets/media/collection/collection-1.png",
-      delay: "200ms",
-    },
-    {
-      id: 2,
-      name: "Pencil",
-      count: "18",
-      image: "/assets/media/collection/collection-2.png",
-      delay: "300ms",
-    },
-    {
-      id: 3,
-      name: "Pencil Pocket",
-      count: "5",
-      image: "/assets/media/collection/collection-3.png",
-      delay: "400ms",
-    },
-    {
-      id: 4,
-      name: "Notebook",
-      count: "8",
-      image: "/assets/media/collection/collection-4.png",
-      delay: "500ms",
-    },
-    {
-      id: 5,
-      name: "Tape",
-      count: "16",
-      image: "/assets/media/collection/collection-5.png",
-      delay: "600ms",
-    },
-    {
-      id: 6,
-      name: "Book Pin",
-      count: "10",
-      image: "/assets/media/collection/collection-6.png",
-      delay: "700ms",
-    },
-    {
-      id: 7,
-      name: "Geometry",
-      count: "5",
-      image: "/assets/media/collection/collection-7.png",
-      delay: "400ms",
-    },
-  ];
 
   const testimonials = [
     {
@@ -391,23 +384,77 @@ export const Home = () => {
             </h2>
             <p>{t("home.catSubtitle")}</p>
           </div>
-          <div className="collection-wrapper">
-            {categories.map((cat) => (
-              <Link
-                key={cat.id}
-                to="/shop"
-                className="collection-block w-100 wow fadeInUp animated"
-                data-wow-delay={cat.delay}
-              >
-                <div className="image-box mb-12">
-                  <img src={cat.image} alt="" />
-                </div>
-                <div className="text-box">
-                  <h6 className="title-text fw-700 text-center">{cat.name}</h6>
-                  <p className="dark-gray">{cat.count}</p>
-                </div>
-              </Link>
-            ))}
+          <div
+            className="collection-wrapper d-flex flex-wrap justify-content-center align-items-center"
+            style={{ gap: "36px" }}
+          >
+            {!brandsLoaded ? (
+              <p className="text-center text-muted w-100" style={{ padding: "20px" }}>
+                <i className="fa-solid fa-spinner fa-spin me-2"></i>
+                {t("common.loading", "Loading...")}
+              </p>
+            ) : brands.length === 0 ? (
+              <p className="text-center text-muted w-100">{t("shop.noProducts", "No brands found")}</p>
+            ) : (
+              brands.map((brand) => (
+                <Link
+                  key={brand.id}
+                  to={`/shop?brandId=${brand.id}`}
+                  className="collection-block wow fadeInUp animated"
+                  data-wow-delay={brand.delay}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    textDecoration: "none",
+                    width: "140px",
+                  }}
+                >
+                  <div
+                    className="image-box mb-12"
+                    style={{
+                      width: "120px",
+                      height: "120px",
+                      borderRadius: "50%",
+                      overflow: "hidden",
+                      backgroundColor: "#f8f9fa",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 4px 15px rgba(0,0,0,0.06)",
+                    }}
+                  >
+                    <img
+                      src={brand.image}
+                      alt={brand.name}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  </div>
+                  <div
+                    className="text-box"
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      textAlign: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    <h6 className="title-text fw-700 text-center m-0" style={{ whiteSpace: "nowrap" }}>
+                      {brand.name}
+                    </h6>
+                    <p className="dark-gray m-0" style={{ fontSize: "13px" }}>
+                      {brand.count} {t("home.products", "products")}
+                    </p>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </div>

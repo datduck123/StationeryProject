@@ -8,7 +8,7 @@ import { useCartContext } from "../../providers/CartContext";
 import LanguageSwitcher from "../ui/LanguageSwitcher";
 
 export const MobileMenu = () => {
-  const { isMobileMenuOpen, closeMobileMenu } = useCartContext();
+  const { isMobileMenuOpen, closeMobileMenu, openWishlist, wishlistCount } = useCartContext();
   const { user, isAdmin, openAuthModal, logout } = useAuth();
   const { t } = useTranslation();
   const [expandedSubMenu, setExpandedSubMenu] = useState(false);
@@ -96,6 +96,21 @@ export const MobileMenu = () => {
                 <Link to="/shop" onClick={closeMobileMenu}>
                   {t("header.brands")}
                 </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => { closeMobileMenu(); openWishlist(); }}
+                  style={{ background: "none", border: "none", padding: "10px 0", width: "100%", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "inherit", color: "inherit" }}
+                >
+                  <i className="fa-regular fa-heart"></i>
+                  {t("wishlist.title", "Wishlist")}
+                  {wishlistCount > 0 && (
+                    <span style={{ backgroundColor: "#e53935", color: "#fff", fontSize: "11px", fontWeight: "700", padding: "1px 6px", borderRadius: "10px" }}>
+                      {wishlistCount}
+                    </span>
+                  )}
+                </button>
               </li>
             </ul>
           </div>
