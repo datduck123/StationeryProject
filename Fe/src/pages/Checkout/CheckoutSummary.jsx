@@ -363,11 +363,11 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
               type="radio"
               id="payment-vnpay"
               name="paymentMethod"
-              value="VNPAY"
-              checked={formData.paymentMethod === "VNPAY"}
+              value="ONLINE"
+              checked={formData.paymentMethod === "ONLINE" || formData.paymentMethod === "VNPAY"}
               onChange={handleChange}
             />
-            <label htmlFor="payment-vnpay">Chuyển khoản VNPAY</label>
+            <label htmlFor="payment-vnpay">Thanh toán trực tuyến (ONLINE)</label>
           </div>
         </div>
 

@@ -8,6 +8,7 @@ import { useAuth } from "../../providers/AuthContext";
 import { useCartContext } from "../../providers/CartContext";
 import { useToast } from "../../providers/ToastContext";
 import checkoutService from "../../services/checkoutService";
+import orderService from "../../services/orderService";
 import cartService from "../../services/cartService";
 
 export const Checkout = () => {
@@ -26,6 +27,7 @@ export const Checkout = () => {
     shippingMethod: "STANDARD",
     paymentMethod: "COD",
     voucherId: null,
+    voucherCode: null,
     isPrefilled: false
   });
 
