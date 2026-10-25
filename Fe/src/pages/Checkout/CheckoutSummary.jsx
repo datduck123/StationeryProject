@@ -7,17 +7,27 @@ import cartService from "../../services/cartService";
 const AVAILABLE_VOUCHERS = [
   {
     id: 1,
-    title: "Voucher #1 - Giảm 10%",
-    discountDesc: "Giảm 10% giá trị đơn hàng (Tối đa 50.000 đ)",
+    code: "WELCOME20K",
+    title: "WELCOME20K - Giảm 20.000 đ",
+    discountDesc: "Giảm 10% tối đa 20.000 đ vào đơn hàng",
     minOrderText: "Đơn hàng tối thiểu từ 100.000 đ",
-    minOrder: 100
+    minOrder: 100000
   },
   {
     id: 2,
-    title: "Voucher #2 - Giảm 15.000 đ",
-    discountDesc: "Giảm trực tiếp 15.000 đ vào đơn hàng",
+    code: "SAVE50K",
+    title: "SAVE50K - Giảm 50.000 đ",
+    discountDesc: "Giảm 15% tối đa 50.000 đ vào đơn hàng",
+    minOrderText: "Đơn hàng tối thiểu từ 300.000 đ",
+    minOrder: 300000
+  },
+  {
+    id: 3,
+    code: "NEWUSER10K",
+    title: "NEWUSER10K - Giảm 10.000 đ",
+    discountDesc: "Giảm 5% tối đa 10.000 đ vào đơn hàng",
     minOrderText: "Đơn hàng tối thiểu từ 50.000 đ",
-    minOrder: 50
+    minOrder: 50000
   }
 ];
 
@@ -48,15 +58,20 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
 
     // Bấm lại mã đang chọn -> hủy chọn
     const targetVoucherId = formData.voucherId === voucherId ? null : voucherId;
+    const targetVoucher = AVAILABLE_VOUCHERS.find(v => v.id === targetVoucherId);
 
     setIsApplyingVoucher(true);
     try {
       const data = await cartService.getCart(formData.shippingMethod, targetVoucherId);
       setCart(data);
-      setFormData(prev => ({ ...prev, voucherId: targetVoucherId }));
+      setFormData(prev => ({
+        ...prev,
+        voucherId: targetVoucherId,
+        voucherCode: targetVoucher ? targetVoucher.code : null,
+      }));
 
       if (targetVoucherId) {
-        showToast(`Áp dụng Voucher ID: ${targetVoucherId} thành công!`, "success");
+        showToast(`Áp dụng Voucher ${targetVoucher?.code || targetVoucherId} thành công!`, "success");
       } else {
         showToast("Đã hủy áp dụng mã giảm giá", "info");
       }
@@ -305,11 +320,11 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
               type="radio"
               id="payment-vnpay"
               name="paymentMethod"
-              value="VNPAY"
-              checked={formData.paymentMethod === "VNPAY"}
+              value="ONLINE"
+              checked={formData.paymentMethod === "ONLINE" || formData.paymentMethod === "VNPAY"}
               onChange={handleChange}
             />
-            <label htmlFor="payment-vnpay">Chuyển khoản VNPAY</label>
+            <label htmlFor="payment-vnpay">Thanh toán trực tuyến (ONLINE)</label>
           </div>
         </div>
 
