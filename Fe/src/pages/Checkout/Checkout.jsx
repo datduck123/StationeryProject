@@ -8,6 +8,7 @@ import { useAuth } from "../../providers/AuthContext";
 import { useCartContext } from "../../providers/CartContext";
 import { useToast } from "../../providers/ToastContext";
 import checkoutService from "../../services/checkoutService";
+import orderService from "../../services/orderService";
 import cartService from "../../services/cartService";
 
 export const Checkout = () => {
@@ -26,6 +27,7 @@ export const Checkout = () => {
     shippingMethod: "STANDARD",
     paymentMethod: "COD",
     voucherId: null,
+    voucherCode: null,
     isPrefilled: false
   });
 
@@ -70,12 +72,33 @@ export const Checkout = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await checkoutService.validateCheckout(formData);
-      showToast(response.message || "Khởi tạo đơn hàng thành công!", "success");
+      const normalizedPayment = formData.paymentMethod === "VNPAY" ? "ONLINE" : (formData.paymentMethod || "COD");
+
+      // 1. Kiểm tra tồn kho trước khi đặt
+      await checkoutService.validateCheckout({
+        ...formData,
+        paymentMethod: normalizedPayment,
+      });
+
+      // 2. Chuẩn bị payload khớp chuẩn CreateOrderRequestDTO của Backend
+      const orderPayload = {
+        shippingAddress: formData.shippingAddress.trim(),
+        phone: formData.phoneNumber.trim(),
+        shippingMethod: formData.shippingMethod || "STANDARD",
+        paymentMethod: normalizedPayment,
+        voucherCode: formData.voucherCode || undefined,
+        note: formData.orderNotes?.trim() || undefined,
+      };
+
+      // 3. Thực hiện lưu đơn hàng vào Database
+      await orderService.createOrder(orderPayload);
+      showToast("Đặt hàng thành công!", "success");
       
-      // Redirect to Order History page
+      // 4. Xóa giỏ hàng trên giao diện client
       await clearCart(false);
-      setTimeout(() => navigate("/account/orders"), 2000);
+
+      // 5. Chuyển hướng ngay đến trang Lịch sử đơn hàng
+      navigate("/account/orders");
       
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || "Lỗi khi xử lý đơn hàng";
