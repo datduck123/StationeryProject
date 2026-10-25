@@ -139,6 +139,17 @@ const OrderHistoryPage = () => {
                           <td><strong className="customer-orders-total">{formatOrderMoney(order.totalCost, i18n.language)}</strong></td>
                           <td><div className="customer-orders-actions">
                             <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => { setSelectedOrder(order); setSelectedOrderNumber(orderNumber); }}>{t("orders.details")}</button>
+                            {order.orderStatus === "DELIVERED" && order.orderItems?.some(item => !item.reviewed) && (
+                              <button
+                                type="button"
+                                className="btn btn-sm text-white"
+                                style={{ backgroundColor: "#e9613f", borderColor: "#e9613f", fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap" }}
+                                onClick={() => { setSelectedOrder(order); setSelectedOrderNumber(orderNumber); }}
+                              >
+                                <i className="fa-solid fa-star text-warning me-1"></i>
+                                {t("reviews.writeReview", "Đánh giá")}
+                              </button>
+                            )}
                             {order.orderStatus === "PENDING" && (
                               <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => cancelOrder(order.orderId, orderNumber)} disabled={cancelingId === order.orderId}>
                                 {cancelingId === order.orderId ? t("orders.cancelling") : t("orders.cancelOrder")}

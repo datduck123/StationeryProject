@@ -107,29 +107,41 @@ const OrderDetailPage = () => {
 
               <div className="checkout-box bg-semi-white p-24 mb-16">
                 <h6 className="fw-600 medium-black mb-16">{t("orders.items")}</h6>
-                {(order.orderItems || []).map((item) => (
-                  <div className="d-flex flex-wrap justify-content-between gap-2 py-2 border-bottom" key={item.orderItemId}>
-                    <div>
-                      <strong className="medium-black">{item.productName}</strong>
-                      <div className="light-gray">{t("orders.quantityEach", { quantity: item.quantity, price: formatOrderMoney(item.unitPrice, i18n.language) })}</div>
+                {(order.orderItems || []).map((item) => {
+                  const isReviewed = item.reviewed || item.hasReview || reviewedOrderItemIds.has(item.orderItemId);
+                  return (
+                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 py-3 border-bottom" key={item.orderItemId}>
+                      <div>
+                        <strong className="medium-black d-block mb-1" style={{ fontSize: "15px" }}>{item.productName}</strong>
+                        <div className="light-gray" style={{ fontSize: "13px" }}>
+                          {t("orders.quantityEach", { quantity: item.quantity, price: formatOrderMoney(item.unitPrice, i18n.language) })}
+                        </div>
+                      </div>
+                      <div className="d-flex align-items-center gap-3">
+                        <strong className="medium-black" style={{ fontSize: "15px" }}>{formatOrderMoney(item.subtotal, i18n.language)}</strong>
+                        {order.orderStatus === "DELIVERED" && (
+                          <div>
+                            {isReviewed ? (
+                              <span className="badge-order-reviewed">
+                                <i className="fa-solid fa-circle-check"></i>
+                                {t("reviews.alreadyReviewed", "Đã đánh giá")}
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="btn-order-review"
+                                onClick={() => setReviewItem(item)}
+                              >
+                                <i className="fa-solid fa-star text-warning"></i>
+                                {t("reviews.writeReview", "Đánh giá")}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="product-review-item-action">
-                      <strong className="medium-black">{formatOrderMoney(item.subtotal, i18n.language)}</strong>
-                      {order.orderStatus === "DELIVERED" && (
-                        <button
-                          type="button"
-                          className="btn btn-outline-primary btn-sm"
-                          disabled={item.reviewed || item.hasReview || reviewedOrderItemIds.has(item.orderItemId)}
-                          onClick={() => setReviewItem(item)}
-                        >
-                          {item.reviewed || item.hasReview || reviewedOrderItemIds.has(item.orderItemId)
-                            ? t("reviews.alreadyReviewed")
-                            : t("reviews.writeReview")}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div className="pt-16 border-top mt-16">
                   <div className="d-flex justify-content-between py-1">
                     <span className="light-gray">{t("orders.subtotal")}</span>
