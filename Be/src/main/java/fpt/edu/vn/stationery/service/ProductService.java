@@ -6,6 +6,7 @@ import fpt.edu.vn.stationery.dto.response.PageDTO;
 import fpt.edu.vn.stationery.dto.response.ProductResponseDTO;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public interface ProductService {
 
@@ -39,4 +40,10 @@ public interface ProductService {
     void deleteProduct(Long id);
 
     ProductResponseDTO updateStock(Long id, UpdateStockRequestDTO request);
+
+    /** Returns top products ordered by average review rating (for the Featured section). */
+    List<ProductResponseDTO> getFeaturedProducts(int limit);
+
+    /** Returns top products ordered by sold count descending (for the Best Seller section). */
+    List<ProductResponseDTO> getBestSellerProducts(int limit);
 }

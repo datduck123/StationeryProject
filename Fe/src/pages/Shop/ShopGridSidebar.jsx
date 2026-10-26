@@ -9,25 +9,11 @@ import PriceSlider from "../../components/ui/PriceSlider";
 import CustomDropdown from "../../components/ui/CustomDropdown";
 import { useCartContext } from "../../providers/CartContext";
 import { getProducts, getCategories, getBrands, getProductImage } from "../../services/productService";
+import ProductRatingSold from "../../components/shared/ProductRatingSold";
 import { onProductChange } from "../../utils/syncEvents";
-
-const SORT_OPTIONS = [
-  { label: "Mặc định", value: "" },
-  { label: "Giá: Thấp → Cao", value: "price,asc" },
-  { label: "Giá: Cao → Thấp", value: "price,desc" },
-  { label: "Tên A → Z", value: "name,asc" },
-  { label: "Tên Z → A", value: "name,desc" },
-];
+import { formatOrderMoney } from "../../utils/orderFormatters";
 
 const PAGE_SIZE = 12;
-
-const formatCurrency = (amount) => {
-  if (amount == null) return "";
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(amount);
-};
 
 export const ShopGridSidebar = () => {
   const {
@@ -39,7 +25,15 @@ export const ShopGridSidebar = () => {
     toggleWishlist,
     isInWishlist,
   } = useCartContext();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  const sortOptions = [
+    { label: t("shop.defaultSorting", "Default"), value: "" },
+    { label: t("shop.priceLowHigh", "Price: Low to High"), value: "price,asc" },
+    { label: t("shop.priceHighLow", "Price: High to Low"), value: "price,desc" },
+    { label: t("shop.sortNameAsc", "Name: A → Z"), value: "name,asc" },
+    { label: t("shop.sortNameDesc", "Name: Z → A"), value: "name,desc" },
+  ];
 
   // ── Sidebar accordion state ──────────────────────────────────────────────
   const [openCategories, setOpenCategories] = useState({
@@ -56,22 +50,31 @@ export const ShopGridSidebar = () => {
   };
 
   // ── Filter / Pagination state ────────────────────────────────────────────
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const urlKeyword = searchParams.get("keyword") || searchParams.get("search") || "";
+  const urlBrandId = searchParams.get("brandId") || searchParams.get("brand") || null;
+  const urlCategoryId = searchParams.get("categoryId") || searchParams.get("category") || null;
+
   const [keyword, setKeyword] = useState(urlKeyword);
 
-  useEffect(() => {
-    const q = searchParams.get("keyword") || searchParams.get("search") || "";
-    setKeyword(q);
-    setCurrentPage(0);
-  }, [searchParams]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
-  const [selectedBrandId, setSelectedBrandId] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(urlCategoryId ? Number(urlCategoryId) : null);
+  const [selectedBrandId, setSelectedBrandId] = useState(urlBrandId ? Number(urlBrandId) : null);
   const [stockFilter, setStockFilter] = useState(null);
   const [minPrice, setMinPrice] = useState(null);
   const [maxPrice, setMaxPrice] = useState(null);
   const [sortValue, setSortValue] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
+
+  // Sync filter state khi URL params thay đổi (ví dụ click brand từ trang Home)
+  useEffect(() => {
+    const q = searchParams.get("keyword") || searchParams.get("search") || "";
+    const bId = searchParams.get("brandId") || searchParams.get("brand") || null;
+    const cId = searchParams.get("categoryId") || searchParams.get("category") || null;
+    setKeyword(q);
+    setSelectedBrandId(bId ? Number(bId) : null);
+    setSelectedCategoryId(cId ? Number(cId) : null);
+    setCurrentPage(0);
+  }, [searchParams]);
 
   // ── Data state ───────────────────────────────────────────────────────────
   const [products, setProducts] = useState([]);
@@ -158,7 +161,7 @@ export const ShopGridSidebar = () => {
       }
     } catch (err) {
       console.error("Failed to fetch products:", err);
-      setError("Không thể tải danh sách sản phẩm. Vui lòng thử lại.");
+      setError(t("commerce.productLoadError", "Could not load products."));
       setProducts([]);
     } finally {
       setLoading(false);
@@ -199,17 +202,43 @@ export const ShopGridSidebar = () => {
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   const handleCategoryChange = (id) => {
-    setSelectedCategoryId((prev) => (prev === id ? null : id));
+    setSelectedCategoryId((prev) => {
+      const next = prev === id ? null : id;
+      setSearchParams((params) => {
+        const nextParams = new URLSearchParams(params);
+        if (next) {
+          nextParams.set("categoryId", String(next));
+        } else {
+          nextParams.delete("categoryId");
+          nextParams.delete("category");
+        }
+        return nextParams;
+      }, { replace: true });
+      return next;
+    });
     setCurrentPage(0);
   };
 
   const handleBrandChange = (id) => {
-    setSelectedBrandId((prev) => (prev === id ? null : id));
+    setSelectedBrandId((prev) => {
+      const next = prev === id ? null : id;
+      setSearchParams((params) => {
+        const nextParams = new URLSearchParams(params);
+        if (next) {
+          nextParams.set("brandId", String(next));
+        } else {
+          nextParams.delete("brandId");
+          nextParams.delete("brand");
+        }
+        return nextParams;
+      }, { replace: true });
+      return next;
+    });
     setCurrentPage(0);
   };
 
   const handleSortSelect = (label) => {
-    const found = SORT_OPTIONS.find((o) => o.label === label);
+    const found = sortOptions.find((o) => o.label === label);
     setSortValue(found ? found.value : "");
     setCurrentPage(0);
   };
@@ -252,7 +281,7 @@ export const ShopGridSidebar = () => {
                   onChange={() => setStockFilter(stockFilter === "inStock" ? null : "inStock")}
                 />
                 <label htmlFor={`${prefix}-inStock`} className="cbx">
-                  {t("common.inStock", "Còn hàng")}
+                  {t("common.inStock", "In Stock")}
                 </label>
               </div>
             </div>
@@ -266,7 +295,7 @@ export const ShopGridSidebar = () => {
                   onChange={() => setStockFilter(stockFilter === "outStock" ? null : "outStock")}
                 />
                 <label htmlFor={`${prefix}-outStock`} className="cbx">
-                  {t("common.outOfStock", "Hết hàng")}
+                  {t("common.outOfStock", "Out of Stock")}
                 </label>
               </div>
             </div>
@@ -321,7 +350,7 @@ export const ShopGridSidebar = () => {
       >
         <div className="title" onClick={() => toggleCategory("categories")}>
           <h6 className="fw-600 font-sec medium-black">
-            {t("shop.productCategories", "Danh mục")}
+            {t("shop.productCategories", "Product Categories")}
           </h6>
           <span>
             <i
@@ -332,9 +361,9 @@ export const ShopGridSidebar = () => {
         {openCategories.categories && (
           <div className="content-block mt-24">
             {sidebarLoading ? (
-              <p className="dark-gray" style={{ fontSize: "13px" }}>Đang tải...</p>
+              <p className="dark-gray" style={{ fontSize: "13px" }}>{t("common.loading", "Loading...")}</p>
             ) : categories.length === 0 ? (
-              <p className="dark-gray" style={{ fontSize: "13px" }}>Không có danh mục</p>
+              <p className="dark-gray" style={{ fontSize: "13px" }}>{t("shop.noCategories", "No categories available")}</p>
             ) : (
               categories.map((cat) => (
                 <div
@@ -368,7 +397,7 @@ export const ShopGridSidebar = () => {
       >
         <div className="title" onClick={() => toggleCategory("brands")}>
           <h6 className="fw-600 font-sec medium-black">
-            Thương hiệu
+            {t("shop.brands", "Brands")}
           </h6>
           <span>
             <i
@@ -379,9 +408,9 @@ export const ShopGridSidebar = () => {
         {openCategories.brands && (
           <div className="content-block mt-24">
             {sidebarLoading ? (
-              <p className="dark-gray" style={{ fontSize: "13px" }}>Đang tải...</p>
+              <p className="dark-gray" style={{ fontSize: "13px" }}>{t("common.loading", "Loading...")}</p>
             ) : brands.length === 0 ? (
-              <p className="dark-gray" style={{ fontSize: "13px" }}>Không có thương hiệu</p>
+              <p className="dark-gray" style={{ fontSize: "13px" }}>{t("shop.noBrands", "No brands available")}</p>
             ) : (
               brands.map((brand) => (
                 <div
@@ -540,7 +569,7 @@ export const ShopGridSidebar = () => {
             onClick={() => handlePageChange(currentPage - 1)}
             onMouseEnter={(e) => { if (currentPage !== 0) e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#6b7280"; }}
-            title="Trang trước"
+            title={t("common.previousPage", "Previous page")}
           >
             &#8592;
           </button>
@@ -589,7 +618,7 @@ export const ShopGridSidebar = () => {
             onClick={() => handlePageChange(currentPage + 1)}
             onMouseEnter={(e) => { if (currentPage < totalPages - 1) { e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; } }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#6b7280"; }}
-            title="Trang sau"
+            title={t("common.nextPage", "Next page")}
           >
             &#8594;
           </button>
@@ -617,8 +646,12 @@ export const ShopGridSidebar = () => {
                 <div className="col-xl-4 col-lg-5 col-md-7 col-6">
                   <p className="d-md-block d-none">
                     {loading
-                      ? "Đang tải..."
-                      : `Hiển thị ${products.length} / ${totalElements} sản phẩm`}
+                      ? t("common.loading", "Loading...")
+                      : t("shop.showingProductCount", {
+                          count: products.length,
+                          total: totalElements,
+                          defaultValue: `Showing ${products.length} / ${totalElements} products`,
+                        })}
                   </p>
                   <button
                     type="button"
@@ -630,11 +663,11 @@ export const ShopGridSidebar = () => {
                 </div>
                 <div className="col-xl-4 col-lg-4 col-md-5 col-6">
                   <div className="d-flex align-items-center justify-content-end gap-8">
-                    <p className="dark-gray">{t("shop.sortBy", "Sắp xếp")}:</p>
+                    <p className="dark-gray">{t("shop.sortBy", "Sort By")}:</p>
                     <div className="drop-container">
                       <CustomDropdown
-                        options={SORT_OPTIONS.map((o) => o.label)}
-                        defaultValue={SORT_OPTIONS[0].label}
+                        options={sortOptions.map((o) => o.label)}
+                        defaultValue={(sortOptions.find((o) => o.value === sortValue) || sortOptions[0]).label}
                         onSelect={handleSortSelect}
                       />
                     </div>
@@ -650,9 +683,9 @@ export const ShopGridSidebar = () => {
                     role="status"
                     style={{ color: "var(--color-primary, #e57c32)", width: "3rem", height: "3rem" }}
                   >
-                    <span className="visually-hidden">Đang tải...</span>
+                    <span className="visually-hidden">{t("common.loading", "Loading...")}</span>
                   </div>
-                  <p className="mt-16 dark-gray">Đang tải sản phẩm...</p>
+                  <p className="mt-16 dark-gray">{t("shop.loadingProducts", "Loading products...")}</p>
                 </div>
               ) : error ? (
                 <div className="text-center py-80">
@@ -675,7 +708,7 @@ export const ShopGridSidebar = () => {
                       marginTop: "16px",
                     }}
                   >
-                    <span>Thử lại</span>
+                    <span>{t("shop.retryButton", "Try again")}</span>
                   </button>
                 </div>
               ) : products.length === 0 ? (
@@ -714,9 +747,9 @@ export const ShopGridSidebar = () => {
                       <line x1="8" y1="11" x2="14" y2="11"></line>
                     </svg>
                   </div>
-                  <h5 className="fw-700 medium-black mb-8">Không tìm thấy sản phẩm phù hợp</h5>
+                  <h5 className="fw-700 medium-black mb-8">{t("shop.noProductsFound", "No matching products found")}</h5>
                   <p className="dark-gray mb-24" style={{ maxWidth: "420px", margin: "0 auto 20px", fontSize: "14px" }}>
-                    Rất tiếc, không có sản phẩm nào khớp với từ khóa tìm kiếm hoặc khoảng giá bạn đã chọn.
+                    {t("shop.noProductsDesc", "Sorry, no products match your search keyword or price range.")}
                   </p>
                   {(selectedCategoryId || selectedBrandId || minPrice !== null || maxPrice !== null || stockFilter !== null) && (
                     <button
@@ -751,7 +784,7 @@ export const ShopGridSidebar = () => {
                         <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
                         <path d="M3 3v5h5"></path>
                       </svg>
-                      <span>Xóa tất cả bộ lọc</span>
+                      <span>{t("shop.clearAllFilters", "Clear all filters")}</span>
                     </button>
                   )}
                 </div>
@@ -795,7 +828,7 @@ export const ShopGridSidebar = () => {
                                   zIndex: 2,
                                 }}
                               >
-                                Hết hàng
+                                {t("common.outOfStock", "Out of Stock")}
                               </span>
                             )}
                             <div className="side-icons">
@@ -804,7 +837,7 @@ export const ShopGridSidebar = () => {
                                 <li>
                                   <a
                                     href="#wishlist"
-                                    title={isWishlisted ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
+                                    title={isWishlisted ? t("wishlist.remove", "Remove from wishlist") : t("wishlist.add", "Add to wishlist")}
                                     onClick={(e) => {
                                       e.preventDefault();
                                       toggleWishlist(prod);
@@ -818,7 +851,7 @@ export const ShopGridSidebar = () => {
                                 <li>
                                   <a
                                     href="#quickview"
-                                    title="Xem nhanh"
+                                    title={t("modals.quickView", "Xem nhanh")}
                                     onClick={(e) => {
                                       e.preventDefault();
                                       openQuickView(prod);
@@ -859,12 +892,9 @@ export const ShopGridSidebar = () => {
                                   {prod.category.name}
                                 </p>
                               )}
-                              <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
-                                <span className="color-primary">★★★★★</span>
-                                <p className="fw-500">(02)</p>
-                              </div>
+                              <ProductRatingSold product={prod} variant="card" className="mb-8" />
                               <h5 className="medium-black fw-700">
-                                {formatCurrency(prod.price)}
+                                {formatOrderMoney(prod.price, i18n.language)}
                               </h5>
                             </div>
                           </div>

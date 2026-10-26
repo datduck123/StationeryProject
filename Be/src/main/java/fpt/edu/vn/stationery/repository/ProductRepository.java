@@ -51,4 +51,34 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @EntityGraph(attributePaths = {"category", "brand"})
     @Query("SELECT p FROM Product p WHERE p.stockQuantity <= :maxStock ORDER BY p.stockQuantity ASC")
     List<Product> findByStockLessThanEqualOrderByStockAsc(@Param("maxStock") Integer maxStock);
+
+    /**
+     * Top products by average review rating (featured section).
+     * Only ACTIVE products with at least one visible review are included.
+     */
+    @EntityGraph(attributePaths = {"category", "brand"})
+    @Query(value = "SELECT p FROM Product p WHERE p.status = 'ACTIVE' " +
+            "AND p.productId IN (SELECT r.productId FROM Review r WHERE r.hidden = false GROUP BY r.productId) " +
+            "ORDER BY (SELECT AVG(r.rating) FROM Review r WHERE r.productId = p.productId AND r.hidden = false) DESC")
+    List<Product> findTopRatedProducts(Pageable pageable);
+
+    /**
+     * Top products by total units sold (best-seller section).
+     * Only ACTIVE products are included.
+     */
+    @EntityGraph(attributePaths = {"category", "brand"})
+    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' ORDER BY p.sold DESC, p.productId DESC")
+    List<Product> findTopBySoldDesc(Pageable pageable);
+
+    /**
+     * Get the average rating for a given product (used when enriching DTO).
+     */
+    @Query(value = "SELECT AVG(r.rating) FROM Reviews r WHERE r.product_id = :productId AND r.is_hidden = 0", nativeQuery = true)
+    Double findAvgRatingByProductId(@Param("productId") Long productId);
+
+    /**
+     * Get the review count for a given product.
+     */
+    @Query(value = "SELECT COUNT(*) FROM Reviews r WHERE r.product_id = :productId AND r.is_hidden = 0", nativeQuery = true)
+    Long findReviewCountByProductId(@Param("productId") Long productId);
 }

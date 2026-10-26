@@ -13,7 +13,7 @@ const VietnamFlag = () => (
       flexShrink: 0,
       boxShadow: "0 0 0 1px rgba(0,0,0,0.12)",
     }}
-    aria-label="Cờ Việt Nam"
+    aria-label="Flag of Vietnam"
   >
     <rect width="30" height="20" fill="#DA251D" />
     <polygon

@@ -53,14 +53,14 @@ export const SidebarCart = () => {
           {items.length === 0 ? (
             <div className="text-center py-48 px-24">
               <i className="fa-solid fa-bag-shopping text-muted mb-16" style={{ fontSize: "48px" }}></i>
-              <h6 className="fw-600 text-muted mb-8">Giỏ hàng của bạn đang trống</h6>
-              <p className="text-muted small mb-24">Hãy khám phá thêm các sản phẩm tuyệt vời của cửa hàng!</p>
+              <h6 className="fw-600 text-muted mb-8">{t("commerce.emptyCart", "Your cart is empty")}</h6>
+              <p className="text-muted small mb-24">{t("cart.emptyCartSubtitle", "Explore our great collection of stationery items!")}</p>
               <Link
                 to="/shop"
                 className="cus-btn btn-sm d-inline-block"
                 onClick={() => closeCart()}
               >
-                <span>Mua sắm ngay</span>
+                <span>{t("common.shopNow", "Shop Now")}</span>
               </Link>
             </div>
           ) : (
@@ -114,7 +114,7 @@ export const SidebarCart = () => {
                         type="button"
                         className="btn btn-link text-danger p-0 border-0 mb-8 d-inline-block"
                         onClick={() => removeItem(item.cartItemId)}
-                        title="Xóa"
+                        title={t("commerce.remove", "Remove")}
                       >
                         <i className="fa-solid fa-trash-can" style={{ fontSize: "14px" }}></i>
                       </button>
@@ -170,8 +170,8 @@ export const SidebarCart = () => {
                   className="cus-btn w-100 text-center py-2"
                   onClick={() => closeCart()}
                 >
-                  <span className="btn-text">Xem giỏ hàng</span>
-                  <span>Xem giỏ hàng</span>
+                  <span className="btn-text">{t("modals.viewCart", "View Cart")}</span>
+                  <span>{t("modals.viewCart", "View Cart")}</span>
                 </Link>
               </div>
               <div className="col-6">
@@ -180,8 +180,8 @@ export const SidebarCart = () => {
                   className="cus-btn-2 btn-sec w-100 text-center py-2"
                   onClick={() => closeCart()}
                 >
-                  <span className="btn-text">Thanh toán</span>
-                  <span>Thanh toán</span>
+                  <span className="btn-text">{t("modals.checkout", "Checkout")}</span>
+                  <span>{t("modals.checkout", "Checkout")}</span>
                 </Link>
               </div>
             </div>

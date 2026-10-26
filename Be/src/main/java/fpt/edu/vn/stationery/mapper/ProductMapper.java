@@ -30,6 +30,7 @@ public interface ProductMapper {
     @Mapping(target = "brand", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "sold", ignore = true)
     @Mapping(target = "imageUrl", expression = "java(request.resolveImageUrl())")
     Product toEntity(ProductRequestDTO request);
 
@@ -38,6 +39,7 @@ public interface ProductMapper {
     @Mapping(target = "brand", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "sold", ignore = true)
     @Mapping(target = "imageUrl", expression = "java(request.resolveImageUrl())")
     void updateEntity(@MappingTarget Product entity, ProductRequestDTO request);
 }

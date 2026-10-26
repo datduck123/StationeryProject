@@ -1,12 +1,14 @@
 // Migrated from: product-detail.html, lines 205-1705
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / input self-closing, gallery thumbnail active state, tab switcher state, i18n support
 // API integration: useParams to read product ID, fetch real data from /api/products/:id
-import { useState, useEffect } from "react";
-import { Link, useSearchParams, useParams } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
 import { getProductById, getProductImage, getProducts } from "../../services/productService";
 import ProductReviewsList from "../../components/reviews/ProductReviewsList";
+import ProductRatingSold from "../../components/shared/ProductRatingSold";
+import { formatOrderMoney } from "../../utils/orderFormatters";
 import "../../styles/reviews.css";
 
 const ReviewStars = ({ rating, label }) => {
@@ -22,9 +24,11 @@ const ReviewStars = ({ rating, label }) => {
 export const ProductDetail = () => {
   const [searchParams] = useSearchParams();
   const { id } = useParams();
-  const productId = id ? Number(id) : (searchParams.get("id") ? Number(searchParams.get("id")) : 1);
-  const { openCart, openQuickView, openCompare, addToCart } = useCartContext();
-  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const rawId = id || searchParams.get("id");
+  const productId = rawId ? Number(rawId) : 1;
+  const { openCart, openQuickView, openCompare, addToCart, isInWishlist, toggleWishlist } = useCartContext();
+  const { t, i18n } = useTranslation();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("review");
@@ -32,7 +36,7 @@ export const ProductDetail = () => {
 
   // API state
   const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(!!id);
+  const [loading, setLoading] = useState(!!productId);
   const [error, setError] = useState(null);
   const [reviewCount, setReviewCount] = useState(0);
   const [averageRating, setAverageRating] = useState(0);
@@ -42,15 +46,15 @@ export const ProductDetail = () => {
   }, []);
 
   useEffect(() => {
-    if (!id) return;
+    if (!productId) return;
     setQuantity(1);
     setLoading(true);
     setError(null);
-    getProductById(id)
-      .then((res) => setProduct(res.data))
-      .catch(() => setError("Không thể tải thông tin sản phẩm."))
+    getProductById(productId)
+      .then((res) => setProduct(res.data?.data ?? res.data))
+      .catch(() => setError(t("commerce.productLoadError", "Could not load products.")))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [productId]);
 
   const formatCurrency = (amount) => {
     if (amount == null) return "";
@@ -82,10 +86,10 @@ export const ProductDetail = () => {
     getProducts({ size: 5 }).then((response) => {
       const payload = response.data?.data ?? response.data;
       const list = Array.isArray(payload) ? payload : payload?.content ?? [];
-      if (active) setRelatedProducts(list.filter((item) => String(item.productId ?? item.id) !== String(id)).slice(0, 4).map((item) => ({ ...item, id: item.productId ?? item.id, title: item.name, image: getProductImage(item) })));
+      if (active) setRelatedProducts(list.filter((item) => String(item.productId ?? item.id) !== String(productId)).slice(0, 4).map((item) => ({ ...item, id: item.productId ?? item.id, title: item.name, image: getProductImage(item) })));
     }).catch(() => { if (active) setRelatedProducts([]); });
     return () => { active = false; };
-  }, [id]);
+  }, [productId]);
 
   if (loading) {
     return (
@@ -95,9 +99,9 @@ export const ProductDetail = () => {
           role="status"
           style={{ color: "var(--color-primary, #e57c32)", width: "3rem", height: "3rem" }}
         >
-          <span className="visually-hidden">Đang tải...</span>
+          <span className="visually-hidden">{t("common.loading", "Loading...")}</span>
         </div>
-        <p className="mt-16 dark-gray">Đang tải sản phẩm...</p>
+        <p className="mt-16 dark-gray">{t("common.loading", "Loading...")}</p>
       </div>
     );
   }
@@ -122,7 +126,7 @@ export const ProductDetail = () => {
             boxShadow: "0 4px 12px rgba(229, 124, 50, 0.25)",
           }}
         >
-          Quay lại cửa hàng
+          {t("common.goToShop", "Go to Shop")}
         </Link>
       </div>
     );
@@ -175,23 +179,23 @@ export const ProductDetail = () => {
                 <h3 className="medium-black fw-700 mb-16">
                   {product?.name ?? "Classic Ballpoint Pens"}
                 </h3>
-                <div className="product-review-summary mb-16">
-                  <ReviewStars rating={averageRating} label={t("reviews.ratingOutOfFive", { rating: averageRating.toFixed(1) })} />
-                  <p className="dark-gray fw-500 mb-0">
-                    {t("reviews.summary", { rating: averageRating.toFixed(1), count: reviewCount })}
-                  </p>
-                </div>
+                <ProductRatingSold
+                  product={product}
+                  rating={averageRating}
+                  reviewCount={reviewCount}
+                  variant="detail"
+                  className="mb-16"
+                />
                 <div className="d-flex align-items-center gap-16 mb-24">
                   <h4 className="color-primary fw-700">
-                    {product ? formatCurrency(product.price) : "$59.00"}
+                    {product ? formatOrderMoney(product.price, i18n.language) : "$59.00"}
                   </h4>
                 </div>
-                <p className="quick-view-text mb-24">
-                  {product?.description || "Sản phẩm văn phòng phẩm chất lượng cao, bền đẹp và tiện lợi."}
-                </p>
                 {product?.stockQuantity != null && (
                   <p className="fw-500 mb-16">
-                    Còn lại: <span className="color-primary fw-700">{product.stockQuantity}</span> sản phẩm trong kho!
+                    {t("productDetail.remainingStock", "Remaining:")}{" "}
+                    <span className="color-primary fw-700">{product.stockQuantity}</span>{" "}
+                    {t("productDetail.itemsInStock", "items in stock!")}
                   </p>
                 )}
                 <p className="fw-500 medium-black mb-8">
@@ -249,7 +253,7 @@ export const ProductDetail = () => {
                 </div>
                 <p className="medium-black fw-500 mb-24">
                   {t("common.sku")}:{" "}
-                  <span className="dark-gray fw-400">AK-251-KT</span>
+                  <span className="dark-gray fw-400">{product?.sku || `SKU-${productId}`}</span>
                 </p>
                 <div className="row row-gap-2 mb-24">
                   <div className="col-sm-6">
@@ -365,7 +369,12 @@ export const ProductDetail = () => {
             <div className="tab-content">
               {activeTab === "desc" && (
                 <div className="tab-pane fade show active p-24 bg-white br-12">
-                  <p className="mb-16">{t("footer.desc")}</p>
+                  <p
+                    className="mb-0 dark-gray"
+                    style={{ whiteSpace: "pre-line", lineHeight: "1.8", fontSize: "15px" }}
+                  >
+                    {product?.description || t("productDetail.noDescription", "No detailed description available for this product.")}
+                  </p>
                 </div>
               )}
               {activeTab === "additional" && (
@@ -373,17 +382,31 @@ export const ProductDetail = () => {
                   <table className="table table-bordered mb-0">
                     <tbody>
                       <tr>
-                        <th style={{ width: "200px" }}>Weight</th>
-                        <td>0.5 kg</td>
+                        <th style={{ width: "200px" }}>{t("productDetail.skuCode", "SKU Code")}</th>
+                        <td>{product?.sku || `SKU-${productId}`}</td>
                       </tr>
+                      {product?.brand?.name && (
+                        <tr>
+                          <th>{t("common.brand", "Brand")}</th>
+                          <td>{product.brand.name}</td>
+                        </tr>
+                      )}
+                      {product?.category?.name && (
+                        <tr>
+                          <th>{t("common.categories", "Categories")}</th>
+                          <td>{product.category.name}</td>
+                        </tr>
+                      )}
                       <tr>
-                        <th>Dimensions</th>
-                        <td>15 x 20 x 2 cm</td>
+                        <th>{t("productDetail.weight", "Weight")}</th>
+                        <td>{product?.weightKg ?? product?.weight ?? "0.1"} kg</td>
                       </tr>
-                      <tr>
-                        <th>Material</th>
-                        <td>Recycled Paper, Premium Ink</td>
-                      </tr>
+                      {product?.stockQuantity != null && (
+                        <tr>
+                          <th>{t("productDetail.stockStatus", "Stock Status")}</th>
+                          <td>{product.stockQuantity > 0 ? `${t("common.inStock", "In Stock")} (${product.stockQuantity})` : t("common.outOfStock", "Out of Stock")}</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -391,7 +414,7 @@ export const ProductDetail = () => {
               {activeTab === "review" && (
                 <div className="tab-pane fade show active p-24 bg-white br-12">
                   <ProductReviewsList
-                    productId={id}
+                    productId={productId}
                     productName={product?.name}
                     onRatingUpdated={handleRatingUpdated}
                   />
@@ -421,7 +444,7 @@ export const ProductDetail = () => {
                     <span className="sale-label subtitle fw-400 white">
                       {prod.badge === "Sale" ? t("common.sale") : prod.badge}
                     </span>
-                    <Link to="/product-detail.html" className="image">
+                    <Link to={`/product/${prod.id}`} className="image">
                       <img
                         src={prod.image}
                         className="product-image"
@@ -433,15 +456,21 @@ export const ProductDetail = () => {
                         <li>
                           <a
                             href="#wishlist"
-                            onClick={(e) => e.preventDefault()}
+                            title={isInWishlist(prod.id) ? t("wishlist.remove", "Remove from wishlist") : t("wishlist.add", "Add to wishlist")}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              toggleWishlist(prod);
+                            }}
+                            style={{ color: isInWishlist(prod.id) ? "#e57c32" : undefined }}
                           >
-                            <i className="fa-light fa-heart"></i>
+                            <i className={isInWishlist(prod.id) ? "fa-solid fa-heart" : "fa-light fa-heart"} style={{ color: isInWishlist(prod.id) ? "#e57c32" : undefined }}></i>
                           </a>
                         </li>
                         <li>
                           <a
                             href="#quickview"
                             className="btn"
+                            title={t("modals.quickView", "Quick View")}
                             onClick={(e) => openQuickView(prod, e)}
                           >
                             <i className="fa-regular fa-eye"></i>
@@ -466,10 +495,8 @@ export const ProductDetail = () => {
                       >
                         {prod.title}
                       </Link>
-                      <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
-                        <span className="color-primary">★★★★★</span>
-                      </div>
-                      <h6 className="fw-700 color-primary">{formatCurrency(prod.price)}</h6>
+                      <ProductRatingSold product={prod} variant="card" className="mb-8" />
+                      <h6 className="fw-700 color-primary">{formatOrderMoney(prod.price, i18n.language)}</h6>
                     </div>
                   </div>
                 </div>
