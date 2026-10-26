@@ -1,9 +1,7 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { useAuth } from "../../providers/AuthContext";
 import reviewService from "../../services/reviewService";
 import Pagination from "../ui/Pagination";
-import ProductReviewModal from "./ProductReviewModal";
 import "../../styles/reviews.css";
 
 const REVIEW_PAGE_SIZE = 5;
@@ -18,9 +16,8 @@ const ReviewStars = ({ rating, label }) => {
   );
 };
 
-const ProductReviewsList = ({ productId, productName, onRatingUpdated }) => {
+const ProductReviewsList = ({ productId, onRatingUpdated }) => {
   const { t, i18n } = useTranslation();
-  const { user } = useAuth();
   const ratingUpdatedRef = useRef(onRatingUpdated);
   useEffect(() => { ratingUpdatedRef.current = onRatingUpdated; }, [onRatingUpdated]);
 
@@ -33,10 +30,6 @@ const ProductReviewsList = ({ productId, productName, onRatingUpdated }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
-
-  // Review eligibility
-  const [eligibility, setEligibility] = useState(null);
-  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   // Load reviews list
   useEffect(() => {
@@ -71,39 +64,10 @@ const ProductReviewsList = ({ productId, productName, onRatingUpdated }) => {
     return () => { active = false; };
   }, [productId, page, t, refreshKey]);
 
-  // Load review eligibility
-  useEffect(() => {
-    let active = true;
-    if (!productId || !user) {
-      setEligibility({ eligible: false, message: "UNAUTHENTICATED" });
-      return undefined;
-    }
-    setEligibility(null);
-    reviewService.getReviewEligibility(productId)
-      .then((res) => { if (active) setEligibility(res); })
-      .catch(() => { if (active) setEligibility({ eligible: false }); });
-    return () => { active = false; };
-  }, [productId, user, refreshKey]);
-
   // Reset to first page when productId changes
   useEffect(() => {
     setPage(0);
-    setIsReviewModalOpen(false);
   }, [productId]);
-
-  const handleReviewSubmitted = () => {
-    setIsReviewModalOpen(false);
-    setPage(0);
-    setRefreshKey((prev) => prev + 1);
-  };
-
-  const closeReviewModal = useCallback(() => setIsReviewModalOpen(false), []);
-  const reviewItemForModal = useMemo(() => eligibility?.orderItemId
-    ? {
-        orderItemId: eligibility.orderItemId,
-        productName: eligibility.productName || productName || "",
-      }
-    : null, [eligibility, productName]);
 
   return (
     <div className="product-reviews-container">
@@ -118,7 +82,7 @@ const ProductReviewsList = ({ productId, productName, onRatingUpdated }) => {
             rating={averageRating}
             label={t("reviews.ratingOutOfFive", { rating: averageRating.toFixed(1) })}
           />
-          <span className="product-rating-total-count">
+          <span className="product-rating-total-count mt-1">
             {t("reviews.summary", {
               rating: averageRating.toFixed(1),
               count: reviewCount,
@@ -155,39 +119,20 @@ const ProductReviewsList = ({ productId, productName, onRatingUpdated }) => {
             );
           })}
         </div>
-
-        {/* Write Review Action or Eligibility Notice */}
-        <div className="product-rating-action-col">
-          {!error && !loading && eligibility?.eligible ? (
-            <button
-              type="button"
-              className="cus-btn-2 text-nowrap"
-              onClick={() => setIsReviewModalOpen(true)}
-            >
-              <span className="btn-text">{t("reviews.writeReviewForProduct")}</span>
-              <span>{t("reviews.writeReviewForProduct")}</span>
-            </button>
-          ) : !loading && !error && (
-            <p className="product-review-eligibility-hint">
-              <i className="fa-regular fa-circle-info me-1" aria-hidden="true"></i>
-              {t("reviews.onlyPurchasedCanReview")}
-            </p>
-          )}
-        </div>
       </div>
 
-      {/* 2. State Handling: Loading, Error, Empty, List */}
+      {/* 2. Reviews List / Empty / Loading State */}
       {loading ? (
-        <div className="product-review-state" role="status">
+        <div className="product-review-state py-5 text-center bg-white br-12 border" role="status">
           <div
             className="spinner-border spinner-border-sm me-2 text-primary"
             role="status"
           />
-          {t("reviews.loading")}
+          <span className="text-muted">{t("reviews.loading")}</span>
         </div>
       ) : error ? (
-        <div className="product-review-state" role="alert">
-          <p className="mb-16 text-danger">{error}</p>
+        <div className="product-review-state py-4 text-center bg-white br-12 border" role="alert">
+          <p className="mb-3 text-danger">{error}</p>
           <button
             type="button"
             className="btn btn-outline-primary btn-sm"
@@ -199,28 +144,54 @@ const ProductReviewsList = ({ productId, productName, onRatingUpdated }) => {
       ) : reviews.length ? (
         <>
           <div className="product-review-list">
-            {reviews.map((review) => (
-              <article className="product-review-card" key={review.reviewId}>
-                <div className="product-review-card-header">
-                  <div>
-                    <strong>{review.userFullName || t("reviews.anonymous")}</strong>
-                    <small>
-                      {review.createdAt
-                        ? new Intl.DateTimeFormat(
-                            i18n.language === "vi" ? "vi-VN" : "en-US",
-                            { dateStyle: "medium" }
-                          ).format(new Date(review.createdAt))
-                        : ""}
-                    </small>
+            {reviews.map((review) => {
+              const displayName = review.userFullName || t("reviews.anonymous", "Khách hàng");
+              const initial = displayName.trim().charAt(0).toUpperCase();
+              return (
+                <article className="product-review-card" key={review.reviewId}>
+                  <div className="product-review-card-header">
+                    <div className="d-flex align-items-center gap-3">
+                      <div className="product-review-avatar">
+                        {initial}
+                      </div>
+                      <div>
+                        <div className="d-flex align-items-center flex-wrap gap-2">
+                          <strong className="medium-black" style={{ fontSize: "15px" }}>{displayName}</strong>
+                          <span
+                            className="badge bg-success-subtle text-success border border-success-subtle py-1 px-2"
+                            style={{ fontSize: "11px", fontWeight: "600", borderRadius: "6px" }}
+                          >
+                            <i className="fa-solid fa-circle-check me-1"></i>
+                            {t("reviews.verifiedPurchase", "Đã mua hàng")}
+                          </span>
+                        </div>
+                        <small className="text-muted d-flex align-items-center gap-1 mt-1" style={{ fontSize: "12px" }}>
+                          <i className="fa-regular fa-clock"></i>
+                          {review.createdAt
+                            ? new Intl.DateTimeFormat(
+                                i18n.language === "vi" ? "vi-VN" : "en-US",
+                                { dateStyle: "medium" }
+                              ).format(new Date(review.createdAt))
+                            : ""}
+                        </small>
+                      </div>
+                    </div>
+                    <div className="d-flex align-items-center gap-2">
+                      <ReviewStars
+                        rating={review.rating}
+                        label={t("reviews.ratingOutOfFive", { rating: review.rating })}
+                      />
+                      <span className="fw-700 color-primary" style={{ fontSize: "14px" }}>
+                        {Number(review.rating || 0).toFixed(1)}
+                      </span>
+                    </div>
                   </div>
-                  <ReviewStars
-                    rating={review.rating}
-                    label={t("reviews.ratingOutOfFive", { rating: review.rating })}
-                  />
-                </div>
-                <p>{review.comment}</p>
-              </article>
-            ))}
+                  <p className="mt-2 text-dark" style={{ fontSize: "14px", lineHeight: "1.65" }}>
+                    {review.comment}
+                  </p>
+                </article>
+              );
+            })}
           </div>
 
           {totalPages > 1 && (
@@ -235,18 +206,17 @@ const ProductReviewsList = ({ productId, productName, onRatingUpdated }) => {
           )}
         </>
       ) : (
-        <div className="product-review-state">
-          <p className="mb-0">{t("reviews.empty")}</p>
+        <div className="product-review-empty-box">
+          <div className="mb-2" style={{ fontSize: "40px", color: "#f59e0b" }}>
+            <i className="fa-regular fa-comments"></i>
+          </div>
+          <h6 className="fw-700 medium-black mb-1">
+            {t("reviews.empty", "Sản phẩm này chưa có đánh giá nào.")}
+          </h6>
+          <p className="text-muted mb-0" style={{ fontSize: "13px", maxWidth: "460px", margin: "0 auto" }}>
+            {t("reviews.emptyHint", "Những đánh giá từ người mua thực tế sẽ xuất hiện tại đây khi đơn hàng hoàn tất.")}
+          </p>
         </div>
-      )}
-
-      {/* 3. Review Modal (reused) */}
-      {isReviewModalOpen && reviewItemForModal && (
-        <ProductReviewModal
-          item={reviewItemForModal}
-          onClose={closeReviewModal}
-          onSubmitted={handleReviewSubmitted}
-        />
       )}
     </div>
   );

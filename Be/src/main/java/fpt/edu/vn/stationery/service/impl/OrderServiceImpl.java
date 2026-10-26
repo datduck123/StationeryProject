@@ -315,6 +315,14 @@ public class OrderServiceImpl implements OrderService {
                     paymentRepository.saveAndFlush(payment);
                 }
             });
+            // Increment sold count for each ordered product
+            for (OrderItem item : order.getOrderItems().stream()
+                    .sorted(Comparator.comparing(OrderItem::getProductId)).toList()) {
+                productRepository.findByIdForUpdate(item.getProductId()).ifPresent(product -> {
+                    product.setSold(Math.addExact(product.getSold() == null ? 0 : product.getSold(), item.getQuantity()));
+                    productRepository.save(product);
+                });
+            }
         }
 
         order.setOrderStatus(next);

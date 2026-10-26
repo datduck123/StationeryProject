@@ -260,7 +260,8 @@
   border-radius: 8px;
   padding: 0 12px;
   height: 38px;
-  width: 500px;
+  min-width: 220px;
+  max-width: 100%;
   transition:
     border-color 0.2s,
     box-shadow 0.2s;

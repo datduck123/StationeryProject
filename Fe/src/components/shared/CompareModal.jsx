@@ -1,11 +1,18 @@
 // Rewritten: Uses real compareList from CartContext instead of static placeholder data
 // Supports up to 2 real products, highlights best price
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
 import { getProductImage } from "../../services/productService";
 
-const formatCurrency = (amount) => {
+const formatCurrency = (amount, language) => {
   if (amount == null) return "—";
+  const locale = String(language).startsWith("en") ? "en-US" : "vi-VN";
+  const currency = String(language).startsWith("en") ? "USD" : "VND";
+  if (String(language).startsWith("en")) {
+    // Show in VND but with English format for now (VND only available)
+    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
+  }
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
 };
 
@@ -35,7 +42,7 @@ const Badge = ({ children, color }) => (
 );
 
 // Placeholder when slot is empty
-const EmptySlot = ({ onClose }) => (
+const EmptySlot = ({ label }) => (
   <div
     style={{
       display: "flex",
@@ -57,13 +64,14 @@ const EmptySlot = ({ onClose }) => (
       <line x1="8" y1="11" x2="14" y2="11" />
     </svg>
     <p style={{ fontSize: "13px", textAlign: "center", margin: 0 }}>
-      Thêm sản phẩm để so sánh
+      {label}
     </p>
   </div>
 );
 
 export const CompareModal = () => {
   const { isCompareOpen, closeCompare, compareList, removeCompareProduct } = useCartContext();
+  const { t, i18n } = useTranslation();
 
   if (!isCompareOpen) return null;
 
@@ -80,7 +88,7 @@ export const CompareModal = () => {
 
   const rows = [
     {
-      label: "Giá bán",
+      label: t("common.price", "Price"),
       key: "price",
       render: (p) => {
         const id = p.id || p.productId;
@@ -94,11 +102,11 @@ export const CompareModal = () => {
                 color: isBest ? "#16a34a" : "#1f2937",
               }}
             >
-              {formatCurrency(p.price)}
+              {formatCurrency(p.price, i18n.language)}
             </span>
             {isBest && (
               <div style={{ fontSize: "11px", color: "#16a34a", marginTop: "4px" }}>
-                ✓ Giá tốt hơn
+                {t("compare.betterPrice", "✓ Better price")}
               </div>
             )}
           </div>
@@ -106,7 +114,7 @@ export const CompareModal = () => {
       },
     },
     {
-      label: "Đánh giá",
+      label: t("common.reviews", "Reviews"),
       key: "rating",
       render: (p) => (
         <div style={{ textAlign: "center" }}>
@@ -118,23 +126,23 @@ export const CompareModal = () => {
       ),
     },
     {
-      label: "Tình trạng",
+      label: t("compare.status", "Status"),
       key: "stock",
       render: (p) => (
         <div style={{ textAlign: "center" }}>
           {(p.stockQuantity ?? p.stock_quantity ?? 0) > 0 ? (
-            <Badge color="green">Còn hàng</Badge>
+            <Badge color="green">{t("common.inStock", "In Stock")}</Badge>
           ) : (
-            <Badge color="red">Hết hàng</Badge>
+            <Badge color="red">{t("common.outOfStock", "Out of Stock")}</Badge>
           )}
           <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
-            {p.stockQuantity ?? p.stock_quantity ?? 0} sản phẩm
+            {p.stockQuantity ?? p.stock_quantity ?? 0} {t("compare.productsCount", "products")}
           </div>
         </div>
       ),
     },
     {
-      label: "Danh mục",
+      label: t("common.categories", "Categories"),
       key: "category",
       render: (p) => (
         <div style={{ textAlign: "center", fontSize: "13px", color: "#4b5563" }}>
@@ -143,7 +151,7 @@ export const CompareModal = () => {
       ),
     },
     {
-      label: "Thương hiệu",
+      label: t("common.brand", "Brand"),
       key: "brand",
       render: (p) => (
         <div style={{ textAlign: "center", fontSize: "13px", color: "#4b5563" }}>
@@ -152,7 +160,7 @@ export const CompareModal = () => {
       ),
     },
     {
-      label: "Trọng lượng",
+      label: t("productDetail.weight", "Weight"),
       key: "weight",
       render: (p) => (
         <div style={{ textAlign: "center", fontSize: "13px", color: "#4b5563" }}>
@@ -161,12 +169,12 @@ export const CompareModal = () => {
       ),
     },
     {
-      label: "Trạng thái",
+      label: t("compare.status", "Status"),
       key: "status",
       render: (p) => (
         <div style={{ textAlign: "center" }}>
           <Badge color={p.status === "ACTIVE" ? "green" : "red"}>
-            {p.status === "ACTIVE" ? "Đang bán" : "Ngừng bán"}
+            {p.status === "ACTIVE" ? t("compare.active", "Active") : t("compare.inactive", "Inactive")}
           </Badge>
         </div>
       ),
@@ -174,7 +182,7 @@ export const CompareModal = () => {
   ];
 
   const renderProductHeader = (prod, slot) => {
-    if (!prod) return <EmptySlot />;
+    if (!prod) return <EmptySlot label={t("compare.addMore", "Add product to compare")} />;
     const prodId = prod.id || prod.productId;
     return (
       <div style={{ textAlign: "center", padding: "0 12px" }}>
@@ -198,7 +206,7 @@ export const CompareModal = () => {
           />
           <button
             type="button"
-            title="Xóa khỏi so sánh"
+            title={t("compare.remove", "Remove from compare")}
             onClick={() => removeCompareProduct(prodId)}
             style={{
               position: "absolute",
@@ -307,10 +315,10 @@ export const CompareModal = () => {
             </div>
             <div>
               <h5 style={{ margin: 0, fontWeight: 700, fontSize: "18px", color: "#1f2937" }}>
-                So sánh sản phẩm
+                {t("modals.compareProducts", "Compare Products")}
               </h5>
               <p style={{ margin: 0, fontSize: "12px", color: "#9ca3af" }}>
-                {compareList.length}/2 sản phẩm được chọn
+                {t("compare.selectedCount", { count: compareList.length, total: 2, defaultValue: `${compareList.length}/2 products selected` })}
               </p>
             </div>
           </div>
@@ -413,7 +421,7 @@ export const CompareModal = () => {
                     textDecoration: "none",
                   }}
                 >
-                  Xem chi tiết
+                  {t("common.viewDetail", "View Details")}
                 </Link>
               </div>
             ) : <div />}
@@ -433,7 +441,7 @@ export const CompareModal = () => {
                     textDecoration: "none",
                   }}
                 >
-                  Xem chi tiết
+                  {t("common.viewDetail", "View Details")}
                 </Link>
               </div>
             ) : <div />}

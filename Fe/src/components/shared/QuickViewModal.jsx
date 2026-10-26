@@ -5,15 +5,12 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
 import { getProductImage } from "../../services/productService";
-
-const formatCurrency = (amount) => {
-  if (amount == null) return "—";
-  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
-};
+import ProductRatingSold from "./ProductRatingSold";
+import { formatOrderMoney } from "../../utils/orderFormatters";
 
 export const QuickViewModal = () => {
   const { quickViewProduct, closeQuickView, addToCart, pendingItemIds } = useCartContext();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
   useEffect(() => { setQuantity(1); }, [quickViewProduct]);
@@ -26,7 +23,7 @@ export const QuickViewModal = () => {
   const imgSrc = getProductImage(prod);
   const prodId = prod.id || prod.productId;
 
-  const subtotal = formatCurrency((prod.price ?? 0) * quantity);
+  const subtotal = formatOrderMoney((prod.price ?? 0) * quantity, i18n.language);
 
   const handleViewDetail = () => {
     closeQuickView();
@@ -129,7 +126,9 @@ export const QuickViewModal = () => {
                     color: inStock ? "#15803d" : "#dc2626",
                   }}
                 >
-                  {inStock ? `Còn hàng (${stockQty})` : "Hết hàng"}
+                  {inStock
+                    ? `${t("common.inStock", "In Stock")} (${stockQty})`
+                    : t("common.outOfStock", "Out of Stock")}
                 </span>
               </div>
 
@@ -143,7 +142,7 @@ export const QuickViewModal = () => {
                   lineHeight: 1.3,
                 }}
               >
-                {prod.name || "Sản phẩm"}
+                {prod.name || t("common.product", "Product")}
               </h4>
 
               {/* Category & Brand */}
@@ -153,18 +152,8 @@ export const QuickViewModal = () => {
                   .join(" · ")}
               </p>
 
-              {/* Stars */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  marginBottom: "16px",
-                }}
-              >
-                <span style={{ color: "#f59e0b", fontSize: "16px" }}>★★★★★</span>
-                <span style={{ fontSize: "13px", color: "#6b7280" }}>(02 đánh giá)</span>
-              </div>
+              {/* Stars & Sold count (Lazada style) */}
+              <ProductRatingSold product={prod} variant="quickview" className="mb-16" />
 
               {/* Price */}
               <div style={{ marginBottom: "16px" }}>
@@ -175,7 +164,7 @@ export const QuickViewModal = () => {
                     color: "#e57c32",
                   }}
                 >
-                  {formatCurrency(prod.price)}
+                  {formatOrderMoney(prod.price, i18n.language)}
                 </span>
               </div>
 
@@ -200,7 +189,7 @@ export const QuickViewModal = () => {
 
               {/* Quantity */}
               <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-                <span style={{ fontWeight: 600, fontSize: "14px", color: "#374151" }}>Số lượng:</span>
+                <span style={{ fontWeight: 600, fontSize: "14px", color: "#374151" }}>{t("common.quantity")}:</span>
                 <div
                   style={{
                     display: "flex",
@@ -312,7 +301,7 @@ export const QuickViewModal = () => {
                     minWidth: "120px",
                   }}
                 >
-                  Xem chi tiết
+                  {t("common.viewDetail", "View Details")}
                 </button>
               </div>
 
@@ -339,7 +328,7 @@ export const QuickViewModal = () => {
                 {(prod.weightKg ?? prod.weight_kg) && (
                   <div style={{ display: "flex", gap: "8px" }}>
                     <span style={{ fontWeight: 600, color: "#374151", minWidth: "80px" }}>
-                      Trọng lượng:
+                      {t("productDetail.weight", "Weight")}:
                     </span>
                     <span style={{ color: "#6b7280" }}>
                       {prod.weightKg ?? prod.weight_kg} kg

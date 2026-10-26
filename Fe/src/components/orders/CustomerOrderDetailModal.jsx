@@ -77,26 +77,39 @@ const CustomerOrderDetailModal = ({ order, orderNumber, onClose }) => {
 
           <h5 className="customer-order-modal-items-title">{t("orders.products")}</h5>
           <div className="customer-order-modal-items">
-            {order.orderItems?.length ? order.orderItems.map((item) => (
-              <div className="customer-order-modal-item" key={item.orderItemId}>
-                <div><strong>{item.productName}</strong><small>{t("orders.quantityPrice", { quantity: item.quantity, price: formatOrderMoney(item.unitPrice, i18n.language) })}</small></div>
-                <div className="product-review-item-action">
-                  <strong>{formatOrderMoney(item.subtotal, i18n.language)}</strong>
-                  {order.orderStatus === "DELIVERED" && (
-                    <button
-                      type="button"
-                      className="btn btn-outline-primary btn-sm"
-                      disabled={item.reviewed || item.hasReview || reviewedOrderItemIds.has(item.orderItemId)}
-                      onClick={() => setReviewItem(item)}
-                    >
-                      {item.reviewed || item.hasReview || reviewedOrderItemIds.has(item.orderItemId)
-                        ? t("reviews.alreadyReviewed")
-                        : t("reviews.writeReview")}
-                    </button>
-                  )}
+            {order.orderItems?.length ? order.orderItems.map((item) => {
+              const isReviewed = item.reviewed || item.hasReview || reviewedOrderItemIds.has(item.orderItemId);
+              return (
+                <div className="customer-order-modal-item d-flex align-items-center justify-content-between py-2 border-bottom" key={item.orderItemId}>
+                  <div>
+                    <strong>{item.productName}</strong>
+                    <small>{t("orders.quantityPrice", { quantity: item.quantity, price: formatOrderMoney(item.unitPrice, i18n.language) })}</small>
+                  </div>
+                  <div className="d-flex align-items-center gap-3">
+                    <strong>{formatOrderMoney(item.subtotal, i18n.language)}</strong>
+                    {order.orderStatus === "DELIVERED" && (
+                      <div>
+                        {isReviewed ? (
+                          <span className="badge-order-reviewed">
+                            <i className="fa-solid fa-circle-check"></i>
+                            {t("reviews.alreadyReviewed", "Đã đánh giá")}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn-order-review"
+                            onClick={() => setReviewItem(item)}
+                          >
+                            <i className="fa-solid fa-star text-warning"></i>
+                            {t("reviews.writeReview", "Đánh giá")}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )) : <p className="light-gray mb-0">{t("orders.noProducts")}</p>}
+              );
+            }) : <p className="light-gray mb-0">{t("orders.noProducts")}</p>}
           </div>
         </div>
 

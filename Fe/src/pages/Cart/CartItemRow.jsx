@@ -1,7 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
+  const { t } = useTranslation();
   const quantity = item.finalQuantity || item.requestedQuantity || 1;
   const maxStock = item.currentStock ?? 999;
   const unitPrice = Number(item.unitPrice || 0);
@@ -16,7 +18,7 @@ export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
               <button
                 type="button"
                 className="btn btn-link text-danger p-0 border-0 me-2"
-                title="Xóa sản phẩm"
+                title={t("cart.removeProduct", "Remove product")}
                 onClick={() => onRemove(item.cartItemId)}
               >
                 <i className="fa-solid fa-xmark fs-5"></i>
@@ -88,7 +90,7 @@ export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
             </div>
             {maxStock <= 5 && maxStock > 0 && (
               <small className="text-danger d-block mt-1">
-                Chỉ còn {maxStock} món
+                {t("cart.onlyLeft", { count: maxStock, defaultValue: `Only ${maxStock} left` })}
               </small>
             )}
           </td>
