@@ -72,34 +72,17 @@ export const Checkout = () => {
 
     setIsSubmitting(true);
     try {
-      const normalizedPayment = formData.paymentMethod === "VNPAY" ? "ONLINE" : (formData.paymentMethod || "COD");
-
-      // 1. Kiểm tra tồn kho trước khi đặt
-      await checkoutService.validateCheckout({
-        ...formData,
-        paymentMethod: normalizedPayment,
-      });
-
-      // 2. Chuẩn bị payload khớp chuẩn CreateOrderRequestDTO của Backend
-      const orderPayload = {
-        shippingAddress: formData.shippingAddress.trim(),
-        phone: formData.phoneNumber.trim(),
-        shippingMethod: formData.shippingMethod || "STANDARD",
-        paymentMethod: normalizedPayment,
-        voucherCode: formData.voucherCode || undefined,
-        note: formData.orderNotes?.trim() || undefined,
-      };
-
-      // 3. Thực hiện lưu đơn hàng vào Database
-      await orderService.createOrder(orderPayload);
-      showToast("Đặt hàng thành công!", "success");
+      const response = await checkoutService.validateCheckout(formData);
+      showToast(response.message || "Đặt hàng thành công!", "success");
       
-      // 4. Xóa giỏ hàng trên giao diện client
+      // Redirect to Order Detail or History page
       await clearCart(false);
-
-      // 5. Chuyển hướng ngay đến trang Lịch sử đơn hàng
-      navigate("/account/orders");
-      
+      const targetOrderId = response?.orderId || response?.data?.orderId;
+      if (targetOrderId) {
+        setTimeout(() => navigate(`/account/orders/${targetOrderId}`), 1200);
+      } else {
+        setTimeout(() => navigate("/account/orders"), 1200);
+      }
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || "Lỗi khi xử lý đơn hàng";
       showToast(message, "error", 5000);
