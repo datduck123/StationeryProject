@@ -1,18 +1,5 @@
 import React from "react";
 
-export interface StatCardProps {
-  title: string;
-  value: string | number;
-  growth?: string | number;
-  growthType?: "up" | "down" | "neutral";
-  growthText?: string;
-  subtitle?: string;
-  icon: string;
-  colorVariant?: "primary" | "success" | "warning" | "info" | "purple";
-  badgeText?: string;
-  loading?: boolean;
-}
-
 const variantStyles = {
   primary: {
     bg: "rgba(233, 97, 63, 0.12)",
@@ -46,7 +33,7 @@ const variantStyles = {
   },
 };
 
-export const StatCard: React.FC<StatCardProps> = ({
+export const StatCard = ({
   title,
   value,
   growth,

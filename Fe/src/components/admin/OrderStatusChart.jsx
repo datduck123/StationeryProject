@@ -4,33 +4,12 @@ import {
   ArcElement,
   Tooltip,
   Legend,
-  ChartOptions,
-  ChartData,
 } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-export interface OrderStatusDistributionItem {
-  status: string;
-  count: number;
-  percentage?: number;
-}
-
-export interface OrderStatusChartProps {
-  statusCounts?: Record<string, number>;
-  statusDistribution?: OrderStatusDistributionItem[];
-  loading?: boolean;
-}
-
-interface StatusMeta {
-  label: string;
-  color: string;
-  icon: string;
-  bgSubtle: string;
-}
-
-const STATUS_METAS: Record<string, StatusMeta> = {
+const STATUS_METAS = {
   DELIVERED: {
     label: "Đã giao hàng",
     color: "#10b981",
@@ -65,14 +44,14 @@ const STATUS_METAS: Record<string, StatusMeta> = {
 
 const ORDERED_STATUSES = ["DELIVERED", "SHIPPING", "CONFIRMED", "PENDING", "CANCELLED"];
 
-export const OrderStatusChart: React.FC<OrderStatusChartProps> = ({
+export const OrderStatusChart = ({
   statusCounts,
   statusDistribution,
   loading = false,
 }) => {
   // Normalize items
   const items = useMemo(() => {
-    let sourceMap: Record<string, number> = {};
+    let sourceMap = {};
 
     if (statusDistribution && statusDistribution.length > 0) {
       statusDistribution.forEach((d) => {
@@ -114,7 +93,7 @@ export const OrderStatusChart: React.FC<OrderStatusChartProps> = ({
 
   const hasData = totalOrders > 0;
 
-  const chartData: ChartData<"doughnut"> = {
+  const chartData = {
     labels: items.map((it) => it.label),
     datasets: [
       {
@@ -129,7 +108,7 @@ export const OrderStatusChart: React.FC<OrderStatusChartProps> = ({
     ],
   };
 
-  const chartOptions: ChartOptions<"doughnut"> = {
+  const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     cutout: "74%",
