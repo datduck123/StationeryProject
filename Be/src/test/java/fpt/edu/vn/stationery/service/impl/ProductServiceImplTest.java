@@ -17,6 +17,7 @@ import fpt.edu.vn.stationery.mapper.ProductMapper;
 import fpt.edu.vn.stationery.repository.BrandRepository;
 import fpt.edu.vn.stationery.repository.CategoryRepository;
 import fpt.edu.vn.stationery.repository.ProductRepository;
+import fpt.edu.vn.stationery.repository.ReviewRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,9 @@ public class ProductServiceImplTest {
 
     @Mock
     private ProductMapper productMapper;
+
+    @Mock
+    private ReviewRepository reviewRepository;
 
     @InjectMocks
     private ProductServiceImpl productService;

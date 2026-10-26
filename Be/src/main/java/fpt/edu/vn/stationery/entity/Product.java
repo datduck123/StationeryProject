@@ -42,6 +42,9 @@ public class Product {
     @Column(name = "stock_quantity", nullable = false)
     private Integer stockQuantity = 0;
 
+    @Column(name = "sold", nullable = false)
+    private Integer sold = 0;
+
     @Column(name = "description", columnDefinition = "NVARCHAR(1000)")
     private String description;
 
@@ -62,7 +65,7 @@ public class Product {
     public Product(Long productId, Category category, Brand brand, String sku, String name,
                    BigDecimal price, BigDecimal weightKg, Integer stockQuantity, Integer stock,
                    String description, String imageUrl, ProductStatus status,
-                   LocalDateTime createdAt, LocalDateTime updatedAt) {
+                   LocalDateTime createdAt, LocalDateTime updatedAt, Integer sold) {
         this.productId = productId;
         this.category = category;
         this.brand = brand;
@@ -76,6 +79,7 @@ public class Product {
         this.status = status != null ? status : ProductStatus.ACTIVE;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.sold = sold != null ? sold : 0;
     }
 
     @PrePersist
@@ -86,6 +90,8 @@ public class Product {
             status = ProductStatus.ACTIVE;
         if (stockQuantity == null)
             stockQuantity = 0;
+        if (sold == null)
+            sold = 0;
     }
 
     @PreUpdate

@@ -6,7 +6,8 @@ import cartService from "../../services/cartService";
 import voucherService from "../../services/voucherService";
 
 export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isEn = i18n.language === "en";
   const { cart, setCart } = useCartContext();
   const { showToast } = useToast();
 
@@ -126,7 +127,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
     <div className="checkout-sidebar">
       {/* Voucher Dropdown Widget */}
       <div className="coupon-widget mb-24" ref={dropdownRef}>
-        <h6 className="fw-600 mb-12">Mã giảm giá (Voucher)</h6>
+        <h6 className="fw-600 mb-12">{t("checkout.voucherTitle", "Discount Code (Voucher)")}</h6>
 
         {/* Dropdown Toggle Header */}
         <div
@@ -152,12 +153,12 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
                     Voucher ID: {formData.voucherId}
                   </div>
                   <span className="badge bg-success-subtle text-success" style={{ fontSize: "11px" }}>
-                    ✓ Đang áp dụng
+                    {t("checkout.applying", "✓ Applied")}
                   </span>
                 </div>
               ) : (
                 <span className="text-secondary" style={{ fontSize: "14px" }}>
-                  Chọn mã giảm giá (Voucher)...
+                  {t("checkout.selectVoucher", "Choose a voucher...")}
                 </span>
               )}
             </div>
@@ -179,6 +180,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
           >
             <div className="text-muted mb-2 fw-500" style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
               Danh sách mã voucher khả dụng:
+              {t("checkout.voucherList", "Voucher list (select by ID):")}
             </div>
 
             {/* Option: Không sử dụng mã giảm giá */}
@@ -196,8 +198,8 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
                 style={{ marginTop: "3px", accentColor: "#e9613f", cursor: "pointer" }}
               />
               <label htmlFor="voucher-opt-none" className="m-0 w-100" style={{ cursor: "pointer" }}>
-                <div className="fw-500 text-dark" style={{ fontSize: "14px" }}>Không sử dụng mã giảm giá</div>
-                <div className="text-muted" style={{ fontSize: "12px" }}>Bỏ chọn voucher</div>
+                <div className="fw-500 text-dark" style={{ fontSize: "14px" }}>{t("checkout.noVoucher", "Do not use discount code")}</div>
+                <div className="text-muted" style={{ fontSize: "12px" }}>{t("checkout.unselectVoucher", "Remove voucher")}</div>
               </label>
             </div>
 
@@ -259,6 +261,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
             <span>
               <i className="fa-solid fa-circle-check me-1"></i>
               Đã kích hoạt Voucher: <strong>{selectedVoucher ? selectedVoucher.code : `ID #${formData.voucherId}`}</strong>
+              {t("checkout.voucherActivated", "Activated Voucher ID:")} <strong>{formData.voucherId}</strong>
             </span>
             <button
               type="button"
@@ -266,18 +269,20 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
               style={{ fontSize: "12px" }}
               onClick={() => handleSelectVoucher(null)}
             >
-              Hủy áp dụng
+              {t("checkout.cancelVoucher", "Cancel")}
             </button>
           </div>
         )}
       </div>
 
       <div className="cart-total-box bg-white br-10">
-        <h5 className="fw-600 mb-24">Tóm tắt đơn hàng</h5>
+        <h5 className="fw-600 mb-24">{t("checkout.orderSummary", "Order Summary")}</h5>
 
         {/* Items Summary */}
         <div className="order-items mb-24">
-          <h6 className="mb-12">Sản phẩm ({cart.totalItemsCount})</h6>
+          <h6 className="mb-12">
+            {t("checkout.productsCount", { count: cart.totalItemsCount, defaultValue: `Products (${cart.totalItemsCount})` })}
+          </h6>
           {cart.items.filter(item => item.available && item.finalQuantity > 0).map((item) => (
             <div key={item.cartItemId || item.productId} className="d-flex justify-content-between mb-8" style={{ fontSize: "14px" }}>
               <span className="text-truncate" style={{ maxWidth: "70%" }}>
@@ -290,7 +295,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
 
         <ul className="list-unstyled mb-24">
           <li className="d-flex justify-content-between align-items-center mb-12">
-            <span className="fw-500">Thành tiền</span>
+            <span className="fw-500">{t("cart.subtotal", "Subtotal")}</span>
             <span className="fw-500">{cart.subtotal.toLocaleString("vi-VN")} đ</span>
           </li>
 
@@ -298,7 +303,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
           <li>
             <div className="shipping-radio w-100 mb-12">
               <span className="fw-500 mb-16 d-block">
-                Vận chuyển
+                {t("cart.delivery", "Shipping")}
               </span>
               <div className="cus-radio mb-12">
                 <input
@@ -309,7 +314,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
                   checked={formData.shippingMethod === "STANDARD"}
                   onChange={handleChange}
                 />
-                <label htmlFor="standard">Standard (Miễn phí {'>'} 100.000 đ)</label>
+                <label htmlFor="standard">{t("checkout.shippingStandard", "Standard (Free > 100.000 đ)")}</label>
               </div>
               <div className="cus-radio">
                 <input
@@ -325,19 +330,19 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
             </div>
           </li>
           <li className="d-flex justify-content-between align-items-center mb-12">
-            <span className="fw-500">Phí giao hàng</span>
-            <span className="fw-500">{cart.shippingFee === 0 ? "Miễn phí" : `${cart.shippingFee.toLocaleString("vi-VN")} đ`}</span>
+            <span className="fw-500">{t("cart.delivery", "Shipping Fee")}</span>
+            <span className="fw-500">{cart.shippingFee === 0 ? t("cart.freeShipping", "Free") : `${cart.shippingFee.toLocaleString("vi-VN")} đ`}</span>
           </li>
 
           {cart.discountAmount > 0 && (
             <li className="d-flex justify-content-between align-items-center mb-12 text-success">
-              <span className="fw-500">Voucher giảm giá</span>
+              <span className="fw-500">{t("checkout.voucherDiscount", "Voucher Discount")}</span>
               <span className="fw-500">-{cart.discountAmount.toLocaleString("vi-VN")} đ</span>
             </li>
           )}
 
           <li className="total d-flex justify-content-between align-items-center mt-16 pt-16 border-top">
-            <span className="fw-600 dark-black">Tổng cộng</span>
+            <span className="fw-600 dark-black">{t("common.total", "Total")}</span>
             <span className="fw-600 dark-black color-primary">
               {cart.totalCost.toLocaleString("vi-VN")} đ
             </span>
@@ -346,7 +351,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
 
         {/* Payment Methods */}
         <div className="payment-accordion mb-24">
-          <h6 className="fw-600 mb-16">Phương thức thanh toán</h6>
+          <h6 className="fw-600 mb-16">{t("checkout.paymentMethod", "Payment Method")}</h6>
           <div className="cus-radio mb-12">
             <input
               type="radio"
@@ -356,18 +361,18 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
               checked={formData.paymentMethod === "COD"}
               onChange={handleChange}
             />
-            <label htmlFor="payment-cod">Thanh toán khi nhận hàng (COD)</label>
+            <label htmlFor="payment-cod">{t("checkout.cashOnDelivery", "Cash on delivery (COD)")}</label>
           </div>
           <div className="cus-radio">
             <input
               type="radio"
               id="payment-vnpay"
               name="paymentMethod"
-              value="VNPAY"
-              checked={formData.paymentMethod === "VNPAY"}
+              value="ONLINE"
+              checked={formData.paymentMethod === "ONLINE" || formData.paymentMethod === "VNPAY"}
               onChange={handleChange}
             />
-            <label htmlFor="payment-vnpay">Chuyển khoản VNPAY</label>
+            <label htmlFor="payment-vnpay">{t("checkout.vnpay", "Thanh toán trực tuyến (ONLINE)")}</label>
           </div>
         </div>
 
@@ -377,9 +382,9 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
           disabled={isSubmitting || !cart || cart.items.length === 0}
         >
           <span className="text-btn">
-            {isSubmitting ? "Đang xử lý..." : "Đặt Hàng Ngay"}
+            {isSubmitting ? t("checkout.processing", "Processing...") : t("checkout.placeOrder", "Place Order Now")}
           </span>
-          <span>{isSubmitting ? "Đang xử lý..." : "Đặt Hàng Ngay"}</span>
+          <span>{isSubmitting ? t("checkout.processing", "Processing...") : t("checkout.placeOrder", "Place Order Now")}</span>
         </button>
       </div>
     </div>

@@ -630,9 +630,9 @@ export const AdminProductManagement = () => {
 
       {/* TOOLBAR CARD (Clean horizontal layout, uniform search, filters, and sort like User Management) */}
       <div className="admin-card mb-4">
-        <div className="d-flex flex-wrap align-items-center gap-3">
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
           {/* Live Auto Search */}
-          <div className="admin-search-box">
+          <div className="admin-search-box" style={{ flex: "1 1 240px", maxWidth: "360px" }}>
             <i className="fa-solid fa-magnifying-glass text-muted fs-13"></i>
             <input
               type="text"
@@ -651,73 +651,76 @@ export const AdminProductManagement = () => {
             )}
           </div>
 
-          {/* Category Filter */}
-          <select
-            className="admin-select-sm"
-            style={{ width: "160px" }}
-            value={selectedCategory}
-            onChange={(e) => {
-              setSelectedCategory(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="">All Categories</option>
-            {categories.map((c) => (
-              <option key={c.categoryId} value={c.categoryId}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          {/* Filter Controls Group */}
+          <div className="d-flex flex-wrap align-items-center gap-2 ms-auto">
+            {/* Category Filter */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "140px" }}
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="">All Categories</option>
+              {categories.map((c) => (
+                <option key={c.categoryId} value={c.categoryId}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
 
-          {/* Brand Filter */}
-          <select
-            className="admin-select-sm"
-            style={{ width: "160px" }}
-            value={selectedBrand}
-            onChange={(e) => {
-              setSelectedBrand(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="">All Brands</option>
-            {brands.map((b) => (
-              <option key={b.brandId} value={b.brandId}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+            {/* Brand Filter */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "135px" }}
+              value={selectedBrand}
+              onChange={(e) => {
+                setSelectedBrand(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="">All Brands</option>
+              {brands.map((b) => (
+                <option key={b.brandId} value={b.brandId}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
 
-          {/* Status Filter */}
-          <select
-            className="admin-select-sm"
-            style={{ width: "140px" }}
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-          </select>
+            {/* Status Filter */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "125px" }}
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
 
-          {/* Sort dropdown */}
-          <select
-            className="admin-select-sm"
-            style={{ width: "165px" }}
-            value={sortBy}
-            onChange={(e) => {
-              setSortBy(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="createdAt,desc">Newest First</option>
-            <option value="price,asc">Price: Low to High</option>
-            <option value="price,desc">Price: High to Low</option>
-            <option value="stockQuantity,asc">Stock: Low to High</option>
-            <option value="stockQuantity,desc">Stock: High to Low</option>
-          </select>
+            {/* Sort dropdown */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "155px" }}
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="createdAt,desc">Newest First</option>
+              <option value="price,asc">Price: Low to High</option>
+              <option value="price,desc">Price: High to Low</option>
+              <option value="stockQuantity,asc">Stock: Low to High</option>
+              <option value="stockQuantity,desc">Stock: High to Low</option>
+            </select>
+          </div>
         </div>
       </div>
 

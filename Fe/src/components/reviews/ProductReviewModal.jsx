@@ -6,7 +6,7 @@ import reviewService from "../../services/reviewService";
 import "../../styles/reviews.css";
 
 const ProductReviewModal = ({ item, onClose, onSubmitted }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { showToast } = useToast();
   const titleId = useId();
   const commentId = useId();
@@ -109,64 +109,151 @@ const ProductReviewModal = ({ item, onClose, onSubmitted }) => {
         aria-labelledby={titleId}
       >
         <div className="product-review-modal-header">
-          <div>
-            <h4 id={titleId}>{t("reviews.formTitle")}</h4>
-            <p>{item.productName}</p>
+          <div className="d-flex align-items-center gap-3">
+            <div
+              style={{
+                width: "42px",
+                height: "42px",
+                borderRadius: "12px",
+                background: "linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "18px",
+                color: "#e9613f",
+                boxShadow: "0 2px 8px rgba(233, 97, 63, 0.15)",
+                flexShrink: 0,
+              }}
+            >
+              <i className="fa-solid fa-star"></i>
+            </div>
+            <div>
+              <h4 id={titleId} className="fw-700 medium-black mb-1" style={{ fontSize: "18px" }}>
+                {t("reviews.formTitle", "Đánh giá sản phẩm")}
+              </h4>
+              <p className="text-muted mb-0 text-truncate" style={{ fontSize: "13px", maxWidth: "340px" }}>
+                {item.productName}
+              </p>
+            </div>
           </div>
-          <button type="button" className="product-review-modal-close" aria-label={t("common.close")} onClick={onClose}>×</button>
+          <button
+            type="button"
+            className="product-review-modal-close"
+            aria-label={t("common.close")}
+            onClick={onClose}
+          >
+            ×
+          </button>
         </div>
 
         <form onSubmit={submitReview} className="product-review-form">
           <fieldset disabled={submitting || duplicate}>
-            <legend>{t("reviews.ratingLabel")}</legend>
-            <div className="product-review-rating-input" onMouseLeave={() => setHoverRating(0)}>
-              {[1, 2, 3, 4, 5].map((value) => (
-                <label
-                  key={value}
-                  className={value <= (hoverRating || rating) ? "is-filled" : ""}
-                  onMouseEnter={() => setHoverRating(value)}
+            <div className="mb-4">
+              <label className="fw-700 medium-black mb-2 d-block" style={{ fontSize: "14px" }}>
+                {t("reviews.ratingLabel", "Mức đánh giá")}
+              </label>
+              <div
+                className="d-flex flex-column align-items-center py-3 px-3 br-12"
+                style={{ backgroundColor: "#fbfbfc", border: "1px solid #f1f3f7" }}
+              >
+                <div className="product-review-rating-input" onMouseLeave={() => setHoverRating(0)}>
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <label
+                      key={value}
+                      className={value <= (hoverRating || rating) ? "is-filled" : ""}
+                      onMouseEnter={() => setHoverRating(value)}
+                    >
+                      <input
+                        ref={value === 1 ? firstRatingRef : undefined}
+                        type="radio"
+                        name="product-review-rating"
+                        value={value}
+                        checked={rating === value}
+                        onChange={() => setRating(value)}
+                      />
+                      <span aria-hidden="true">★</span>
+                      <span className="visually-hidden">{t("reviews.starValue", { value })}</span>
+                    </label>
+                  ))}
+                </div>
+                <div
+                  className="product-review-emotion-badge mt-2"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    background: "#fff7ed",
+                    border: "1px solid #fed7aa",
+                    color: "#ea580c",
+                    padding: "4px 16px",
+                    borderRadius: "999px",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    transition: "all 0.2s ease",
+                  }}
                 >
-                  <input
-                    ref={value === 1 ? firstRatingRef : undefined}
-                    type="radio"
-                    name="product-review-rating"
-                    value={value}
-                    checked={rating === value}
-                    onChange={() => setRating(value)}
-                  />
-                  <span aria-hidden="true">★</span>
-                  <span className="visually-hidden">{t("reviews.starValue", { value })}</span>
-                </label>
-              ))}
+                  {(hoverRating || rating) === 1 && "😡 " + (i18n.language === "vi" ? "Rất không hài lòng" : "Very Bad")}
+                  {(hoverRating || rating) === 2 && "🙁 " + (i18n.language === "vi" ? "Không hài lòng" : "Bad")}
+                  {(hoverRating || rating) === 3 && "😐 " + (i18n.language === "vi" ? "Bình thường" : "Fair")}
+                  {(hoverRating || rating) === 4 && "🙂 " + (i18n.language === "vi" ? "Hài lòng" : "Good")}
+                  {(hoverRating || rating) === 5 && "😍 " + (i18n.language === "vi" ? "Tuyệt vời" : "Excellent")}
+                </div>
+              </div>
             </div>
 
-            <label className="product-review-comment-label" htmlFor={commentId}>{t("reviews.commentLabel")}</label>
-            <textarea
-              id={commentId}
-              rows="5"
-              minLength="3"
-              maxLength="1000"
-              value={comment}
-              onChange={(event) => {
-                setComment(event.target.value);
-                if (error && !duplicate) setError("");
-              }}
-              placeholder={t("reviews.commentPlaceholder")}
-              aria-invalid={Boolean(error)}
-              aria-describedby={`${commentId}-counter${error ? ` ${commentId}-error` : ""}`}
-              required
-            />
-            <div id={`${commentId}-counter`} className="product-review-comment-counter" aria-live="polite">
-              {t("reviews.commentCounter", { count: comment.length })}
+            <div className="mb-2">
+              <label className="fw-700 medium-black mb-2 d-block" htmlFor={commentId} style={{ fontSize: "14px" }}>
+                {t("reviews.commentLabel", "Nhận xét của bạn")}
+              </label>
+              <textarea
+                id={commentId}
+                rows="4"
+                minLength="3"
+                maxLength="1000"
+                value={comment}
+                onChange={(event) => {
+                  setComment(event.target.value);
+                  if (error && !duplicate) setError("");
+                }}
+                placeholder={t("reviews.commentPlaceholder")}
+                aria-invalid={Boolean(error)}
+                aria-describedby={`${commentId}-counter${error ? ` ${commentId}-error` : ""}`}
+                required
+              />
+              <div id={`${commentId}-counter`} className="product-review-comment-counter">
+                {t("reviews.commentCounter", { count: comment.length })}
+              </div>
             </div>
           </fieldset>
 
           {error && <p id={`${commentId}-error`} className="product-review-form-error" role="alert">{error}</p>}
 
           <div className="product-review-modal-actions">
-            <button type="button" className="btn btn-outline-secondary" onClick={onClose}>{t("reviews.cancel")}</button>
-            <button type="submit" className="btn btn-primary" disabled={submitting || duplicate}>
-              {submitting ? t("reviews.submitting") : duplicate ? t("reviews.alreadyReviewed") : t("reviews.submit")}
+            <button
+              type="button"
+              className="btn-review-modal-cancel"
+              onClick={onClose}
+            >
+              {t("reviews.cancel", "Để sau")}
+            </button>
+            <button
+              type="submit"
+              className="btn-review-modal-submit"
+              disabled={submitting || duplicate}
+            >
+              {submitting ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  {t("reviews.submitting", "Đang gửi...")}
+                </>
+              ) : duplicate ? (
+                t("reviews.alreadyReviewed", "Đã đánh giá")
+              ) : (
+                <>
+                  <i className="fa-solid fa-paper-plane me-2"></i>
+                  {t("reviews.submit", "Gửi đánh giá")}
+                </>
+              )}
             </button>
           </div>
         </form>

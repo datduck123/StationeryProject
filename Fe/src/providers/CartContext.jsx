@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import cartService from "../services/cartService";
 import { useAuth } from "./AuthContext";
 import { useToast } from "./ToastContext";
@@ -76,6 +77,7 @@ const normalizeCart = (payload) => {
 };
 
 export const CartProvider = ({ children }) => {
+  const { t } = useTranslation();
   const { user, openAuthModal } = useAuth();
   const { showToast } = useToast();
 
@@ -117,10 +119,10 @@ export const CartProvider = ({ children }) => {
 
   const requireCustomer = useCallback(() => {
     if (user) return true;
-    showToast?.("Vui lòng đăng nhập để thao tác giỏ hàng!", "info");
+    showToast?.(t("cart.pleaseLogin", "Please sign in to manage your cart!"), "info");
     openAuthModal?.("login");
     return false;
-  }, [openAuthModal, showToast, user]);
+  }, [openAuthModal, showToast, t, user]);
 
   const setPending = useCallback((id, pending) => {
     setPendingItemIds((current) => {
@@ -158,14 +160,14 @@ export const CartProvider = ({ children }) => {
         if (error?.response?.status !== 401 && error?.response?.status !== 403) {
           console.error("Failed to load cart:", error);
         }
-        const msg = extractMessage(error, "Không thể tải giỏ hàng.");
+        const msg = extractMessage(error, t("cart.loadError", "Could not load cart."));
         setCartError(msg);
         return normalizeCart(null);
       } finally {
         if (!silent) setIsLoading(false);
       }
     },
-    [showToast, user]
+    [showToast, t, user]
   );
 
   const refreshCart = fetchCart;
@@ -204,12 +206,12 @@ export const CartProvider = ({ children }) => {
         } else {
           await fetchCart({ silent: true });
         }
-        showToast?.("Đã thêm sản phẩm vào giỏ hàng thành công!", "success");
+        showToast?.(t("cart.addedSuccess", "Added product to cart successfully!"), "success");
         if (shouldOpenDrawer) setIsCartOpen(true);
         return true;
       } catch (error) {
         showToast?.(
-          extractMessage(error, "Không thể thêm sản phẩm vào giỏ hàng."),
+          extractMessage(error, t("cart.addError", "Could not add product to cart.")),
           "error"
         );
         return false;
@@ -218,7 +220,7 @@ export const CartProvider = ({ children }) => {
         setIsLoading(false);
       }
     },
-    [fetchCart, requireCustomer, setPending, showToast]
+    [fetchCart, requireCustomer, setPending, showToast, t]
   );
 
   /**
@@ -247,7 +249,7 @@ export const CartProvider = ({ children }) => {
         return true;
       } catch (error) {
         showToast?.(
-          extractMessage(error, "Không thể cập nhật số lượng."),
+          extractMessage(error, t("cart.updateQtyError", "Could not update quantity.")),
           "error"
         );
         await fetchCart({ silent: true });
@@ -257,7 +259,7 @@ export const CartProvider = ({ children }) => {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fetchCart, setPending, showToast, user]
+    [fetchCart, setPending, showToast, t, user]
   );
 
   const updateQuantity = updateCartItem;
@@ -276,11 +278,11 @@ export const CartProvider = ({ children }) => {
         } else {
           await fetchCart({ silent: true });
         }
-        showToast?.("Đã xóa sản phẩm khỏi giỏ hàng.", "info");
+        showToast?.(t("cart.removedSuccess", "Removed product from cart."), "info");
         return true;
       } catch (error) {
         showToast?.(
-          extractMessage(error, "Không thể xóa sản phẩm khỏi giỏ hàng."),
+          extractMessage(error, t("cart.removeError", "Could not remove product from cart.")),
           "error"
         );
         return false;
@@ -288,7 +290,7 @@ export const CartProvider = ({ children }) => {
         setPending(cartItemId, false);
       }
     },
-    [fetchCart, setPending, showToast, user]
+    [fetchCart, setPending, showToast, t, user]
   );
 
   const removeItem = removeCartItem;
@@ -307,12 +309,12 @@ export const CartProvider = ({ children }) => {
         await cartService.clearCart();
         setCartState(normalizeCart(null));
         if (showNotification) {
-          showToast?.("Đã xóa sạch giỏ hàng.", "info");
+          showToast?.(t("cart.clearedSuccess", "Cart cleared successfully."), "info");
         }
         return true;
       } catch (error) {
         showToast?.(
-          extractMessage(error, "Không thể xóa toàn bộ giỏ hàng."),
+          extractMessage(error, t("cart.clearError", "Could not clear cart.")),
           "error"
         );
         return false;
@@ -320,7 +322,7 @@ export const CartProvider = ({ children }) => {
         setIsLoading(false);
       }
     },
-    [showToast, user]
+    [showToast, t, user]
   );
 
   // Drawer open / close handlers
@@ -371,15 +373,16 @@ export const CartProvider = ({ children }) => {
             )
           : [...current, product]
       );
+      const prodName = product.name || t("common.product", "Product");
       showToast?.(
         exists
-          ? `Đã xóa "${product.name || "Sản phẩm"}" khỏi danh sách yêu thích.`
-          : `Đã thêm "${product.name || "Sản phẩm"}" vào danh sách yêu thích!`,
+          ? t("wishlist.removedToast", { name: prodName, defaultValue: `Removed "${prodName}" from wishlist.` })
+          : t("wishlist.addedToast", { name: prodName, defaultValue: `Added "${prodName}" to wishlist!` }),
         exists ? "info" : "success"
       );
       if (!exists) setTimeout(() => setIsWishlistOpen(true), 300);
     },
-    [isInWishlist, showToast]
+    [isInWishlist, showToast, t]
   );
 
   const removeFromWishlist = useCallback((productId) => {

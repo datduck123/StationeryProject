@@ -8,6 +8,7 @@ import { useAuth } from "../../providers/AuthContext";
 import { useCartContext } from "../../providers/CartContext";
 import { useToast } from "../../providers/ToastContext";
 import checkoutService from "../../services/checkoutService";
+import orderService from "../../services/orderService";
 import cartService from "../../services/cartService";
 
 export const Checkout = () => {
@@ -26,6 +27,7 @@ export const Checkout = () => {
     shippingMethod: "STANDARD",
     paymentMethod: "COD",
     voucherId: null,
+    voucherCode: null,
     isPrefilled: false
   });
 
@@ -105,7 +107,7 @@ export const Checkout = () => {
             <div className="customer-wrapper">
               <div className="title-box">
                 <p className="fw-500">
-                  Khách hàng cũ?{" "}
+                  {t("checkout.returningCustomer", "Returning customer?")}{" "}
                   <a
                     href="#login"
                     className="color-primary text-decoration-underline signin-button"
@@ -114,14 +116,14 @@ export const Checkout = () => {
                       setShowSignIn((prev) => !prev);
                     }}
                   >
-                    Nhấn vào đây để đăng nhập
+                    {t("checkout.clickToLogin", "Click here to login")}
                   </a>
                 </p>
               </div>
               {showSignIn && (
                 <div className="sign-form mt-32" style={{ display: "block" }}>
                   <p className="fw-500 mb-16">
-                    Vui lòng đăng nhập ở menu bên góc phải phía trên.
+                    {t("checkout.pleaseLoginPrompt", "Please login from the menu in the top right corner.")}
                   </p>
                 </div>
               )}
