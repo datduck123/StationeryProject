@@ -10,8 +10,6 @@ import {
   Tooltip,
   Legend,
   Filler,
-  ChartOptions,
-  ChartData,
 } from "chart.js";
 import { Line, Bar } from "react-chartjs-2";
 
@@ -27,27 +25,7 @@ ChartJS.register(
   Filler
 );
 
-export type RevenuePeriod = "7d" | "30d" | "year" | "week" | "month";
-export type MetricType = "users" | "revenue" | "orders";
-
-export interface ChartDataPoint {
-  label: string;
-  date?: string;
-  orders?: number;
-  deliveredOrders?: number;
-  revenue?: number | string;
-  newUsers?: number;
-  users?: number;
-}
-
-export interface RevenueChartProps {
-  data?: ChartDataPoint[];
-  period?: RevenuePeriod;
-  onPeriodChange?: (period: "7d" | "30d" | "year") => void;
-  loading?: boolean;
-}
-
-const formatCurrencyShort = (val: number): string => {
+const formatCurrencyShort = (val) => {
   if (val >= 1_000_000_000) {
     return (val / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + " tỷ";
   }
@@ -60,7 +38,7 @@ const formatCurrencyShort = (val: number): string => {
   return val.toLocaleString("vi-VN") + " ₫";
 };
 
-const formatFullCurrency = (val: number): string => {
+const formatFullCurrency = (val) => {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
@@ -68,14 +46,14 @@ const formatFullCurrency = (val: number): string => {
   }).format(val);
 };
 
-export const RevenueChart: React.FC<RevenueChartProps> = ({
+export const RevenueChart = ({
   data = [],
   period = "7d",
   onPeriodChange,
   loading = false,
 }) => {
-  const [chartMode, setChartMode] = useState<"bar" | "line">("bar");
-  const [activeMetric, setActiveMetric] = useState<MetricType>("users");
+  const [chartMode, setChartMode] = useState("bar");
+  const [activeMetric, setActiveMetric] = useState("users");
 
   // Normalized items
   const chartItems = useMemo(() => {
@@ -129,7 +107,7 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
   const orderValues = chartItems.map((item) => item.orders);
 
   // Normalized active period
-  const activePeriod: "7d" | "30d" | "year" =
+  const activePeriod =
     period === "30d" || period === "month"
       ? "30d"
       : period === "year"
@@ -179,7 +157,7 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
   }, [activeMetric]);
 
   // Chart.js Data Configuration
-  const chartConfig: ChartData<"bar" | "line"> = {
+  const chartConfig = {
     labels,
     datasets: [
       {
@@ -213,7 +191,7 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({
     ],
   };
 
-  const chartOptions: ChartOptions<"bar" | "line"> = {
+  const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {

@@ -53,7 +53,7 @@ public class SecurityConfig {
                     "/swagger-ui.html",
                     "/api/cart/calculate"
                 ).permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**", "/api/brands/**", "/api/products/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**", "/api/brands/**", "/api/products/**", "/api/vouchers/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )

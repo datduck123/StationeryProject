@@ -2,25 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import orderService from "../../services/orderService";
 
-export interface OrderItemDTO {
-  orderId: number;
-  userId?: number;
-  customerName?: string;
-  customerEmail?: string;
-  orderStatus: string;
-  totalCost: number | string;
-  createdAt?: string;
-  itemCount?: number;
-}
-
-export interface RecentOrdersTableProps {
-  orders?: OrderItemDTO[];
-  loading?: boolean;
-  onRefresh?: () => void;
-  onOrderUpdated?: () => void;
-}
-
-const formatCurrency = (val: number | string): string => {
+const formatCurrency = (val) => {
   if (val === undefined || val === null) return "0 ₫";
   const num = typeof val === "string" ? parseFloat(val) : val;
   if (isNaN(num)) return "0 ₫";
@@ -31,7 +13,7 @@ const formatCurrency = (val: number | string): string => {
   }).format(num);
 };
 
-const formatDate = (dateStr?: string): string => {
+const formatDate = (dateStr) => {
   if (!dateStr) return "-";
   try {
     const d = new Date(dateStr);
@@ -47,7 +29,7 @@ const formatDate = (dateStr?: string): string => {
   }
 };
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status) => {
   switch (status?.toUpperCase()) {
     case "PENDING":
       return (
@@ -88,7 +70,7 @@ const getStatusBadge = (status: string) => {
   }
 };
 
-export const RecentOrdersTable: React.FC<RecentOrdersTableProps> = ({
+export const RecentOrdersTable = ({
   orders = [],
   loading = false,
   onRefresh,
@@ -96,7 +78,7 @@ export const RecentOrdersTable: React.FC<RecentOrdersTableProps> = ({
 }) => {
   const navigate = useNavigate();
   const [filterPendingOnly, setFilterPendingOnly] = useState(false);
-  const [processingId, setProcessingId] = useState<number | null>(null);
+  const [processingId, setProcessingId] = useState(null);
 
   const pendingCount = useMemo(() => {
     return orders.filter((o) => o.orderStatus?.toUpperCase() === "PENDING").length;
@@ -110,7 +92,7 @@ export const RecentOrdersTable: React.FC<RecentOrdersTableProps> = ({
   }, [orders, filterPendingOnly]);
 
   // Quick confirm approval action
-  const handleQuickApprove = async (orderId: number, e: React.MouseEvent) => {
+  const handleQuickApprove = async (orderId, e) => {
     e.stopPropagation();
     try {
       setProcessingId(orderId);

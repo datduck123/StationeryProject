@@ -1,42 +1,25 @@
 import React from "react";
 import StatCard from "./StatCard";
 
-export interface DashboardKpis {
-  totalUsers?: number;
-  totalProducts?: number;
-  totalOrders?: number;
-  totalRevenue?: number | string;
-}
-
-export interface KpiSummarySectionProps {
-  kpis?: DashboardKpis | null;
-  loading?: boolean;
-  error?: string | null;
-  onRefresh?: () => void;
-  currencyPrefix?: string;
-}
-
-const formatNumber = (val?: number | string): string => {
+const formatNumber = (val) => {
   if (val === undefined || val === null) return "0";
   const num = typeof val === "string" ? parseFloat(val) : val;
   if (isNaN(num)) return "0";
   return new Intl.NumberFormat("vi-VN").format(num);
 };
 
-const formatCurrency = (val?: number | string): string => {
+const formatCurrency = (val) => {
   if (val === undefined || val === null) return "0 ₫";
   const num = typeof val === "string" ? parseFloat(val) : val;
   if (isNaN(num)) return "0 ₫";
-  return (
-    new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-      maximumFractionDigits: 0,
-    }).format(num)
-  );
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(num);
 };
 
-export const KpiSummarySection: React.FC<KpiSummarySectionProps> = ({
+export const KpiSummarySection = ({
   kpis,
   loading = false,
   error = null,

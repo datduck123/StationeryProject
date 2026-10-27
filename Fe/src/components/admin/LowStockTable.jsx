@@ -1,26 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-export interface LowStockProductItem {
-  productId: number;
-  sku: string;
-  name: string;
-  price: number | string;
-  stock: number;
-  imageUrl?: string;
-  categoryName?: string;
-  brandName?: string;
-  status?: string;
-}
-
-export interface LowStockTableProps {
-  products?: LowStockProductItem[];
-  loading?: boolean;
-  threshold?: number;
-  onRefresh?: () => void;
-}
-
-const formatCurrency = (val: number | string): string => {
+const formatCurrency = (val) => {
   if (val === undefined || val === null) return "0 ₫";
   const num = typeof val === "string" ? parseFloat(val) : val;
   if (isNaN(num)) return "0 ₫";
@@ -31,7 +12,7 @@ const formatCurrency = (val: number | string): string => {
   }).format(num);
 };
 
-export const LowStockTable: React.FC<LowStockTableProps> = ({
+export const LowStockTable = ({
   products = [],
   loading = false,
   threshold = 5,
