@@ -4,6 +4,97 @@ import { useTranslation } from "react-i18next";
 import TitleBanner from "../../components/shared/TitleBanner";
 import CartItemRow from "./CartItemRow";
 import { useCartContext } from "../../providers/CartContext";
+import useQuantityInput from "../../hooks/useQuantityInput";
+
+const CartMobileCard = ({ item, updateQuantity, removeItem, t }) => {
+  const qty = item.finalQuantity || item.requestedQuantity || 1;
+  const maxStock = item.currentStock ?? 999;
+  const price = Number(item.unitPrice || 0);
+
+  const {
+    inputProps,
+    handleIncrement,
+    handleDecrement,
+    isAtMin,
+    isAtMax,
+  } = useQuantityInput({
+    value: qty,
+    maxStock,
+    min: 1,
+    onChange: (nextQty) => updateQuantity(item.cartItemId, nextQty),
+    commitOnBlurOnly: true,
+  });
+
+  return (
+    <div className="col-md-6">
+      <div className="card-item bg-semi-white br-20 p-24">
+        <div className="d-flex align-items-center justify-content-between mb-16">
+          <h6 className="m-0 text-truncate" style={{ maxWidth: "80%" }}>
+            {item.productName}
+          </h6>
+          <button
+            type="button"
+            className="btn btn-link text-danger p-0 border-0"
+            onClick={() => removeItem(item.cartItemId)}
+          >
+            <i className="fa-solid fa-xmark fs-5"></i>
+          </button>
+        </div>
+        <div className="img-block mb-16 text-center bg-white p-2 br-12" style={{ height: "140px" }}>
+          <img
+            src={item.imageUrl || "/assets/media/products/product-1.png"}
+            alt={item.productName}
+            className="h-100 object-fit-contain"
+            onError={(e) => {
+              e.target.src = "/assets/media/products/product-1.png";
+            }}
+          />
+        </div>
+        <ul className="list-unstyled p-0 m-0 d-flex flex-column gap-12">
+          <li className="d-flex justify-content-between align-items-center">
+            <span className="font-primary text-muted">{t("cart.price")}</span>
+            <h6 className="font-primary m-0">{price.toLocaleString("vi-VN")} đ</h6>
+          </li>
+          <li className="d-flex justify-content-between align-items-center">
+            <span className="font-primary text-muted">{t("cart.quantity")}</span>
+            <div className="quantity quantity-wrap">
+              <div className="input-area quantity-wrap d-flex align-items-center">
+                <button
+                  className="decrement"
+                  type="button"
+                  disabled={isAtMin}
+                  onClick={handleDecrement}
+                >
+                  -
+                </button>
+                <input
+                  name="quantity"
+                  className="number text-center"
+                  style={{ width: "45px" }}
+                  {...inputProps}
+                />
+                <button
+                  className="increment"
+                  type="button"
+                  disabled={isAtMax}
+                  onClick={handleIncrement}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </li>
+          <li className="d-flex justify-content-between align-items-center">
+            <span className="font-primary text-muted">{t("cart.subtotal")}</span>
+            <h6 className="color-primary m-0">
+              {(price * qty).toLocaleString("vi-VN")} đ
+            </h6>
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+};
 
 export const Cart = () => {
   const { t } = useTranslation();
@@ -80,82 +171,15 @@ export const Cart = () => {
                 {/* Mobile View Cards */}
                 <div className="d-lg-none d-block">
                   <div className="row row-gap-3">
-                    {items.map((item) => {
-                      const qty = item.finalQuantity || item.requestedQuantity || 1;
-                      const maxStock = item.currentStock ?? 999;
-                      const price = Number(item.unitPrice || 0);
-
-                      return (
-                        <div key={item.cartItemId || item.productId} className="col-md-6">
-                          <div className="card-item bg-semi-white br-20 p-24">
-                            <div className="d-flex align-items-center justify-content-between mb-16">
-                              <h6 className="m-0 text-truncate" style={{ maxWidth: "80%" }}>
-                                {item.productName}
-                              </h6>
-                              <button
-                                type="button"
-                                className="btn btn-link text-danger p-0 border-0"
-                                onClick={() => removeItem(item.cartItemId)}
-                              >
-                                <i className="fa-solid fa-xmark fs-5"></i>
-                              </button>
-                            </div>
-                            <div className="img-block mb-16 text-center bg-white p-2 br-12" style={{ height: "140px" }}>
-                              <img
-                                src={item.imageUrl || "/assets/media/products/product-1.png"}
-                                alt={item.productName}
-                                className="h-100 object-fit-contain"
-                                onError={(e) => {
-                                  e.target.src = "/assets/media/products/product-1.png";
-                                }}
-                              />
-                            </div>
-                            <ul className="list-unstyled p-0 m-0 d-flex flex-column gap-12">
-                              <li className="d-flex justify-content-between align-items-center">
-                                <span className="font-primary text-muted">{t("cart.price")}</span>
-                                <h6 className="font-primary m-0">{price.toLocaleString("vi-VN")} đ</h6>
-                              </li>
-                              <li className="d-flex justify-content-between align-items-center">
-                                <span className="font-primary text-muted">{t("cart.quantity")}</span>
-                                <div className="quantity quantity-wrap">
-                                  <div className="input-area quantity-wrap d-flex align-items-center">
-                                    <button
-                                      className="decrement"
-                                      type="button"
-                                      disabled={qty <= 1}
-                                      onClick={() => updateQuantity(item.cartItemId, qty - 1)}
-                                    >
-                                      -
-                                    </button>
-                                    <input
-                                      type="text"
-                                      name="quantity"
-                                      value={qty}
-                                      readOnly
-                                      className="number text-center"
-                                    />
-                                    <button
-                                      className="increment"
-                                      type="button"
-                                      disabled={qty >= maxStock}
-                                      onClick={() => updateQuantity(item.cartItemId, qty + 1)}
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-                                </div>
-                              </li>
-                              <li className="d-flex justify-content-between align-items-center">
-                                <span className="font-primary text-muted">{t("cart.subtotal")}</span>
-                                <h6 className="color-primary m-0">
-                                  {(price * qty).toLocaleString("vi-VN")} đ
-                                </h6>
-                              </li>
-                            </ul>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    {items.map((item) => (
+                      <CartMobileCard
+                        key={item.cartItemId || item.productId}
+                        item={item}
+                        updateQuantity={updateQuantity}
+                        removeItem={removeItem}
+                        t={t}
+                      />
+                    ))}
                   </div>
                 </div>
 

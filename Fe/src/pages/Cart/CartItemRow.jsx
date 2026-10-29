@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import useQuantityInput from "../../hooks/useQuantityInput";
 
 export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
   const { t } = useTranslation();
@@ -8,6 +9,20 @@ export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
   const maxStock = item.currentStock ?? 999;
   const unitPrice = Number(item.unitPrice || 0);
   const subtotal = Number(item.subtotal || unitPrice * quantity);
+
+  const {
+    inputProps,
+    handleIncrement,
+    handleDecrement,
+    isAtMin,
+    isAtMax,
+  } = useQuantityInput({
+    value: quantity,
+    maxStock,
+    min: 1,
+    onChange: (nextQty) => onUpdateQuantity(item.cartItemId, nextQty),
+    commitOnBlurOnly: true,
+  });
 
   return (
     <table className="cart-table mb-16">
@@ -66,23 +81,22 @@ export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
                 <button
                   className="decrement"
                   type="button"
-                  disabled={quantity <= 1}
-                  onClick={() => onUpdateQuantity(item.cartItemId, quantity - 1)}
+                  disabled={isAtMin}
+                  onClick={handleDecrement}
                 >
                   -
                 </button>
                 <input
-                  type="text"
                   name="quantity"
-                  value={quantity}
-                  readOnly
                   className="number text-center"
+                  style={{ width: "45px" }}
+                  {...inputProps}
                 />
                 <button
                   className="increment"
                   type="button"
-                  disabled={quantity >= maxStock}
-                  onClick={() => onUpdateQuantity(item.cartItemId, quantity + 1)}
+                  disabled={isAtMax}
+                  onClick={handleIncrement}
                 >
                   +
                 </button>

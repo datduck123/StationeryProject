@@ -2,13 +2,14 @@
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / input self-closing, gallery thumbnail active state, tab switcher state, i18n support
 // API integration: useParams to read product ID, fetch real data from /api/products/:id
 import { useState, useEffect, useCallback } from "react";
-import { Link, useSearchParams, useParams } from "react-router-dom";
+import { Link, useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
 import { getProductById, getProductImage, getProducts } from "../../services/productService";
 import ProductReviewsList from "../../components/reviews/ProductReviewsList";
 import ProductRatingSold from "../../components/shared/ProductRatingSold";
 import { formatOrderMoney } from "../../utils/orderFormatters";
+import useQuantityInput from "../../hooks/useQuantityInput";
 import "../../styles/reviews.css";
 
 const ReviewStars = ({ rating, label }) => {
@@ -40,6 +41,23 @@ export const ProductDetail = () => {
   const [error, setError] = useState(null);
   const [reviewCount, setReviewCount] = useState(0);
   const [averageRating, setAverageRating] = useState(0);
+
+  const maxStock = product?.stockQuantity != null ? product.stockQuantity : 999;
+  const isOutOfStock = product?.stockQuantity != null && product.stockQuantity <= 0;
+
+  const {
+    inputProps,
+    handleIncrement,
+    handleDecrement,
+    isAtMin,
+    isAtMax,
+    numericValue,
+  } = useQuantityInput({
+    value: quantity,
+    maxStock,
+    min: 1,
+    onChange: setQuantity,
+  });
   const handleRatingUpdated = useCallback(({ averageRating: avg, reviewCount: count }) => {
     setAverageRating(avg);
     setReviewCount(count);
@@ -196,6 +214,11 @@ export const ProductDetail = () => {
                     {t("productDetail.remainingStock", "Remaining:")}{" "}
                     <span className="color-primary fw-700">{product.stockQuantity}</span>{" "}
                     {t("productDetail.itemsInStock", "items in stock!")}
+                    {product.stockQuantity > 20 && (
+                      <span className="text-muted ms-2" style={{ fontSize: "13px" }}>
+                        ({t("productDetail.maxPerOrder", "Tối đa 20 sản phẩm/đơn")})
+                      </span>
+                    )}
                   </p>
                 )}
                 <p className="fw-500 medium-black mb-8">
@@ -206,7 +229,8 @@ export const ProductDetail = () => {
                     <button
                       className="decrement"
                       type="button"
-                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      disabled={isAtMin || isOutOfStock}
+                      onClick={handleDecrement}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -217,24 +241,22 @@ export const ProductDetail = () => {
                       >
                         <path
                           d="M15.375 7.375H0.625C0.279813 7.375 0 7.65481 0 8C0 8.34519 0.279813 8.625 0.625 8.625H15.375C15.7202 8.625 16 8.34519 16 8C16 7.65481 15.7202 7.375 15.375 7.375Z"
-                          fill="#1E1F20"
+                          fill="currentColor"
                         />
                       </svg>
                     </button>
                     <input
-                      type="text"
                       name="quantity"
-                      value={quantity}
-                      readOnly
-                      maxLength={2}
-                      size={1}
-                      className="number"
+                      disabled={isOutOfStock}
+                      className="number text-center"
+                      style={{ width: "48px" }}
+                      {...inputProps}
                     />
                     <button
                       className="increment"
                       type="button"
-                      disabled={quantity >= (product?.stockQuantity ?? 1)}
-                      onClick={() => setQuantity((q) => Math.min(product?.stockQuantity ?? 1, q + 1))}
+                      disabled={isAtMax || isOutOfStock}
+                      onClick={handleIncrement}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -245,7 +267,7 @@ export const ProductDetail = () => {
                       >
                         <path
                           d="M15.375 7.375H8.625V0.625C8.625 0.279813 8.34519 0 8 0C7.65481 0 7.375 0.279813 7.375 0.625V7.375H0.625C0.279813 7.375 0 7.65481 0 8C0 8.34519 0.279813 8.625 0.625 8.625H7.375V15.375C7.375 15.7202 7.65481 16 8 16C8.34519 16 8.625 15.7202 8.625 15.375V8.625H15.375C15.7202 8.625 16 8.34519 16 8C16 7.65481 15.7202 7.375 15.375 7.375Z"
-                          fill="#1E1F20"
+                          fill="currentColor"
                         />
                       </svg>
                     </button>
@@ -260,7 +282,8 @@ export const ProductDetail = () => {
                     <button
                       type="button"
                       className="w-100 text-center cus-btn-2 border-0"
-                      onClick={() => addToCart(productId, quantity, true)}
+                      disabled={isOutOfStock}
+                      onClick={() => addToCart(productId, numericValue, true)}
                     >
                       <span className="btn-text">{t("common.addCart")}</span>
                       <span>{t("common.addCart")}</span>
@@ -269,8 +292,8 @@ export const ProductDetail = () => {
                   <div className="col-sm-6">
                     <Link
                       to="/checkout.html"
-                      className="w-100 text-center cus-btn"
-                      onClick={async (event) => { event.preventDefault(); if (await addToCart(product, quantity, { open: false })) navigate("/checkout"); }}
+                      className={`w-100 text-center cus-btn ${isOutOfStock ? "disabled pe-none opacity-50" : ""}`}
+                      onClick={async (event) => { event.preventDefault(); if (isOutOfStock) return; if (await addToCart(product, numericValue, { open: false })) navigate("/checkout"); }}
                     >
                       <span className="btn-text">
                         {t("productDetail.buyNow")}
@@ -463,7 +486,7 @@ export const ProductDetail = () => {
                             }}
                             style={{ color: isInWishlist(prod.id) ? "#e57c32" : undefined }}
                           >
-                            <i className={isInWishlist(prod.id) ? "fa-solid fa-heart" : "fa-light fa-heart"} style={{ color: isInWishlist(prod.id) ? "#e57c32" : undefined }}></i>
+                            <i className={isInWishlist(prod.id) ? "fa-solid fa-heart" : "fa-regular fa-heart"} style={{ color: isInWishlist(prod.id) ? "#e57c32" : undefined }}></i>
                           </a>
                         </li>
                         <li>
