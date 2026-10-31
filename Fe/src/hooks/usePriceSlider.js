@@ -11,6 +11,11 @@ export const usePriceSlider = ({
   const [minPrice, setMinPrice] = useState(initialMin);
   const [maxPrice, setMaxPrice] = useState(initialMax);
 
+  useEffect(() => {
+    setMinPrice(initialMin);
+    setMaxPrice(initialMax);
+  }, [initialMin, initialMax]);
+
   const notifyChange = (newMin, newMax) => {
     if (onPriceChange) {
       onPriceChange({ minPrice: newMin, maxPrice: newMax });

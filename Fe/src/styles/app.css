@@ -1462,59 +1462,117 @@ Elements
 
 .quantity {
   display: inline-flex;
-  align-items: flex-start;
-  border: 0;
-  border-radius: 64px;
-  padding: clamp(4px, 0.208vw, 24px) clamp(6px, 0.417vw, 48px);
-  border: 1px solid #1e1f20;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 4px 6px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  vertical-align: middle;
+}
+
+.quantity:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+}
+
+.quantity:focus-within {
+  border-color: #e57c32;
+  box-shadow: 0 0 0 3px rgba(229, 124, 50, 0.15);
 }
 
 .quantity .input-area {
   display: flex;
   align-items: center;
+  gap: 2px;
 }
 
 .quantity .input-area input {
-  padding: 0;
+  padding: 0 4px;
   border: 0;
   background: transparent;
-  font-size: clamp(16px, 0.938vw, 40px);
+  font-size: 16px;
   font-style: normal;
-  font-weight: 500;
+  font-weight: 700;
   line-height: 130%;
   text-align: center;
+  color: #0f172a;
+  min-width: 38px;
 }
 
 .quantity .input-area input:focus-visible {
   outline: none;
 }
 
-.quantity .input-area .decrement {
-  border-radius: clamp(2px, 0.208vw, 28px);
-  border: none;
-  width: clamp(28px, 1.667vw, 64px);
-  height: clamp(28px, 1.667vw, 64px);
-  transition: all 0.5s ease-in-out;
-  background: transparent;
-}
-
-.quantity .input-area .decrement svg {
-  width: clamp(12px, 0.833vw, 32px);
-  height: clamp(12px, 0.833vw, 32px);
-}
-
+.quantity .input-area .decrement,
 .quantity .input-area .increment {
-  border-radius: clamp(2px, 0.208vw, 28px);
+  border-radius: 50%;
   border: none;
-  width: clamp(28px, 1.667vw, 64px);
-  height: clamp(28px, 1.667vw, 64px);
-  transition: all 0.5s ease-in-out;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   background: transparent;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  outline: none;
 }
 
+.quantity .input-area .decrement:not(:disabled):hover,
+.quantity .input-area .increment:not(:disabled):hover {
+  background: rgba(229, 124, 50, 0.12);
+  color: #e57c32;
+  transform: scale(1.15);
+}
+
+.quantity .input-area .decrement:not(:disabled):active,
+.quantity .input-area .increment:not(:disabled):active {
+  background: rgba(229, 124, 50, 0.22);
+  color: #c25e1a;
+  transform: scale(0.88);
+}
+
+/* Hiệu ứng mờ rõ ràng khi đạt ngưỡng không thể tăng hoặc giảm */
+.quantity .input-area .decrement:disabled,
+.quantity .input-area .increment:disabled {
+  opacity: 0.22 !important;
+  cursor: not-allowed !important;
+  color: #94a3b8 !important;
+  transform: none !important;
+  background: transparent !important;
+  pointer-events: auto;
+}
+
+.quantity .input-area .decrement svg,
 .quantity .input-area .increment svg {
-  width: clamp(12px, 0.833vw, 32px);
-  height: clamp(12px, 0.833vw, 32px);
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.quantity .input-area .decrement svg path,
+.quantity .input-area .increment svg path {
+  fill: currentColor;
+}
+
+.quantity .input-area .decrement:disabled svg,
+.quantity .input-area .increment:disabled svg {
+  fill: #94a3b8 !important;
+}
+
+.quantity .input-area .decrement:disabled svg path,
+.quantity .input-area .increment:disabled svg path {
+  fill: #94a3b8 !important;
 }
 
 .pagination {

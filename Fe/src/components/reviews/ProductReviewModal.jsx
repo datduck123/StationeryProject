@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useToast } from "../../providers/ToastContext";
 import reviewService from "../../services/reviewService";
+import DashedEmotionFace from "./DashedEmotionFace";
 import "../../styles/reviews.css";
 
 const ProductReviewModal = ({ item, onClose, onSubmitted }) => {
@@ -176,28 +177,42 @@ const ProductReviewModal = ({ item, onClose, onSubmitted }) => {
                     </label>
                   ))}
                 </div>
-                <div
-                  className="product-review-emotion-badge mt-2"
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    background: "#fff7ed",
-                    border: "1px solid #fed7aa",
-                    color: "#ea580c",
-                    padding: "4px 16px",
-                    borderRadius: "999px",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  {(hoverRating || rating) === 1 && "😡 " + (i18n.language === "vi" ? "Rất không hài lòng" : "Very Bad")}
-                  {(hoverRating || rating) === 2 && "🙁 " + (i18n.language === "vi" ? "Không hài lòng" : "Bad")}
-                  {(hoverRating || rating) === 3 && "😐 " + (i18n.language === "vi" ? "Bình thường" : "Fair")}
-                  {(hoverRating || rating) === 4 && "🙂 " + (i18n.language === "vi" ? "Hài lòng" : "Good")}
-                  {(hoverRating || rating) === 5 && "😍 " + (i18n.language === "vi" ? "Tuyệt vời" : "Excellent")}
-                </div>
+                {(() => {
+                  const currentLevel = hoverRating || rating || 5;
+                  const label =
+                    currentLevel === 1
+                      ? (i18n.language === "vi" ? "Rất không hài lòng" : "Very Bad")
+                      : currentLevel === 2
+                      ? (i18n.language === "vi" ? "Không hài lòng" : "Bad")
+                      : currentLevel === 3
+                      ? (i18n.language === "vi" ? "Bình thường" : "Fair")
+                      : currentLevel === 4
+                      ? (i18n.language === "vi" ? "Hài lòng" : "Good")
+                      : (i18n.language === "vi" ? "Tuyệt vời" : "Excellent");
+
+                  return (
+                    <div
+                      className="product-review-emotion-badge mt-2"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        background: "#fff7ed",
+                        border: "1px solid #fed7aa",
+                        color: "#ea580c",
+                        padding: "5px 16px",
+                        borderRadius: "999px",
+                        fontSize: "13px",
+                        fontWeight: "600",
+                        transition: "all 0.2s ease",
+                        boxShadow: "0 1px 2px rgba(234, 88, 12, 0.05)",
+                      }}
+                    >
+                      <DashedEmotionFace rating={currentLevel} size={20} color="#ea580c" />
+                      <span>{label}</span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 

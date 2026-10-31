@@ -64,7 +64,7 @@ const ProductCard = ({ product, openQuickView, t }) => {
                 style={{ color: isWishlisted ? "#e57c32" : undefined }}
               >
                 <i
-                  className={isWishlisted ? "fa-solid fa-heart" : "fa-light fa-heart"}
+                  className={isWishlisted ? "fa-solid fa-heart" : "fa-regular fa-heart"}
                   style={{ color: isWishlisted ? "#e57c32" : undefined }}
                 ></i>
               </a>

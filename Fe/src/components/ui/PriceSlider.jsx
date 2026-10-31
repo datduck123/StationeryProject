@@ -195,6 +195,7 @@ export const PriceSlider = ({
               pointerEvents: "none",
               appearance: "none",
               WebkitAppearance: "none",
+              zIndex: minPrice > maxLimit - 1000 ? 5 : 3,
             }}
           />
           <input
@@ -214,6 +215,7 @@ export const PriceSlider = ({
               pointerEvents: "none",
               appearance: "none",
               WebkitAppearance: "none",
+              zIndex: 4,
             }}
           />
         </div>
