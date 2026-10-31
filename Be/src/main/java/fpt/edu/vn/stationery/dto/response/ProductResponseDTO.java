@@ -47,6 +47,12 @@ public class ProductResponseDTO {
         return stockQuantity;
     }
 
+    private Integer sold;
+
+    private Double avgRating;
+
+    private Long reviewCount;
+
     private String description;
 
     private String imageUrl;

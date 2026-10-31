@@ -1,37 +1,38 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useToast } from "../../providers/ToastContext";
 import orderService from "../../services/orderService";
 import { nextStatuses } from "./orderStatusTransitions";
 
 const OrderStatusChanger = ({ order, onUpdated }) => {
+  const { t } = useTranslation();
+  const { showToast } = useToast();
   const options = nextStatuses[order.orderStatus] || [];
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     setStatus("");
-    setError("");
   }, [order.orderId, order.orderStatus]);
 
   const updateStatus = async () => {
     if (!status) return;
-    if (status === "CANCELLED" && !window.confirm(`Cancel order #${order.orderId}?`)) return;
+    if (status === "CANCELLED" && !window.confirm(t("adminOrders.statusEditor.confirmCancel", { id: order.orderId }))) return;
     setSaving(true);
-    setError("");
     try {
       onUpdated(await orderService.updateOrderStatus(order.orderId, status));
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || "Could not update order status.");
+      showToast(requestError?.response?.data?.message || t("adminOrders.errors.updateStatus"), "error");
     } finally {
       setSaving(false);
     }
   };
 
-  if (options.length === 0) return <p className="text-muted mb-0">This order is complete. Its status cannot be changed.</p>;
+  if (options.length === 0) return <p className="text-muted mb-0">{t("adminOrders.statusEditor.complete")}</p>;
 
   return (
     <div className="admin-order-status-changer">
-      <label htmlFor="admin-order-next-status" className="fw-700 d-block mb-2">Change order status</label>
+      <label htmlFor="admin-order-next-status" className="fw-700 d-block mb-2">{t("adminOrders.statusEditor.change")}</label>
       <div className="d-flex flex-wrap gap-2">
         <select
           id="admin-order-next-status"
@@ -40,14 +41,13 @@ const OrderStatusChanger = ({ order, onUpdated }) => {
           onChange={(event) => setStatus(event.target.value)}
           disabled={saving}
         >
-          <option value="">Choose next status</option>
-          {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          <option value="">{t("adminOrders.statusEditor.choose")}</option>
+          {options.map((option) => <option key={option.value} value={option.value}>{t(`adminOrders.statusActions.${option.value}`)}</option>)}
         </select>
         <button type="button" className="btn btn-primary" disabled={!status || saving} onClick={updateStatus}>
-          {saving ? "Saving..." : "Update status"}
+          {saving ? t("adminOrders.statusEditor.saving") : t("adminOrders.statusEditor.update")}
         </button>
       </div>
-      {error && <div className="alert alert-danger mt-2 mb-0" role="alert">{error}</div>}
     </div>
   );
 };

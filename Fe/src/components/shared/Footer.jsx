@@ -21,7 +21,7 @@ export const Footer = () => {
               <p className="mb-24">{t("footer.desc")}</p>
               <div className="mb-1">
                 <p className="medium-black fw-500">
-                  Email:
+                  {t("footer.emailLabel")}:
                   <a
                     href="mailto:stationarytales@domain.com"
                     className="fw-400 dark-gray"
@@ -33,7 +33,7 @@ export const Footer = () => {
               </div>
               <div className="mb-1">
                 <p className="medium-black fw-500">
-                  Phone:
+                  {t("footer.phoneLabel")}:
                   <a href="tel:1235498" className="fw-400 dark-gray">
                     {" "}
                     (+68) 123 456 7890
@@ -42,10 +42,10 @@ export const Footer = () => {
               </div>
               <div className="mb-24">
                 <p className="medium-black fw-500">
-                  Address:
+                  {t("footer.addressLabel")}:
                   <span className="fw-400 dark-gray">
                     {" "}
-                    502 New Design Str, Melbourne
+                    {t("footer.addressValue")}
                   </span>
                 </p>
               </div>

@@ -8,7 +8,7 @@ import { useCartContext } from "../../providers/CartContext";
 import LanguageSwitcher from "../ui/LanguageSwitcher";
 
 export const MobileMenu = () => {
-  const { isMobileMenuOpen, closeMobileMenu } = useCartContext();
+  const { isMobileMenuOpen, closeMobileMenu, openWishlist, wishlistCount } = useCartContext();
   const { user, isAdmin, openAuthModal, logout } = useAuth();
   const { t } = useTranslation();
   const [expandedSubMenu, setExpandedSubMenu] = useState(false);
@@ -57,7 +57,7 @@ export const MobileMenu = () => {
                 </Link>
                 <button
                   type="button"
-                  aria-label="dropdown toggler"
+                  aria-label={t("header.shop")}
                   className={expandedSubMenu ? "expanded" : ""}
                   onClick={toggleSubMenu}
                   style={{
@@ -97,6 +97,21 @@ export const MobileMenu = () => {
                   {t("header.brands")}
                 </Link>
               </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => { closeMobileMenu(); openWishlist(); }}
+                  style={{ background: "none", border: "none", padding: "10px 0", width: "100%", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px", fontSize: "inherit", color: "inherit" }}
+                >
+                  <i className="fa-regular fa-heart"></i>
+                  {t("wishlist.title", "Wishlist")}
+                  {wishlistCount > 0 && (
+                    <span style={{ backgroundColor: "#e53935", color: "#fff", fontSize: "11px", fontWeight: "700", padding: "1px 6px", borderRadius: "10px" }}>
+                      {wishlistCount}
+                    </span>
+                  )}
+                </button>
+              </li>
             </ul>
           </div>
         </div>
@@ -110,7 +125,7 @@ export const MobileMenu = () => {
                     isAdmin ? "user-role-admin" : "user-role-patient"
                   }`}
                 >
-                  {isAdmin ? "Admin" : "Patient"}
+                  {isAdmin ? t("header.roleAdmin") : t("header.roleCustomer")}
                 </span>
               </div>
               <div className="fs-13 text-muted mb-2">{user.email}</div>
@@ -120,8 +135,7 @@ export const MobileMenu = () => {
                   className="btn btn-sm btn-outline-danger w-100 mb-2"
                   onClick={closeMobileMenu}
                 >
-                  <i className="fa-solid fa-gauge-high me-1"></i> Admin
-                  Dashboard
+                  <i className="fa-solid fa-gauge-high me-1"></i> {t("header.adminDashboard")}
                 </Link>
               )}
               <button
@@ -133,7 +147,7 @@ export const MobileMenu = () => {
                 }}
               >
                 <i className="fa-solid fa-arrow-right-from-bracket me-1"></i>{" "}
-                Sign Out
+                {t("header.signOut")}
               </button>
             </div>
           ) : (
@@ -145,8 +159,8 @@ export const MobileMenu = () => {
                 openAuthModal("login");
               }}
             >
-              <span className="btn-text">Sign In / Register</span>
-              <span>Sign In / Register</span>
+              <span className="btn-text">{t("header.signIn")} / {t("header.register")}</span>
+              <span>{t("header.signIn")} / {t("header.register")}</span>
             </button>
           )}
           <LanguageSwitcher />

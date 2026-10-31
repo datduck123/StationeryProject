@@ -49,6 +49,11 @@ public class CustomerOrderQueryService {
 
     public PageDTO<OrderResponseDTO> getOrders(String email, int page, int size,
                                                 String sortBy, String sortDir) {
+        return getOrders(email, null, page, size, sortBy, sortDir);
+    }
+
+    public PageDTO<OrderResponseDTO> getOrders(String email, String status, int page, int size,
+                                                String sortBy, String sortDir) {
         if (page < 0 || size < 1 || size > 100) {
             throw new BadRequestException("Page must be non-negative and size must be between 1 and 100");
         }
@@ -57,12 +62,15 @@ public class CustomerOrderQueryService {
             throw new BadRequestException("Unsupported order sort");
         }
 
+        String normalizedStatus = org.springframework.util.StringUtils.hasText(status) && !"ALL".equalsIgnoreCase(status.trim())
+                ? status.trim().toUpperCase() : null;
+
         Sort sort = Sort.by("asc".equalsIgnoreCase(sortDir) ? Sort.Direction.ASC : Sort.Direction.DESC,
                 sortBy);
         if (!"orderId".equals(sortBy)) {
             sort = sort.and(Sort.by(Sort.Direction.DESC, "orderId"));
         }
-        Page<Order> orders = orderRepository.findByUser_Email(email, PageRequest.of(page, size, sort));
+        Page<Order> orders = orderRepository.findCustomerOrders(email, normalizedStatus, PageRequest.of(page, size, sort));
         if (orders.isEmpty()) {
             return PageDTO.from(orders.map(this::toResponse));
         }
@@ -77,6 +85,9 @@ public class CustomerOrderQueryService {
                         Collectors.mapping(this::toItemResponse, Collectors.toList())));
 
         Map<Long, PaymentAndVoucher> extrasByOrder = new HashMap<>();
+        Set<Long> reviewedItems = Set.copyOf(entityManager.createQuery(
+                        "SELECT r.orderItem.orderItemId FROM Review r WHERE r.orderItem.order.orderId IN :orderIds", Long.class)
+                .setParameter("orderIds", orderIds).getResultList());
         jdbcTemplate.query(EXTRAS_SQL, new MapSqlParameterSource("orderIds", orderIds), rs -> {
             extrasByOrder.put(rs.getLong("order_id"), new PaymentAndVoucher(
                     rs.getString("voucher_code"),
@@ -87,6 +98,7 @@ public class CustomerOrderQueryService {
         return PageDTO.from(orders.map(order -> {
             OrderResponseDTO response = toResponse(order);
             List<OrderItemResponseDTO> items = itemsByOrder.getOrDefault(order.getOrderId(), List.of());
+            items.forEach(item -> item.setReviewed(reviewedItems.contains(item.getOrderItemId())));
             response.setOrderItems(items);
             response.setItemCount(items.size());
             PaymentAndVoucher extras = extrasByOrder.get(order.getOrderId());
@@ -102,6 +114,7 @@ public class CustomerOrderQueryService {
     private OrderResponseDTO toResponse(Order order) {
         return OrderResponseDTO.builder()
                 .orderId(order.getOrderId())
+                .trackingCode(order.getTrackingCode())
                 .userId(order.getUser().getUserId())
                 .customerName(order.getUser().getFullName())
                 .customerEmail(order.getUser().getEmail())

@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "Orders", schema = "dbo")
@@ -22,6 +23,9 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "order_id")
     private Long orderId;
+
+    @Column(name = "tracking_code", nullable = false, unique = true, length = 40)
+    private String trackingCode;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
@@ -76,6 +80,7 @@ public class Order {
     @PrePersist
     protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();
+        if (trackingCode == null) trackingCode = "ST-" + UUID.randomUUID().toString().replace("-", "").toUpperCase();
         if (createdAt == null) createdAt = now;
         if (updatedAt == null) updatedAt = now;
     }

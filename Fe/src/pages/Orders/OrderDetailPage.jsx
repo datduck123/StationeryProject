@@ -1,19 +1,48 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import TitleBanner from "../../components/shared/TitleBanner";
 import OrderTrackingTimeline from "../../components/orders/OrderTrackingTimeline";
+import ProductReviewModal from "../../components/reviews/ProductReviewModal";
 import orderService from "../../services/orderService";
-
-const currency = (amount) =>
-  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(
-    Number(amount || 0),
-  );
+import { useToast } from "../../providers/ToastContext";
+import { formatOrderDateTime, formatOrderMoney, orderStatusLabel, paymentMethodLabel, paymentStatusLabel, shippingMethodLabel } from "../../utils/orderFormatters";
 
 const OrderDetailPage = () => {
   const { id } = useParams();
+  const { t, i18n } = useTranslation();
+  const { showToast } = useToast();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reviewItem, setReviewItem] = useState(null);
+  const [reviewedOrderItemIds, setReviewedOrderItemIds] = useState(() => new Set());
+
+  const [canceling, setCanceling] = useState(false);
+
+  const closeReview = useCallback(() => setReviewItem(null), []);
+  const markReviewed = useCallback(() => {
+    if (!reviewItem?.orderItemId) return;
+    setReviewedOrderItemIds((current) => {
+      const next = new Set(current);
+      next.add(reviewItem.orderItemId);
+      return next;
+    });
+  }, [reviewItem]);
+
+  const handleCancelOrder = async () => {
+    if (!window.confirm(t("orders.confirmCancel", { number: id }))) return;
+    setCanceling(true);
+    try {
+      await orderService.cancelMyOrder(id);
+      setOrder((current) => current ? { ...current, orderStatus: "CANCELLED" } : current);
+      showToast(t("orders.toast.cancelSuccess", { number: id }), "success");
+    } catch (requestError) {
+      showToast(requestError?.response?.data?.message || t("orders.toast.cancelError"), "error");
+    } finally {
+      setCanceling(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -22,74 +51,138 @@ const OrderDetailPage = () => {
       .then((data) => active && setOrder(data))
       .catch((requestError) => {
         if (active) {
-          setError(
-            requestError?.response?.data?.message ||
-              "Could not load this order.",
-          );
+          const message = requestError?.response?.data?.message || t("orders.toast.loadError");
+          setError(message);
+          showToast(message, "error");
         }
       })
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, showToast, t]);
 
   return (
     <>
-      <TitleBanner title="Order details" />
+      <TitleBanner title={t("orders.detailTitle")} />
       <section className="py-40">
         <div className="container-2">
-          <div className="d-flex justify-content-between align-items-center mb-24">
-            <h4 className="font-sec fw-700 medium-black mb-0">Order #{id}</h4>
-            <Link to="/account/orders" className="text-decoration-underline">Back to orders</Link>
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-24">
+            <h4 className="font-sec fw-700 medium-black mb-0">{t("orders.detailTitle")} #{id}</h4>
+            <div className="d-flex align-items-center gap-3">
+              {order?.orderStatus === "PENDING" && (
+                <button
+                  type="button"
+                  className="btn btn-outline-danger btn-sm"
+                  disabled={canceling}
+                  onClick={handleCancelOrder}
+                >
+                  {canceling ? t("orders.cancelling") : t("orders.cancelOrder")}
+                </button>
+              )}
+              <Link to="/account/orders" className="text-decoration-underline">{t("orders.backToOrders")}</Link>
+            </div>
           </div>
-          {loading && <p className="light-gray">Loading order…</p>}
+          {loading && <p className="light-gray">{t("orders.loadingDetail")}</p>}
           {error && <div className="alert alert-danger" role="alert">{error}</div>}
           {order && (
             <>
               <div className="checkout-box bg-semi-white p-24 mb-16">
                 <div className="d-flex flex-wrap justify-content-between gap-3 mb-16">
                   <div>
-                    <span className="light-gray d-block mb-1">Status</span>
-                    <strong className="medium-black">{order.orderStatus}</strong>
+                    <span className="light-gray d-block mb-1">{t("orders.status")}</span>
+                    <strong className="medium-black">{orderStatusLabel(order.orderStatus, t)}</strong>
                   </div>
                   <div>
-                    <span className="light-gray d-block mb-1">Placed</span>
+                    <span className="light-gray d-block mb-1">{t("orders.placedAt")}</span>
                     <strong className="medium-black">
-                      {order.createdAt ? new Date(order.createdAt).toLocaleString() : "—"}
+                      {formatOrderDateTime(order.createdAt, i18n.language)}
                     </strong>
                   </div>
                 </div>
                 <OrderTrackingTimeline status={order.orderStatus} />
+                <p className="mt-3 mb-1"><strong>{t("commerce.trackingCode")}:</strong> {order.trackingCode || t("commerce.trackingPending")}</p>
+                <p className="mb-0"><strong>{t("orders.payment")}:</strong> {paymentMethodLabel(order.paymentMethod, t)} · {paymentStatusLabel(order.paymentStatus, t)}</p>
               </div>
 
               <div className="checkout-box bg-semi-white p-24 mb-16">
-                <h6 className="fw-600 medium-black mb-16">Items</h6>
-                {(order.orderItems || []).map((item) => (
-                  <div className="d-flex flex-wrap justify-content-between gap-2 py-2 border-bottom" key={item.orderItemId}>
-                    <div>
-                      <strong className="medium-black">{item.productName}</strong>
-                      <div className="light-gray">Qty: {item.quantity} · {currency(item.unitPrice)} each</div>
+                <h6 className="fw-600 medium-black mb-16">{t("orders.items")}</h6>
+                {(order.orderItems || []).map((item) => {
+                  const isReviewed = item.reviewed || item.hasReview || reviewedOrderItemIds.has(item.orderItemId);
+                  return (
+                    <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 py-3 border-bottom" key={item.orderItemId}>
+                      <div>
+                        <strong className="medium-black d-block mb-1" style={{ fontSize: "15px" }}>{item.productName}</strong>
+                        <div className="light-gray" style={{ fontSize: "13px" }}>
+                          {t("orders.quantityEach", { quantity: item.quantity, price: formatOrderMoney(item.unitPrice, i18n.language) })}
+                        </div>
+                      </div>
+                      <div className="d-flex align-items-center gap-3">
+                        <strong className="medium-black" style={{ fontSize: "15px" }}>{formatOrderMoney(item.subtotal, i18n.language)}</strong>
+                        {order.orderStatus === "DELIVERED" && (
+                          <div>
+                            {isReviewed ? (
+                              <span className="badge-order-reviewed">
+                                <i className="fa-solid fa-circle-check"></i>
+                                {t("reviews.alreadyReviewed", "Đã đánh giá")}
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="btn-order-review"
+                                onClick={() => setReviewItem(item)}
+                              >
+                                <i className="fa-solid fa-star text-warning"></i>
+                                {t("reviews.writeReview", "Đánh giá")}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <strong className="medium-black">{currency(item.subtotal)}</strong>
+                  );
+                })}
+                <div className="pt-16 border-top mt-16">
+                  <div className="d-flex justify-content-between py-1">
+                    <span className="light-gray">{t("orders.subtotal")}</span>
+                    <span className="medium-black">
+                      {formatOrderMoney(order.subtotal != null ? order.subtotal : order.totalCost, i18n.language)}
+                    </span>
                   </div>
-                ))}
-                <div className="d-flex justify-content-between pt-16">
-                  <span className="fw-600">Total</span>
-                  <strong className="color-primary">{currency(order.totalCost)}</strong>
+                  <div className="d-flex justify-content-between py-1">
+                    <span className="light-gray">{t("orders.shippingFee")}</span>
+                    <span className="medium-black">
+                      {formatOrderMoney(order.shippingFee || 0, i18n.language)}
+                    </span>
+                  </div>
+                  {Number(order.discountAmount || 0) > 0 && (
+                    <div className="d-flex justify-content-between py-1">
+                      <span className="light-gray">
+                        {t("orders.discount")} {order.voucherId ? `(#${order.voucherId})` : ""}
+                      </span>
+                      <span className="text-success">
+                        -{formatOrderMoney(order.discountAmount, i18n.language)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="d-flex justify-content-between pt-12 border-top mt-8">
+                    <span className="fw-600">{t("orders.total")}</span>
+                    <strong className="color-primary fs-5">{formatOrderMoney(order.totalCost, i18n.language)}</strong>
+                  </div>
                 </div>
               </div>
 
               <div className="checkout-box bg-semi-white p-24">
-                <h6 className="fw-600 medium-black mb-16">Delivery</h6>
+                <h6 className="fw-600 medium-black mb-16">{t("orders.delivery")}</h6>
                 <p className="mb-1">{order.shippingAddress}</p>
                 <p className="light-gray mb-1">{order.phone}</p>
-                <p className="light-gray mb-0">{order.shippingMethod}</p>
+                <p className="light-gray mb-0">{shippingMethodLabel(order.shippingMethod, t)}</p>
               </div>
             </>
           )}
         </div>
       </section>
+      <ProductReviewModal item={reviewItem} onClose={closeReview} onSubmitted={markReviewed} />
     </>
   );
 };

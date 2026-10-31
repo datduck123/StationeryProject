@@ -1,14 +1,15 @@
 // Migrated from: shop-grid-sidebar.html, lines 203-2241; assets/js/app.js lines 322-352
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / input self-closing, accordion states, mobile filter drawer state, i18n support
 // API integration: replaced mock data with real /api/products, /api/categories/public, /api/brands/public calls
-import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import TitleBanner from "../../components/shared/TitleBanner";
 import PriceSlider from "../../components/ui/PriceSlider";
 import CustomDropdown from "../../components/ui/CustomDropdown";
 import { useCartContext } from "../../providers/CartContext";
 import { getProducts, getCategories, getBrands, getProductImage } from "../../services/productService";
+import ProductRatingSold from "../../components/shared/ProductRatingSold";
 import { onProductChange } from "../../utils/syncEvents";
 
 const SORT_OPTIONS = [
@@ -22,22 +23,51 @@ const SORT_OPTIONS = [
 
 const PAGE_SIZE = 12;
 
-const formatCurrency = (amount) => {
-  if (amount == null) return "";
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(amount);
-};
+const SidebarSectionHeader = ({ title, isOpen, onToggle, activeCount = null }) => (
+  <div className="shop-sidebar-header" onClick={onToggle}>
+    <h6 className="shop-sidebar-title">
+      <span>{title}</span>
+      {activeCount !== null && activeCount > 0 && (
+        <span className="shop-active-filter-badge">{activeCount}</span>
+      )}
+    </h6>
+    <span className={`shop-sidebar-toggle-btn ${isOpen ? "is-open" : ""}`} aria-label="Toggle section">
+      <svg
+        width="13"
+        height="13"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`shop-sidebar-chevron ${isOpen ? "is-open" : ""}`}
+      >
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </span>
+  </div>
+);
 
 export const ShopGridSidebar = () => {
   const {
     openCart,
     openQuickView,
+    openCompare,
+    addToCart,
+    addCompareProduct,
     toggleWishlist,
     isInWishlist,
   } = useCartContext();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  const sortOptions = [
+    { label: t("shop.defaultSorting", "Default"), value: "" },
+    { label: t("shop.priceLowHigh", "Price: Low to High"), value: "price,asc" },
+    { label: t("shop.priceHighLow", "Price: High to Low"), value: "price,desc" },
+    { label: t("shop.sortNameAsc", "Name: A → Z"), value: "name,asc" },
+    { label: t("shop.sortNameDesc", "Name: Z → A"), value: "name,desc" },
+  ];
 
   // ── Sidebar accordion state ──────────────────────────────────────────────
   const [openCategories, setOpenCategories] = useState({
@@ -54,14 +84,33 @@ export const ShopGridSidebar = () => {
   };
 
   // ── Filter / Pagination state ────────────────────────────────────────────
-  const [keyword, setKeyword] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
-  const [selectedBrandId, setSelectedBrandId] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlKeyword = searchParams.get("keyword") || searchParams.get("search") || "";
+  const urlBrandId = searchParams.get("brandId") || searchParams.get("brand") || null;
+  const urlCategoryId = searchParams.get("categoryId") || searchParams.get("category") || null;
+
+  const [keyword, setKeyword] = useState(urlKeyword);
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState(urlCategoryId ? Number(urlCategoryId) : null);
+  const [selectedBrandId, setSelectedBrandId] = useState(urlBrandId ? Number(urlBrandId) : null);
   const [stockFilter, setStockFilter] = useState(null);
   const [minPrice, setMinPrice] = useState(null);
   const [maxPrice, setMaxPrice] = useState(null);
   const [sortValue, setSortValue] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
+
+  // Sync filter state khi URL params thay đổi (ví dụ click brand từ trang Home)
+  useEffect(() => {
+    const q = searchParams.get("keyword") || searchParams.get("search") || "";
+    const bId = searchParams.get("brandId") || searchParams.get("brand") || null;
+    const cId = searchParams.get("categoryId") || searchParams.get("category") || null;
+    const parsedBrandId = bId ? Number(bId) : null;
+    const parsedCategoryId = cId ? Number(cId) : null;
+
+    setKeyword((prev) => (prev !== q ? q : prev));
+    setSelectedBrandId((prev) => (prev !== parsedBrandId ? parsedBrandId : prev));
+    setSelectedCategoryId((prev) => (prev !== parsedCategoryId ? parsedCategoryId : prev));
+  }, [searchParams]);
 
   // ── Data state ───────────────────────────────────────────────────────────
   const [products, setProducts] = useState([]);
@@ -110,7 +159,10 @@ export const ShopGridSidebar = () => {
   }, [fetchSidebarData]);
 
   // ── Fetch products whenever filters / page change ────────────────────────
+  const fetchReqIdRef = useRef(0);
+
   const fetchProducts = useCallback(async () => {
+    const reqId = ++fetchReqIdRef.current;
     setLoading(true);
     setError(null);
     try {
@@ -124,6 +176,8 @@ export const ShopGridSidebar = () => {
         maxPrice: maxPrice !== null ? maxPrice : undefined,
         sort: sortValue || undefined,
       });
+
+      if (reqId !== fetchReqIdRef.current) return;
 
       const data = res.data;
       // Spring Page response shape: { content, totalPages, totalElements, ... }
@@ -147,13 +201,16 @@ export const ShopGridSidebar = () => {
         setProducts([]);
       }
     } catch (err) {
+      if (reqId !== fetchReqIdRef.current) return;
       console.error("Failed to fetch products:", err);
-      setError("Không thể tải danh sách sản phẩm. Vui lòng thử lại.");
+      setError(t("commerce.productLoadError", "Could not load products."));
       setProducts([]);
     } finally {
-      setLoading(false);
+      if (reqId === fetchReqIdRef.current) {
+        setLoading(false);
+      }
     }
-  }, [currentPage, keyword, selectedCategoryId, selectedBrandId, minPrice, maxPrice, sortValue]);
+  }, [currentPage, keyword, selectedCategoryId, selectedBrandId, minPrice, maxPrice, sortValue, t]);
 
   // ── Auto-adjust page if current page exceeds total pages ─────────────────
   useEffect(() => {
@@ -189,17 +246,37 @@ export const ShopGridSidebar = () => {
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   const handleCategoryChange = (id) => {
-    setSelectedCategoryId((prev) => (prev === id ? null : id));
+    const nextId = selectedCategoryId === id ? null : id;
+    setSelectedCategoryId(nextId);
     setCurrentPage(0);
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextId) {
+      nextParams.set("categoryId", String(nextId));
+    } else {
+      nextParams.delete("categoryId");
+      nextParams.delete("category");
+    }
+    setSearchParams(nextParams, { replace: true });
   };
 
   const handleBrandChange = (id) => {
-    setSelectedBrandId((prev) => (prev === id ? null : id));
+    const nextId = selectedBrandId === id ? null : id;
+    setSelectedBrandId(nextId);
     setCurrentPage(0);
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (nextId) {
+      nextParams.set("brandId", String(nextId));
+    } else {
+      nextParams.delete("brandId");
+      nextParams.delete("brand");
+    }
+    setSearchParams(nextParams, { replace: true });
   };
 
   const handleSortSelect = (label) => {
-    const found = SORT_OPTIONS.find((o) => o.label === label);
+    const found = sortOptions.find((o) => o.label === label);
     setSortValue(found ? found.value : "");
     setCurrentPage(0);
   };
@@ -211,80 +288,117 @@ export const ShopGridSidebar = () => {
     }
   };
 
+  const hasActiveFilters = Boolean(
+    stockFilter ||
+    minPrice !== null ||
+    maxPrice !== null ||
+    selectedCategoryId !== null ||
+    selectedBrandId !== null ||
+    keyword
+  );
+
+  const resetAllFilters = () => {
+    setStockFilter(null);
+    setMinPrice(null);
+    setMaxPrice(null);
+    setSelectedCategoryId(null);
+    setSelectedBrandId(null);
+    setKeyword("");
+    setSearchParams({}, { replace: true });
+    setCurrentPage(0);
+  };
+
   // ── Sidebar content (shared between desktop & mobile) ────────────────────
   const renderSidebarContent = (prefix = "desktop") => (
-    <div className="sidebar">
-
-      {/* Availability Filter */}
-      <div
-        className="category-block box-2 mb-32 wow fadeInUp animated"
-        data-wow-delay="200ms"
-      >
-        <div className="title" onClick={() => toggleCategory("availability")}>
-          <h6 className="fw-600 font-sec medium-black">
-            {t("shop.availability", "Availablity")}
-          </h6>
-          <span>
-            <i
-              className={`fa-light ${openCategories.availability ? "fa-chevron-up" : "fa-chevron-down"}`}
-            ></i>
+    <div className={`shop-sidebar-card sidebar ${prefix === "desktop" ? "shop-sidebar-sticky" : ""}`}>
+      {/* Header bar with Active Filter Summary and Reset */}
+      <div className="d-flex align-items-center justify-content-between mb-16 pb-12" style={{ borderBottom: "1px solid #f1f5f9" }}>
+        <div className="d-flex align-items-center gap-8">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e57c32" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+          </svg>
+          <span style={{ fontWeight: 700, fontSize: "15px", color: "#0f172a", letterSpacing: "-0.2px" }}>
+            {t("shop.filterTitle", "Filters")}
           </span>
         </div>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            className="shop-reset-filters-btn"
+            onClick={resetAllFilters}
+            title={t("common.reset", "Reset")}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            <span>{t("common.clearAll", "Clear all")}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Availability Filter */}
+      <div className="category-block mb-12">
+        <SidebarSectionHeader
+          title={t("shop.availability", "Availability")}
+          isOpen={openCategories.availability}
+          onToggle={() => toggleCategory("availability")}
+          activeCount={stockFilter ? 1 : null}
+        />
         {openCategories.availability && (
-          <div className="content-block mt-24">
-            <div className="d-flex align-items-center justify-content-between mb-12">
-              <div className="cus-checkBox">
+          <div className="content-block mt-12">
+            <div
+              className={`shop-filter-option ${stockFilter === "inStock" ? "is-selected" : ""}`}
+              onClick={() => setStockFilter((prev) => (prev === "inStock" ? null : "inStock"))}
+            >
+              <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
                 <input
                   type="checkbox"
-                  id={`${prefix}-inStock`}
                   className="inp-cbx"
                   checked={stockFilter === "inStock"}
-                  onChange={() => setStockFilter(stockFilter === "inStock" ? null : "inStock")}
+                  readOnly
+                  tabIndex={-1}
                 />
-                <label htmlFor={`${prefix}-inStock`} className="cbx">
-                  {t("common.inStock", "Còn hàng")}
+                <label className="cbx shop-filter-label" style={{ pointerEvents: "none", marginBottom: 0 }}>
+                  {t("common.inStock", "In Stock")}
                 </label>
               </div>
             </div>
-            <div className="d-flex align-items-center justify-content-between mb-12">
-              <div className="cus-checkBox">
+            <div
+              className={`shop-filter-option ${stockFilter === "outStock" ? "is-selected" : ""}`}
+              onClick={() => setStockFilter((prev) => (prev === "outStock" ? null : "outStock"))}
+            >
+              <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
                 <input
                   type="checkbox"
-                  id={`${prefix}-outStock`}
                   className="inp-cbx"
                   checked={stockFilter === "outStock"}
-                  onChange={() => setStockFilter(stockFilter === "outStock" ? null : "outStock")}
+                  readOnly
+                  tabIndex={-1}
                 />
-                <label htmlFor={`${prefix}-outStock`} className="cbx">
-                  {t("common.outOfStock", "Hết hàng")}
+                <label className="cbx shop-filter-label" style={{ pointerEvents: "none", marginBottom: 0 }}>
+                  {t("common.outOfStock", "Out of Stock")}
                 </label>
               </div>
             </div>
           </div>
         )}
       </div>
-      <div className="hr-line line-2 mb-24"></div>
+      <div className="shop-sidebar-divider"></div>
 
       {/* Price Filter */}
-      <div
-        className="category-block box-5 wow fadeInUp animated mb-32 animated"
-        data-wow-delay="200ms"
-      >
-        <div className="title mb-24" onClick={() => toggleCategory("price")}>
-          <h6 className="fw-600 font-sec medium-black">
-            {t("shop.filterByPrice", "Filter By Price")}
-          </h6>
-          <span>
-            <i
-              className={`fa-light ${openCategories.price ? "fa-chevron-up" : "fa-chevron-down"}`}
-            ></i>
-          </span>
-        </div>
+      <div className="category-block mb-12">
+        <SidebarSectionHeader
+          title={t("shop.filterByPrice", "Filter By Price")}
+          isOpen={openCategories.price}
+          onToggle={() => toggleCategory("price")}
+          activeCount={minPrice !== null || maxPrice !== null ? 1 : null}
+        />
         {openCategories.price && (
-          <div className="content-block">
+          <div className="content-block mt-16">
             <PriceSlider
-              initialMin={0}
-              initialMax={150000}
+              initialMin={minPrice !== null ? minPrice : 0}
+              initialMax={maxPrice !== null ? maxPrice : 150000}
               maxLimit={150000}
               step={5000}
               isFiltered={minPrice !== null || maxPrice !== null}
@@ -302,44 +416,38 @@ export const ShopGridSidebar = () => {
           </div>
         )}
       </div>
-      <div className="hr-line line-2 mb-24"></div>
+      <div className="shop-sidebar-divider"></div>
 
       {/* Category Filter */}
-      <div
-        className="category-block box-1 mb-32 wow fadeInUp animated"
-        data-wow-delay="300ms"
-      >
-        <div className="title" onClick={() => toggleCategory("categories")}>
-          <h6 className="fw-600 font-sec medium-black">
-            {t("shop.productCategories", "Danh mục")}
-          </h6>
-          <span>
-            <i
-              className={`fa-light ${openCategories.categories ? "fa-chevron-up" : "fa-chevron-down"}`}
-            ></i>
-          </span>
-        </div>
+      <div className="category-block mb-12">
+        <SidebarSectionHeader
+          title={t("shop.productCategories", "Product Categories")}
+          isOpen={openCategories.categories}
+          onToggle={() => toggleCategory("categories")}
+          activeCount={selectedCategoryId ? 1 : null}
+        />
         {openCategories.categories && (
-          <div className="content-block mt-24">
+          <div className="content-block mt-12 shop-filter-scroll-list">
             {sidebarLoading ? (
-              <p className="dark-gray" style={{ fontSize: "13px" }}>Đang tải...</p>
+              <p className="dark-gray py-8" style={{ fontSize: "13px" }}>{t("common.loading", "Loading...")}</p>
             ) : categories.length === 0 ? (
-              <p className="dark-gray" style={{ fontSize: "13px" }}>Không có danh mục</p>
+              <p className="dark-gray py-8" style={{ fontSize: "13px" }}>{t("shop.noCategories", "No categories available")}</p>
             ) : (
               categories.map((cat) => (
                 <div
                   key={cat.id}
-                  className="d-flex align-items-center justify-content-between mb-12"
+                  className={`shop-filter-option ${selectedCategoryId === cat.id ? "is-selected" : ""}`}
+                  onClick={() => handleCategoryChange(cat.id)}
                 >
-                  <div className="cus-checkBox">
+                  <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
                     <input
                       type="checkbox"
-                      id={`${prefix}-cat-${cat.id}`}
                       className="inp-cbx"
                       checked={selectedCategoryId === cat.id}
-                      onChange={() => handleCategoryChange(cat.id)}
+                      readOnly
+                      tabIndex={-1}
                     />
-                    <label htmlFor={`${prefix}-cat-${cat.id}`} className="cbx">
+                    <label className="cbx shop-filter-label" style={{ pointerEvents: "none", marginBottom: 0 }}>
                       {cat.name}
                     </label>
                   </div>
@@ -349,44 +457,38 @@ export const ShopGridSidebar = () => {
           </div>
         )}
       </div>
-      <div className="hr-line line-2 mb-24"></div>
+      <div className="shop-sidebar-divider"></div>
 
       {/* Brand Filter */}
-      <div
-        className="category-block box-1 mb-32 wow fadeInUp animated"
-        data-wow-delay="350ms"
-      >
-        <div className="title" onClick={() => toggleCategory("brands")}>
-          <h6 className="fw-600 font-sec medium-black">
-            Thương hiệu
-          </h6>
-          <span>
-            <i
-              className={`fa-light ${openCategories.brands ? "fa-chevron-up" : "fa-chevron-down"}`}
-            ></i>
-          </span>
-        </div>
+      <div className="category-block mb-12">
+        <SidebarSectionHeader
+          title={t("shop.brands", "Brands")}
+          isOpen={openCategories.brands}
+          onToggle={() => toggleCategory("brands")}
+          activeCount={selectedBrandId ? 1 : null}
+        />
         {openCategories.brands && (
-          <div className="content-block mt-24">
+          <div className="content-block mt-12 shop-filter-scroll-list">
             {sidebarLoading ? (
-              <p className="dark-gray" style={{ fontSize: "13px" }}>Đang tải...</p>
+              <p className="dark-gray py-8" style={{ fontSize: "13px" }}>{t("common.loading", "Loading...")}</p>
             ) : brands.length === 0 ? (
-              <p className="dark-gray" style={{ fontSize: "13px" }}>Không có thương hiệu</p>
+              <p className="dark-gray py-8" style={{ fontSize: "13px" }}>{t("shop.noBrands", "No brands available")}</p>
             ) : (
               brands.map((brand) => (
                 <div
                   key={brand.id}
-                  className="d-flex align-items-center justify-content-between mb-12"
+                  className={`shop-filter-option ${selectedBrandId === brand.id ? "is-selected" : ""}`}
+                  onClick={() => handleBrandChange(brand.id)}
                 >
-                  <div className="cus-checkBox">
+                  <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
                     <input
                       type="checkbox"
-                      id={`${prefix}-brand-${brand.id}`}
                       className="inp-cbx"
                       checked={selectedBrandId === brand.id}
-                      onChange={() => handleBrandChange(brand.id)}
+                      readOnly
+                      tabIndex={-1}
                     />
-                    <label htmlFor={`${prefix}-brand-${brand.id}`} className="cbx">
+                    <label className="cbx shop-filter-label" style={{ pointerEvents: "none", marginBottom: 0 }}>
                       {brand.name}
                     </label>
                   </div>
@@ -396,25 +498,18 @@ export const ShopGridSidebar = () => {
           </div>
         )}
       </div>
-      <div className="hr-line line-2 mb-24"></div>
+      <div className="shop-sidebar-divider"></div>
 
       {/* Tags Filter */}
-      <div
-        className="category-block box-4 mb-24 wow fadeInUp animated"
-        data-wow-delay="400ms"
-      >
-        <div className="title mb-24" onClick={() => toggleCategory("tags")}>
-          <h6 className="fw-600 font-sec medium-black">
-            {t("shop.popularTags", "Tags")}
-          </h6>
-          <span>
-            <i
-              className={`fa-light ${openCategories.tags ? "fa-chevron-up" : "fa-chevron-down"}`}
-            ></i>
-          </span>
-        </div>
+      <div className="category-block mb-12">
+        <SidebarSectionHeader
+          title={t("shop.popularTags", "Tags")}
+          isOpen={openCategories.tags}
+          onToggle={() => toggleCategory("tags")}
+          activeCount={keyword ? 1 : null}
+        />
         {openCategories.tags && (
-          <div className="content-block mt-24">
+          <div className="content-block mt-12">
             <div className="tags-wrapper d-flex flex-wrap gap-8">
               {["Pen", "Notebook", "Paper", "Highlighter", "Puncher", "Deli", "Thien Long"].map((tag) => {
                 const isTagActive = keyword.toLowerCase() === tag.toLowerCase();
@@ -426,23 +521,22 @@ export const ShopGridSidebar = () => {
                     onClick={() => {
                       if (isTagActive) {
                         setKeyword("");
-                        setSearchInput("");
                       } else {
                         setKeyword(tag);
-                        setSearchInput(tag);
                       }
                       setCurrentPage(0);
                     }}
                     style={{
                       padding: "6px 14px",
                       borderRadius: "20px",
-                      border: isTagActive ? "1px solid var(--color-primary, #e57c32)" : "1px solid #e5e7eb",
-                      backgroundColor: isTagActive ? "var(--color-primary, #e57c32)" : "#f9fafb",
-                      color: isTagActive ? "#ffffff" : "#4b5563",
+                      border: isTagActive ? "1px solid var(--color-primary, #e57c32)" : "1px solid #e2e8f0",
+                      backgroundColor: isTagActive ? "var(--color-primary, #e57c32)" : "#f8fafc",
+                      color: isTagActive ? "#ffffff" : "#475569",
                       fontSize: "12px",
                       fontWeight: "600",
                       cursor: "pointer",
                       transition: "all 0.2s ease",
+                      boxShadow: isTagActive ? "0 2px 8px rgba(229, 124, 50, 0.25)" : "none",
                     }}
                   >
                     {tag}
@@ -456,8 +550,7 @@ export const ShopGridSidebar = () => {
 
       {/* Sidebar Promotional Image */}
       <div
-        className="sidebar-promotional-image w-100 object-fit-cover br-12 wow fadeInUp animated"
-        data-wow-delay="500ms"
+        className="sidebar-promotional-image w-100 object-fit-cover br-12 mt-16 overflow-hidden"
       >
         <img
           src="/assets/media/images/sidebar-image.png"
@@ -530,7 +623,7 @@ export const ShopGridSidebar = () => {
             onClick={() => handlePageChange(currentPage - 1)}
             onMouseEnter={(e) => { if (currentPage !== 0) e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#6b7280"; }}
-            title="Trang trước"
+            title={t("common.previousPage", "Previous page")}
           >
             &#8592;
           </button>
@@ -579,7 +672,7 @@ export const ShopGridSidebar = () => {
             onClick={() => handlePageChange(currentPage + 1)}
             onMouseEnter={(e) => { if (currentPage < totalPages - 1) { e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; } }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#6b7280"; }}
-            title="Trang sau"
+            title={t("common.nextPage", "Next page")}
           >
             &#8594;
           </button>
@@ -597,18 +690,22 @@ export const ShopGridSidebar = () => {
         <div className="container-2">
           <div className="row">
             {/* Desktop Sidebar */}
-            <div className="col-lg-3 d-lg-block d-none">
+            <div className="col-xxl-2 col-xl-3 col-lg-4 d-lg-block d-none">
               {renderSidebarContent("desktop")}
             </div>
 
             {/* Products Main Column */}
-            <div className="col-lg-9">
+            <div className="col-xxl-10 col-xl-9 col-lg-8">
               <div className="row row-gap-3 align-items-center justify-content-between mb-24">
                 <div className="col-xl-4 col-lg-5 col-md-7 col-6">
                   <p className="d-md-block d-none">
                     {loading
-                      ? "Đang tải..."
-                      : `Hiển thị ${products.length} / ${totalElements} sản phẩm`}
+                      ? t("common.loading", "Loading...")
+                      : t("shop.showingProductCount", {
+                          count: products.length,
+                          total: totalElements,
+                          defaultValue: `Showing ${products.length} / ${totalElements} products`,
+                        })}
                   </p>
                   <button
                     type="button"
@@ -620,11 +717,11 @@ export const ShopGridSidebar = () => {
                 </div>
                 <div className="col-xl-4 col-lg-4 col-md-5 col-6">
                   <div className="d-flex align-items-center justify-content-end gap-8">
-                    <p className="dark-gray">{t("shop.sortBy", "Sắp xếp")}:</p>
+                    <p className="dark-gray">{t("shop.sortBy", "Sort By")}:</p>
                     <div className="drop-container">
                       <CustomDropdown
-                        options={SORT_OPTIONS.map((o) => o.label)}
-                        defaultValue={SORT_OPTIONS[0].label}
+                        options={sortOptions.map((o) => o.label)}
+                        defaultValue={(sortOptions.find((o) => o.value === sortValue) || sortOptions[0]).label}
                         onSelect={handleSortSelect}
                       />
                     </div>
@@ -640,9 +737,9 @@ export const ShopGridSidebar = () => {
                     role="status"
                     style={{ color: "var(--color-primary, #e57c32)", width: "3rem", height: "3rem" }}
                   >
-                    <span className="visually-hidden">Đang tải...</span>
+                    <span className="visually-hidden">{t("common.loading", "Loading...")}</span>
                   </div>
-                  <p className="mt-16 dark-gray">Đang tải sản phẩm...</p>
+                  <p className="mt-16 dark-gray">{t("shop.loadingProducts", "Loading products...")}</p>
                 </div>
               ) : error ? (
                 <div className="text-center py-80">
@@ -665,7 +762,7 @@ export const ShopGridSidebar = () => {
                       marginTop: "16px",
                     }}
                   >
-                    <span>Thử lại</span>
+                    <span>{t("shop.retryButton", "Try again")}</span>
                   </button>
                 </div>
               ) : products.length === 0 ? (
@@ -704,9 +801,9 @@ export const ShopGridSidebar = () => {
                       <line x1="8" y1="11" x2="14" y2="11"></line>
                     </svg>
                   </div>
-                  <h5 className="fw-700 medium-black mb-8">Không tìm thấy sản phẩm phù hợp</h5>
+                  <h5 className="fw-700 medium-black mb-8">{t("shop.noProductsFound", "No matching products found")}</h5>
                   <p className="dark-gray mb-24" style={{ maxWidth: "420px", margin: "0 auto 20px", fontSize: "14px" }}>
-                    Rất tiếc, không có sản phẩm nào khớp với từ khóa tìm kiếm hoặc khoảng giá bạn đã chọn.
+                    {t("shop.noProductsDesc", "Sorry, no products match your search keyword or price range.")}
                   </p>
                   {(selectedCategoryId || selectedBrandId || minPrice !== null || maxPrice !== null || stockFilter !== null) && (
                     <button
@@ -741,7 +838,7 @@ export const ShopGridSidebar = () => {
                         <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
                         <path d="M3 3v5h5"></path>
                       </svg>
-                      <span>Xóa tất cả bộ lọc</span>
+                      <span>{t("shop.clearAllFilters", "Clear all filters")}</span>
                     </button>
                   )}
                 </div>
@@ -754,7 +851,7 @@ export const ShopGridSidebar = () => {
                     return (
                       <div
                         key={prodId}
-                        className="col-lg-4 col-md-6 col-sm-6 wow fadeInUp animated"
+                        className="col-xxl-3 col-xl-4 col-md-6 col-sm-6 wow fadeInUp animated"
                         data-wow-delay="400ms"
                       >
                         <div className="latest-product-card">
@@ -785,7 +882,7 @@ export const ShopGridSidebar = () => {
                                   zIndex: 2,
                                 }}
                               >
-                                Hết hàng
+                                {t("common.outOfStock", "Out of Stock")}
                               </span>
                             )}
                             <div className="side-icons">
@@ -794,21 +891,21 @@ export const ShopGridSidebar = () => {
                                 <li>
                                   <a
                                     href="#wishlist"
-                                    title={isWishlisted ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
+                                    title={isWishlisted ? t("wishlist.remove", "Remove from wishlist") : t("wishlist.add", "Add to wishlist")}
                                     onClick={(e) => {
                                       e.preventDefault();
                                       toggleWishlist(prod);
                                     }}
                                     style={{ color: isWishlisted ? "#e57c32" : undefined }}
                                   >
-                                    <i className={isWishlisted ? "fa-solid fa-heart" : "fa-light fa-heart"} style={{ color: isWishlisted ? "#e57c32" : undefined }}></i>
+                                    <i className={isWishlisted ? "fa-solid fa-heart" : "fa-regular fa-heart"} style={{ color: isWishlisted ? "#e57c32" : undefined }}></i>
                                   </a>
                                 </li>
                                 {/* Quick View */}
                                 <li>
                                   <a
                                     href="#quickview"
-                                    title="Xem nhanh"
+                                    title={t("modals.quickView", "Xem nhanh")}
                                     onClick={(e) => {
                                       e.preventDefault();
                                       openQuickView(prod);
@@ -824,7 +921,7 @@ export const ShopGridSidebar = () => {
                               className="cus-btn"
                               onClick={(e) => {
                                 e.preventDefault();
-                                openCart();
+                                addToCart(prodId, 1, true);
                               }}
                             >
                               <span className="btn-text">
@@ -856,7 +953,7 @@ export const ShopGridSidebar = () => {
                                 </span>
                               </div>
                               <h5 className="medium-black fw-700">
-                                {formatCurrency(prod.price)}
+                                {formatOrderMoney(prod.price, i18n.language)}
                               </h5>
                             </div>
                           </div>

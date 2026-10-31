@@ -1,34 +1,41 @@
 package fpt.edu.vn.stationery.service;
 
+import fpt.edu.vn.stationery.constant.ProductStatus;
 import fpt.edu.vn.stationery.dto.response.OrderDetailResponseDTO;
 import fpt.edu.vn.stationery.dto.response.PageDTO;
 import fpt.edu.vn.stationery.entity.Order;
+import fpt.edu.vn.stationery.entity.OrderItem;
+import fpt.edu.vn.stationery.entity.Product;
 import fpt.edu.vn.stationery.entity.User;
 import fpt.edu.vn.stationery.event.OrderStatusChangedEvent;
 import fpt.edu.vn.stationery.exception.BadRequestException;
 import fpt.edu.vn.stationery.exception.ResourceNotFoundException;
 import fpt.edu.vn.stationery.mapper.OrderMapper;
+import fpt.edu.vn.stationery.repository.CartItemRepository;
+import fpt.edu.vn.stationery.repository.PaymentRepository;
+import fpt.edu.vn.stationery.repository.VoucherRepository;
 import fpt.edu.vn.stationery.repository.OrderRepository;
+import fpt.edu.vn.stationery.repository.ProductRepository;
+import fpt.edu.vn.stationery.repository.UserRepository;
 import fpt.edu.vn.stationery.service.impl.OrderServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.mockito.ArgumentCaptor;
-import org.springframework.context.ApplicationEventPublisher;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
@@ -37,7 +44,17 @@ class OrderServiceTest {
     private OrderRepository orderRepository;
 
     @Mock
+    private ProductRepository productRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
     private OrderMapper orderMapper;
+
+    @Mock private CartItemRepository cartItemRepository;
+    @Mock private VoucherRepository voucherRepository;
+    @Mock private PaymentRepository paymentRepository;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -106,27 +123,50 @@ class OrderServiceTest {
     }
 
     @Test
-    void customerCanCancelOnlyTheirPendingOrder() {
+    void customerCanCancelOnlyTheirPendingOrder_andRestoresStock() {
+        User user = User.builder().userId(12L).email("buyer@example.com").build();
+        Product product = Product.builder().productId(101L).stockQuantity(5).build();
+        OrderItem item = OrderItem.builder().productId(101L).quantity(2).build();
+
+        Order order = Order.builder()
+                .orderId(7L)
+                .orderStatus("PENDING")
+                .user(user)
+                .orderItems(new ArrayList<>(List.of(item)))
+                .build();
+
         OrderDetailResponseDTO cancelled = OrderDetailResponseDTO.builder()
                 .orderId(7L).orderStatus("CANCELLED").build();
-        when(orderRepository.cancelPendingOrder(7L, "buyer@example.com")).thenReturn(1);
-        when(orderRepository.findWithOrderItemsByOrderIdAndUser_Email(7L, "buyer@example.com"))
-                .thenReturn(Optional.of(new Order()));
+
+        when(orderRepository.findForStatusUpdate(7L))
+                .thenReturn(Optional.of(order));
+        when(productRepository.findByIdForUpdate(101L)).thenReturn(Optional.of(product));
+        when(orderRepository.saveAndFlush(any(Order.class))).thenReturn(order);
         when(orderMapper.toDetailResponse(any(Order.class))).thenReturn(cancelled);
 
         assertSame(cancelled, orderService.cancelCustomerOrder(7L, "buyer@example.com"));
-        verify(orderRepository).cancelPendingOrder(7L, "buyer@example.com");
+
+        assertEquals("CANCELLED", order.getOrderStatus());
+        assertEquals(7, product.getStockQuantity()); // 5 + 2 = 7 restored
+        verify(productRepository).save(product);
+        verify(eventPublisher).publishEvent(any(OrderStatusChangedEvent.class));
     }
 
     @Test
     void customerCannotCancelConfirmedOrder() {
-        when(orderRepository.findWithOrderItemsByOrderIdAndUser_Email(7L, "buyer@example.com"))
-                .thenReturn(Optional.of(new Order()));
-        when(orderMapper.toDetailResponse(any(Order.class))).thenReturn(
-                OrderDetailResponseDTO.builder().orderStatus("CONFIRMED").build());
+        User user = User.builder().userId(12L).email("buyer@example.com").build();
+        Order order = Order.builder()
+                .orderId(7L)
+                .orderStatus("CONFIRMED")
+                .user(user)
+                .build();
+
+        when(orderRepository.findForStatusUpdate(7L))
+                .thenReturn(Optional.of(order));
 
         assertThrows(BadRequestException.class,
                 () -> orderService.cancelCustomerOrder(7L, "buyer@example.com"));
+        verify(productRepository, never()).save(any());
     }
 
     @Test

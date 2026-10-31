@@ -1,16 +1,35 @@
 // Migrated from: product-detail.html, lines 205-1705
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / input self-closing, gallery thumbnail active state, tab switcher state, i18n support
 // API integration: useParams to read product ID, fetch real data from /api/products/:id
-import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useSearchParams, useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
-import { getProductById, getProductImage } from "../../services/productService";
+import { getProductById, getProductImage, getProducts } from "../../services/productService";
+import ProductReviewsList from "../../components/reviews/ProductReviewsList";
+import ProductRatingSold from "../../components/shared/ProductRatingSold";
+import { formatOrderMoney } from "../../utils/orderFormatters";
+import useQuantityInput from "../../hooks/useQuantityInput";
+import "../../styles/reviews.css";
+
+const ReviewStars = ({ rating, label }) => {
+  const filled = Math.max(0, Math.min(5, Math.round(Number(rating) || 0)));
+  return (
+    <span className="product-review-stars" aria-label={label}>
+      <span aria-hidden="true">{"★".repeat(filled)}</span>
+      <span className="empty" aria-hidden="true">{"★".repeat(5 - filled)}</span>
+    </span>
+  );
+};
 
 export const ProductDetail = () => {
-  const { openCart, openQuickView } = useCartContext();
-  const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
   const { id } = useParams();
+  const navigate = useNavigate();
+  const rawId = id || searchParams.get("id");
+  const productId = rawId ? Number(rawId) : 1;
+  const { openCart, openQuickView, openCompare, addToCart, isInWishlist, toggleWishlist } = useCartContext();
+  const { t, i18n } = useTranslation();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("desc");
@@ -18,18 +37,42 @@ export const ProductDetail = () => {
 
   // API state
   const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(!!id);
+  const [loading, setLoading] = useState(!!productId);
   const [error, setError] = useState(null);
+  const [reviewCount, setReviewCount] = useState(0);
+  const [averageRating, setAverageRating] = useState(0);
+
+  const maxStock = product?.stockQuantity != null ? product.stockQuantity : 999;
+  const isOutOfStock = product?.stockQuantity != null && product.stockQuantity <= 0;
+
+  const {
+    inputProps,
+    handleIncrement,
+    handleDecrement,
+    isAtMin,
+    isAtMax,
+    numericValue,
+  } = useQuantityInput({
+    value: quantity,
+    maxStock,
+    min: 1,
+    onChange: setQuantity,
+  });
+  const handleRatingUpdated = useCallback(({ averageRating: avg, reviewCount: count }) => {
+    setAverageRating(avg);
+    setReviewCount(count);
+  }, []);
 
   useEffect(() => {
-    if (!id) return;
+    if (!productId) return;
+    setQuantity(1);
     setLoading(true);
     setError(null);
-    getProductById(id)
-      .then((res) => setProduct(res.data))
-      .catch(() => setError("Không thể tải thông tin sản phẩm."))
+    getProductById(productId)
+      .then((res) => setProduct(res.data?.data ?? res.data))
+      .catch(() => setError(t("commerce.productLoadError", "Could not load products.")))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [productId]);
 
   const formatCurrency = (amount) => {
     if (amount == null) return "";
@@ -55,36 +98,16 @@ export const ProductDetail = () => {
     "/assets/media/products/nav-image-4.png",
   ];
 
-  const relatedProducts = [
-    {
-      id: 1,
-      title: "Daily Planner Pro",
-      image: "/assets/media/products/product-1.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 2,
-      title: "SmoothFlow Pens",
-      image: "/assets/media/products/product-2.png",
-      price: "$15.00",
-      badge: "Sale",
-    },
-    {
-      id: 3,
-      title: "Premium Bags",
-      image: "/assets/media/products/product-3.png",
-      price: "$45.00",
-      badge: "Sale",
-    },
-    {
-      id: 4,
-      title: "Premium Letter Paper",
-      image: "/assets/media/products/product-4.png",
-      price: "$20.00",
-      badge: "Sale",
-    },
-  ];
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  useEffect(() => {
+    let active = true;
+    getProducts({ size: 5 }).then((response) => {
+      const payload = response.data?.data ?? response.data;
+      const list = Array.isArray(payload) ? payload : payload?.content ?? [];
+      if (active) setRelatedProducts(list.filter((item) => String(item.productId ?? item.id) !== String(productId)).slice(0, 4).map((item) => ({ ...item, id: item.productId ?? item.id, title: item.name, image: getProductImage(item) })));
+    }).catch(() => { if (active) setRelatedProducts([]); });
+    return () => { active = false; };
+  }, [productId]);
 
   if (loading) {
     return (
@@ -94,9 +117,9 @@ export const ProductDetail = () => {
           role="status"
           style={{ color: "var(--color-primary, #e57c32)", width: "3rem", height: "3rem" }}
         >
-          <span className="visually-hidden">Đang tải...</span>
+          <span className="visually-hidden">{t("common.loading", "Loading...")}</span>
         </div>
-        <p className="mt-16 dark-gray">Đang tải sản phẩm...</p>
+        <p className="mt-16 dark-gray">{t("common.loading", "Loading...")}</p>
       </div>
     );
   }
@@ -121,7 +144,7 @@ export const ProductDetail = () => {
             boxShadow: "0 4px 12px rgba(229, 124, 50, 0.25)",
           }}
         >
-          Quay lại cửa hàng
+          {t("common.goToShop", "Go to Shop")}
         </Link>
       </div>
     );
@@ -186,7 +209,7 @@ export const ProductDetail = () => {
                 </div>
                 <div className="d-flex align-items-center gap-16 mb-24">
                   <h4 className="color-primary fw-700">
-                    {product ? formatCurrency(product.price) : "$59.00"}
+                    {product ? formatOrderMoney(product.price, i18n.language) : "$59.00"}
                   </h4>
                 </div>
                 {(product?.category?.name || product?.brand?.name) && (
@@ -196,7 +219,14 @@ export const ProductDetail = () => {
                 )}
                 {product?.stockQuantity != null && (
                   <p className="fw-500 mb-16">
-                    Còn lại: <span className="color-primary fw-700">{product.stockQuantity}</span> sản phẩm trong kho!
+                    {t("productDetail.remainingStock", "Remaining:")}{" "}
+                    <span className="color-primary fw-700">{product.stockQuantity}</span>{" "}
+                    {t("productDetail.itemsInStock", "items in stock!")}
+                    {product.stockQuantity > 20 && (
+                      <span className="text-muted ms-2" style={{ fontSize: "13px" }}>
+                        ({t("productDetail.maxPerOrder", "Tối đa 20 sản phẩm/đơn")})
+                      </span>
+                    )}
                   </p>
                 )}
                 <p className="fw-500 medium-black mb-8">
@@ -207,7 +237,8 @@ export const ProductDetail = () => {
                     <button
                       className="decrement"
                       type="button"
-                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      disabled={isAtMin || isOutOfStock}
+                      onClick={handleDecrement}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -218,23 +249,22 @@ export const ProductDetail = () => {
                       >
                         <path
                           d="M15.375 7.375H0.625C0.279813 7.375 0 7.65481 0 8C0 8.34519 0.279813 8.625 0.625 8.625H15.375C15.7202 8.625 16 8.34519 16 8C16 7.65481 15.7202 7.375 15.375 7.375Z"
-                          fill="#1E1F20"
+                          fill="currentColor"
                         />
                       </svg>
                     </button>
                     <input
-                      type="text"
                       name="quantity"
-                      value={quantity}
-                      readOnly
-                      maxLength={2}
-                      size={1}
-                      className="number"
+                      disabled={isOutOfStock}
+                      className="number text-center"
+                      style={{ width: "48px" }}
+                      {...inputProps}
                     />
                     <button
                       className="increment"
                       type="button"
-                      onClick={() => setQuantity((q) => q + 1)}
+                      disabled={isAtMax || isOutOfStock}
+                      onClick={handleIncrement}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -245,7 +275,7 @@ export const ProductDetail = () => {
                       >
                         <path
                           d="M15.375 7.375H8.625V0.625C8.625 0.279813 8.34519 0 8 0C7.65481 0 7.375 0.279813 7.375 0.625V7.375H0.625C0.279813 7.375 0 7.65481 0 8C0 8.34519 0.279813 8.625 0.625 8.625H7.375V15.375C7.375 15.7202 7.65481 16 8 16C8.34519 16 8.625 15.7202 8.625 15.375V8.625H15.375C15.7202 8.625 16 8.34519 16 8C16 7.65481 15.7202 7.375 15.375 7.375Z"
-                          fill="#1E1F20"
+                          fill="currentColor"
                         />
                       </svg>
                     </button>
@@ -257,19 +287,21 @@ export const ProductDetail = () => {
                 </p>
                 <div className="row row-gap-2 mb-24">
                   <div className="col-sm-6">
-                    <Link
-                      to="/cart.html"
-                      className="w-100 text-center cus-btn-2"
-                      onClick={openCart}
+                    <button
+                      type="button"
+                      className="w-100 text-center cus-btn-2 border-0"
+                      disabled={isOutOfStock}
+                      onClick={() => addToCart(productId, numericValue, true)}
                     >
                       <span className="btn-text">{t("common.addCart")}</span>
                       <span>{t("common.addCart")}</span>
-                    </Link>
+                    </button>
                   </div>
                   <div className="col-sm-6">
                     <Link
                       to="/checkout.html"
-                      className="w-100 text-center cus-btn"
+                      className={`w-100 text-center cus-btn ${isOutOfStock ? "disabled pe-none opacity-50" : ""}`}
+                      onClick={async (event) => { event.preventDefault(); if (isOutOfStock) return; if (await addToCart(product, numericValue, { open: false })) navigate("/checkout"); }}
                     >
                       <span className="btn-text">
                         {t("productDetail.buyNow")}
@@ -357,7 +389,7 @@ export const ProductDetail = () => {
                     }`}
                   onClick={() => setActiveTab("review")}
                 >
-                  {t("productDetail.reviewsTab")}
+                  {t("productDetail.reviewsTab", { count: reviewCount })}
                 </button>
               </li>
             </ul>
@@ -386,185 +418,42 @@ export const ProductDetail = () => {
                   <table className="table table-bordered mb-0">
                     <tbody>
                       <tr>
-                        <th style={{ width: "200px" }}>Weight</th>
-                        <td>0.5 kg</td>
+                        <th style={{ width: "200px" }}>{t("productDetail.skuCode", "SKU Code")}</th>
+                        <td>{product?.sku || `SKU-${productId}`}</td>
                       </tr>
+                      {product?.brand?.name && (
+                        <tr>
+                          <th>{t("common.brand", "Brand")}</th>
+                          <td>{product.brand.name}</td>
+                        </tr>
+                      )}
+                      {product?.category?.name && (
+                        <tr>
+                          <th>{t("common.categories", "Categories")}</th>
+                          <td>{product.category.name}</td>
+                        </tr>
+                      )}
                       <tr>
-                        <th>Dimensions</th>
-                        <td>15 x 20 x 2 cm</td>
+                        <th>{t("productDetail.weight", "Weight")}</th>
+                        <td>{product?.weightKg ?? product?.weight ?? "0.1"} kg</td>
                       </tr>
-                      <tr>
-                        <th>Material</th>
-                        <td>Recycled Paper, Premium Ink</td>
-                      </tr>
+                      {product?.stockQuantity != null && (
+                        <tr>
+                          <th>{t("productDetail.stockStatus", "Stock Status")}</th>
+                          <td>{product.stockQuantity > 0 ? `${t("common.inStock", "In Stock")} (${product.stockQuantity})` : t("common.outOfStock", "Out of Stock")}</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
               )}
               {activeTab === "review" && (
-                <div className="tab-pane fade show active">
-                  <div className="review-box mb-48">
-                    <div className="comment-box mb-24">
-                      <img
-                        src="/assets/media/users/user-2.png"
-                        alt=""
-                        className="br-4"
-                      />
-                      <div className="block">
-                        <div className="top-row mb-16">
-                          <div className="info">
-                            <h6 className="fw-600 medium-black">
-                              Ethan Clarke
-                            </h6>
-                          </div>
-                          <div className="rating-star mb-12">
-                            <p className="color-star">★★★★★</p>
-                          </div>
-                        </div>
-                        <p>
-                          Lorem ipsum dolor sit amet consectetur. Est morbi cum
-                          bibendum id eleifend ultrices enim nec. Vitae morbi
-                          mus imperdiet tincidunt ultrices hendrerit. Lobortis
-                          donec massa fermentum aliquet sapien. Magna risus
-                          donec aliquam diam aliquet consectetur.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="hr-line bg-light-gray mb-24"></div>
-                    <div className="comment-box">
-                      <img
-                        src="/assets/media/users/user-3.png"
-                        alt=""
-                        className="br-4"
-                      />
-                      <div className="block">
-                        <div className="top-row mb-16">
-                          <div className="info">
-                            <h6 className="fw-600 medium-black">
-                              Sophia Reynolds
-                            </h6>
-                          </div>
-                          <div className="rating-star mb-12">
-                            <p className="color-star">★★★★★</p>
-                          </div>
-                        </div>
-                        <p>
-                          Lorem ipsum dolor sit amet consectetur. Est morbi cum
-                          bibendum id eleifend ultrices enim nec. Vitae morbi
-                          mus imperdiet tincidunt ultrices hendrerit. Lobortis
-                          donec massa fermentum aliquet sapien. Magna risus
-                          donec aliquam diam aliquet consectetur.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="review-form">
-                    <h5 className="medium-black fw-600 mb-16">
-                      Write a Review
-                    </h5>
-                    <p className="mb-24">
-                      Your email address will not be published. Required fields
-                      are marked.
-                    </p>
-
-                    <p className="mb-8">Your Rating</p>
-                    <div className="star-rating mb-32">
-                      <input type="radio" id="1-star" name="rating" value="1" />
-                      <label htmlFor="1-star" className="star">
-                        &#9733;
-                      </label>
-                      <input
-                        type="radio"
-                        id="2-stars"
-                        name="rating"
-                        value="2"
-                      />
-                      <label htmlFor="2-stars" className="star">
-                        &#9733;
-                      </label>
-                      <input
-                        type="radio"
-                        id="3-stars"
-                        defaultChecked
-                        name="rating"
-                        value="3"
-                      />
-                      <label htmlFor="3-stars" className="star">
-                        &#9733;
-                      </label>
-                      <input
-                        type="radio"
-                        id="4-stars"
-                        name="rating"
-                        value="4"
-                      />
-                      <label htmlFor="4-stars" className="star">
-                        &#9733;
-                      </label>
-                      <input
-                        type="radio"
-                        id="5-stars"
-                        name="rating"
-                        value="5"
-                      />
-                      <label htmlFor="5-stars" className="star">
-                        &#9733;
-                      </label>
-                    </div>
-                    <p className="medium-black fw-600 mb-16">Your Review</p>
-                    <form
-                      method="post"
-                      action="#"
-                      className="form-group product-form"
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        alert("Review submitted successfully!");
-                      }}
-                    >
-                      <div className="row">
-                        <div className="col-sm-12">
-                          <div className="input-block mb-24">
-                            <textarea
-                              className="form-control"
-                              name="message"
-                              id="comment"
-                              rows="4"
-                              placeholder="Write Your Review here..."
-                            ></textarea>
-                          </div>
-                        </div>
-                        <div className="col-sm-6">
-                          <div className="input-block mb-24">
-                            <input
-                              type="text"
-                              className="form-control"
-                              placeholder="Name"
-                            />
-                          </div>
-                        </div>
-                        <div className="col-sm-6">
-                          <div className="input-block mb-24">
-                            <input
-                              type="email"
-                              className="form-control"
-                              placeholder="Email"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="cus-checkBox mb-32">
-                        <input type="checkbox" id="remember" defaultChecked />
-                        <label htmlFor="remember">
-                          Save my name, email, and website in this browser for
-                          the next time I comment.
-                        </label>
-                      </div>
-                      <button type="submit" className="cus-btn">
-                        <span className="btn-text">Submit</span>
-                        <span>Submit</span>
-                      </button>
-                    </form>
-                  </div>
+                <div className="tab-pane fade show active p-24 bg-white br-12">
+                  <ProductReviewsList
+                    productId={productId}
+                    productName={product?.name}
+                    onRatingUpdated={handleRatingUpdated}
+                  />
                 </div>
               )}
             </div>
@@ -603,15 +492,21 @@ export const ProductDetail = () => {
                         <li>
                           <a
                             href="#wishlist"
-                            onClick={(e) => e.preventDefault()}
+                            title={isInWishlist(prod.id) ? t("wishlist.remove", "Remove from wishlist") : t("wishlist.add", "Add to wishlist")}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              toggleWishlist(prod);
+                            }}
+                            style={{ color: isInWishlist(prod.id) ? "#e57c32" : undefined }}
                           >
-                            <i className="fa-light fa-heart"></i>
+                            <i className={isInWishlist(prod.id) ? "fa-solid fa-heart" : "fa-regular fa-heart"} style={{ color: isInWishlist(prod.id) ? "#e57c32" : undefined }}></i>
                           </a>
                         </li>
                         <li>
                           <a
                             href="#quickview"
                             className="btn"
+                            title={t("modals.quickView", "Quick View")}
                             onClick={(e) => openQuickView(prod, e)}
                           >
                             <i className="fa-regular fa-eye"></i>
@@ -622,7 +517,7 @@ export const ProductDetail = () => {
                     <Link
                       to="/cart.html"
                       className="cus-btn"
-                      onClick={openCart}
+                      onClick={(event) => { event.preventDefault(); addToCart(prod.id, 1); }}
                     >
                       <span className="btn-text">{t("common.addCart")}</span>
                       <span>{t("common.goToCart")}</span>
@@ -636,10 +531,8 @@ export const ProductDetail = () => {
                       >
                         {prod.title}
                       </Link>
-                      <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
-                        <span className="color-primary">★★★★★</span>
-                      </div>
-                      <h6 className="fw-700 color-primary">{prod.price}</h6>
+                      <ProductRatingSold product={prod} variant="card" className="mb-8" />
+                      <h6 className="fw-700 color-primary">{formatOrderMoney(prod.price, i18n.language)}</h6>
                     </div>
                   </div>
                 </div>

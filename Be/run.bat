@@ -11,5 +11,10 @@ if "%JAVA_HOME%"=="" (
     )
 )
 echo JAVA_HOME: %JAVA_HOME%
+if "%JWT_SECRET%"=="" (
+    if exist "%~dp0.dev-jwt-secret" (
+        set /p JWT_SECRET=<"%~dp0.dev-jwt-secret"
+    )
+)
 call "%~dp0mvnw.cmd" spring-boot:run
 pause

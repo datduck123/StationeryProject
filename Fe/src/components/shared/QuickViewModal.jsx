@@ -1,31 +1,44 @@
 // Migrated from: index.html, lines 3380-3502
 // Fixed: uses real quickViewProduct fields (name, imageUrl, price, stockQuantity, sku, category, brand, description)
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useCartContext } from "../../providers/CartContext";
 import { getProductImage } from "../../services/productService";
-
-const formatCurrency = (amount) => {
-  if (amount == null) return "—";
-  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount);
-};
+import ProductRatingSold from "./ProductRatingSold";
+import { formatOrderMoney } from "../../utils/orderFormatters";
+import useQuantityInput from "../../hooks/useQuantityInput";
 
 export const QuickViewModal = () => {
-  const { quickViewProduct, closeQuickView, openCart } = useCartContext();
-  const { t } = useTranslation();
+  const { quickViewProduct, closeQuickView, addToCart, pendingItemIds } = useCartContext();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
+  useEffect(() => { setQuantity(1); }, [quickViewProduct]);
 
   if (!quickViewProduct) return null;
 
   const prod = quickViewProduct;
-  const stockQty = prod.stockQuantity ?? prod.stock_quantity ?? 0;
+  const stockQty = prod ? (prod.stockQuantity ?? prod.stock_quantity ?? 0) : 0;
   const inStock = stockQty > 0;
   const imgSrc = getProductImage(prod);
-  const prodId = prod.id || prod.productId;
+  const prodId = prod?.id || prod?.productId;
 
-  const subtotal = formatCurrency((prod.price ?? 0) * quantity);
+  const {
+    inputProps,
+    handleIncrement,
+    handleDecrement,
+    isAtMin,
+    isAtMax,
+    numericValue,
+  } = useQuantityInput({
+    value: quantity,
+    maxStock: stockQty,
+    min: 1,
+    onChange: setQuantity,
+  });
+
+  const subtotal = formatOrderMoney((prod?.price ?? 0) * numericValue, i18n.language);
 
   const handleViewDetail = () => {
     closeQuickView();
@@ -128,7 +141,9 @@ export const QuickViewModal = () => {
                     color: inStock ? "#15803d" : "#dc2626",
                   }}
                 >
-                  {inStock ? `Còn hàng (${stockQty})` : "Hết hàng"}
+                  {inStock
+                    ? `${t("common.inStock", "In Stock")} (${stockQty})`
+                    : t("common.outOfStock", "Out of Stock")}
                 </span>
               </div>
 
@@ -142,7 +157,7 @@ export const QuickViewModal = () => {
                   lineHeight: 1.3,
                 }}
               >
-                {prod.name || "Sản phẩm"}
+                {prod.name || t("common.product", "Product")}
               </h4>
 
               {/* Category & Brand */}
@@ -181,7 +196,7 @@ export const QuickViewModal = () => {
                     color: "#e57c32",
                   }}
                 >
-                  {formatCurrency(prod.price)}
+                  {formatOrderMoney(prod.price, i18n.language)}
                 </span>
               </div>
 
@@ -206,52 +221,77 @@ export const QuickViewModal = () => {
 
               {/* Quantity */}
               <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-                <span style={{ fontWeight: 600, fontSize: "14px", color: "#374151" }}>Số lượng:</span>
+                <span style={{ fontWeight: 600, fontSize: "14px", color: "#374151" }}>{t("common.quantity")}:</span>
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px",
-                    overflow: "hidden",
+                    border: "1.5px solid #e2e8f0",
+                    borderRadius: "9999px",
+                    padding: "3px 6px",
+                    background: "#ffffff",
+                    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
                   }}
                 >
                   <button
                     type="button"
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                    disabled={isAtMin || !inStock}
+                    onClick={handleDecrement}
                     style={{
-                      width: "36px",
-                      height: "36px",
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
                       border: "none",
-                      background: "#f9fafb",
+                      background: "transparent",
                       fontSize: "16px",
-                      cursor: "pointer",
+                      cursor: isAtMin || !inStock ? "not-allowed" : "pointer",
                       fontWeight: 700,
+                      opacity: isAtMin || !inStock ? 0.22 : 1,
+                      color: isAtMin || !inStock ? "#94a3b8" : "#334155",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      outline: "none",
                     }}
                   >
                     −
                   </button>
-                  <span
+                  <input
+                    disabled={!inStock}
                     style={{
-                      width: "40px",
+                      width: "44px",
+                      height: "32px",
+                      border: "none",
+                      outline: "none",
                       textAlign: "center",
-                      fontWeight: 600,
-                      fontSize: "15px",
+                      fontWeight: 700,
+                      fontSize: "16px",
+                      color: "#0f172a",
+                      background: "transparent",
                     }}
-                  >
-                    {quantity}
-                  </span>
+                    {...inputProps}
+                  />
                   <button
                     type="button"
-                    onClick={() => setQuantity((q) => q + 1)}
+                    disabled={isAtMax || !inStock}
+                    onClick={handleIncrement}
                     style={{
-                      width: "36px",
-                      height: "36px",
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "50%",
                       border: "none",
-                      background: "#f9fafb",
+                      background: "transparent",
                       fontSize: "16px",
-                      cursor: "pointer",
+                      cursor: isAtMax || !inStock ? "not-allowed" : "pointer",
                       fontWeight: 700,
+                      opacity: isAtMax || !inStock ? 0.22 : 1,
+                      color: isAtMax || !inStock ? "#94a3b8" : "#334155",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      outline: "none",
                     }}
                   >
                     +
@@ -280,8 +320,8 @@ export const QuickViewModal = () => {
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px" }}>
                 <button
                   type="button"
-                  disabled={!inStock}
-                  onClick={() => { openCart(); closeQuickView(); }}
+                  disabled={!inStock || pendingItemIds.has(String(prodId))}
+                  onClick={async () => { if (await addToCart(prodId, numericValue)) closeQuickView(); }}
                   style={{
                     flex: 1,
                     padding: "11px 16px",
@@ -317,7 +357,7 @@ export const QuickViewModal = () => {
                     minWidth: "120px",
                   }}
                 >
-                  Xem chi tiết
+                  {t("common.viewDetail", "View Details")}
                 </button>
               </div>
 
@@ -344,7 +384,7 @@ export const QuickViewModal = () => {
                 {(prod.weightKg ?? prod.weight_kg) && (
                   <div style={{ display: "flex", gap: "8px" }}>
                     <span style={{ fontWeight: 600, color: "#374151", minWidth: "80px" }}>
-                      Trọng lượng:
+                      {t("productDetail.weight", "Weight")}:
                     </span>
                     <span style={{ color: "#6b7280" }}>
                       {prod.weightKg ?? prod.weight_kg} kg

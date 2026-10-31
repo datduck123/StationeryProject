@@ -1,6 +1,11 @@
 import api from "./api";
 
 const orderService = {
+  async createOrder(orderData) {
+    const response = await api.post("/orders", orderData);
+    return response.data;
+  },
+
   async getMyOrders(params = {}) {
     const response = await api.get("/orders", { params });
     return response.data;
@@ -23,6 +28,11 @@ const orderService = {
 
   async getOrder(orderId) {
     const response = await api.get(`/admin/orders/${orderId}`);
+    return response.data;
+  },
+
+  async getOrderStats() {
+    const response = await api.get("/admin/orders/stats");
     return response.data;
   },
 

@@ -22,6 +22,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 @EnableWebSecurity
@@ -34,39 +35,29 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
-                            response.setContentType("application/json");
-                            response.setCharacterEncoding("UTF-8");
-                            response.getWriter().write(
-                                    "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Please sign in with an Admin account to access this page\"}");
-                        })
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
-                            response.setContentType("application/json");
-                            response.setCharacterEncoding("UTF-8");
-                            response.getWriter().write(
-                                    "{\"status\":403,\"error\":\"Forbidden\",\"message\":\"Access denied: Administrator privileges required\"}");
-                        }))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/api/upload/**",
-                                "/uploads/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html")
-                        .permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**",
-                                "/api/brands/**", "/api/products/**", "/api/vouchers/**")
-                        .permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .anyRequest().authenticated())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+            .cors(Customizer.withDefaults())
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, authException.getMessage());
+                })
+            )
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(
+                    "/api/auth/**",
+                    "/api/upload/**",
+                    "/uploads/**",
+                    "/v3/api-docs/**",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/api/cart/calculate"
+                ).permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/categories/**", "/api/brands/**", "/api/products/**", "/api/vouchers/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

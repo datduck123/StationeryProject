@@ -40,7 +40,11 @@ export const AdminLayout = () => {
 
   const isActive = (path) => {
     if (path === "/admin") {
-      return location.pathname === "/admin" || location.pathname === "/admin/";
+      return (
+        location.pathname === "/admin" ||
+        location.pathname === "/admin/" ||
+        location.pathname === "/admin/dashboard"
+      );
     }
     return location.pathname.startsWith(path);
   };
@@ -106,34 +110,38 @@ export const AdminLayout = () => {
         </div>
 
         {/* Navigation list */}
-        <div className="py-3 flex-grow-1">
-          <div className="admin-nav-group-title">MAIN MENU</div>
-          <ul className="admin-nav-list">
-            {/* 1. Dashboard */}
+        <div
+          className="py-2 flex-grow-1"
+          style={{ overflowY: "auto", overflowX: "hidden" }}
+        >
+          {/* Section 1: Dashboard */}
+          <div className="admin-nav-group-title">Dashboard</div>
+          <ul className="admin-nav-list mb-2">
             <li className="admin-nav-item">
               <Link
                 to="/admin"
-                className={`admin-nav-link ${isActive("/admin") ? "active" : ""}`}
+                className={`admin-nav-link ${
+                  isActive("/admin") &&
+                  !location.pathname.startsWith("/admin/users") &&
+                  !location.pathname.startsWith("/admin/products") &&
+                  !location.pathname.startsWith("/admin/categories") &&
+                  !location.pathname.startsWith("/admin/brands") &&
+                  !location.pathname.startsWith("/admin/vouchers") &&
+                  !location.pathname.startsWith("/admin/orders")
+                    ? "active"
+                    : ""
+                }`}
                 title="Overview Dashboard"
               >
                 <i className="fa-solid fa-chart-pie"></i>
                 <span>Overview Dashboard</span>
               </Link>
             </li>
+          </ul>
 
-            {/* 2. User Management */}
-            <li className="admin-nav-item">
-              <Link
-                to="/admin/users"
-                className={`admin-nav-link ${isActive("/admin/users") ? "active" : ""}`}
-                title="User Management"
-              >
-                <i className="fa-solid fa-users-gear"></i>
-                <span>User Management</span>
-              </Link>
-            </li>
-
-            {/* 3. Product Management */}
+          {/* Section 2: Catalog & Inventory */}
+          <div className="admin-nav-group-title">Catalog & Inventory</div>
+          <ul className="admin-nav-list mb-2">
             <li className="admin-nav-item">
               <Link
                 to="/admin/products"
@@ -143,11 +151,9 @@ export const AdminLayout = () => {
                 title="Product Management"
               >
                 <i className="fa-solid fa-boxes-stacked"></i>
-                <span>Product Management</span>
+                <span>Products Management</span>
               </Link>
             </li>
-
-            {/* 4. Category Management */}
             <li className="admin-nav-item">
               <Link
                 to="/admin/categories"
@@ -157,11 +163,9 @@ export const AdminLayout = () => {
                 title="Category Management"
               >
                 <i className="fa-solid fa-layer-group"></i>
-                <span>Category Management</span>
+                <span>Categories Management</span>
               </Link>
             </li>
-
-            {/* 5. Brand Management */}
             <li className="admin-nav-item">
               <Link
                 to="/admin/brands"
@@ -171,25 +175,14 @@ export const AdminLayout = () => {
                 title="Brand Management"
               >
                 <i className="fa-solid fa-certificate"></i>
-                <span>Brand Management</span>
+                <span>Brands Management</span>
               </Link>
             </li>
+          </ul>
 
-            {/* 5. Voucher Management */}
-            <li className="admin-nav-item">
-              <Link
-                to="/admin/vouchers"
-                className={`admin-nav-link ${
-                  isActive("/admin/vouchers") ? "active" : ""
-                }`}
-                title="Voucher Management"
-              >
-                <i className="fa-solid fa-ticket"></i>
-                <span>Voucher Management</span>
-              </Link>
-            </li>
-
-            {/* 6. Order Management */}
+          {/* Section 3: Sales & Promotions */}
+          <div className="admin-nav-group-title">Sales & Promotions</div>
+          <ul className="admin-nav-list mb-2">
             <li className="admin-nav-item">
               <Link
                 to="/admin/orders"
@@ -199,39 +192,37 @@ export const AdminLayout = () => {
                 title="Order Management"
               >
                 <i className="fa-solid fa-receipt"></i>
-                <span>Order Management</span>
+                <span>Orders Management</span>
+              </Link>
+            </li>
+            <li className="admin-nav-item">
+              <Link
+                to="/admin/vouchers"
+                className={`admin-nav-link ${
+                  isActive("/admin/vouchers") ? "active" : ""
+                }`}
+                title="Voucher Management"
+              >
+                <i className="fa-solid fa-ticket"></i>
+                <span>Vouchers & Coupons</span>
               </Link>
             </li>
           </ul>
 
-          <div className="admin-nav-group-title mt-3">QUICK LINKS</div>
-          <ul className="admin-nav-list">
+          {/* Section 4: Administration */}
+          <div className="admin-nav-group-title">Administration</div>
+          <ul className="admin-nav-list mb-2">
             <li className="admin-nav-item">
               <Link
-                to="/shop"
-                className="admin-nav-link"
-                title="View Client Shop"
+                to="/admin/users"
+                className={`admin-nav-link ${
+                  isActive("/admin/users") ? "active" : ""
+                }`}
+                title="User Management"
               >
-                <i className="fa-solid fa-store"></i>
-                <span>View Client Shop</span>
+                <i className="fa-solid fa-users-gear"></i>
+                <span>Users Management</span>
               </Link>
-            </li>
-            <li className="admin-nav-item">
-              <Link to="/" className="admin-nav-link" title="Main Website">
-                <i className="fa-solid fa-store"></i>
-                <span>Main Website</span>
-              </Link>
-            </li>
-            <li className="admin-nav-item">
-              <button
-                type="button"
-                className="admin-nav-link"
-                title="My Profile"
-                onClick={() => setIsAdminProfileOpen(true)}
-              >
-                <i className="fa-regular fa-user"></i>
-                <span>My Profile</span>
-              </button>
             </li>
           </ul>
         </div>
