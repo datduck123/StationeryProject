@@ -32,7 +32,7 @@ export const ProductDetail = () => {
   const { t, i18n } = useTranslation();
 
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState("review");
+  const [activeTab, setActiveTab] = useState("desc");
   const [quantity, setQuantity] = useState(1);
 
   // API state
@@ -170,9 +170,8 @@ export const ProductDetail = () => {
                   {thumbImages.map((img, idx) => (
                     <div
                       key={idx}
-                      className={`thumbnail-item br-8 overflow-hidden p-2 bg-semi-white cursor-pointer ${
-                        activeImageIndex === idx ? "border border-primary" : ""
-                      }`}
+                      className={`thumbnail-item br-8 overflow-hidden p-2 bg-semi-white cursor-pointer ${activeImageIndex === idx ? "border border-primary" : ""
+                        }`}
                       style={{
                         width: "80px",
                         height: "80px",
@@ -197,18 +196,27 @@ export const ProductDetail = () => {
                 <h3 className="medium-black fw-700 mb-16">
                   {product?.name ?? "Classic Ballpoint Pens"}
                 </h3>
-                <ProductRatingSold
-                  product={product}
-                  rating={averageRating}
-                  reviewCount={reviewCount}
-                  variant="detail"
-                  className="mb-16"
-                />
+                <div className="d-flex align-items-center gap-12 mb-16 flex-wrap">
+                  <div className="d-flex align-items-center gap-4">
+                    <span className="color-primary">★★★★★</span>
+                    <p className="dark-gray fw-500 mb-0">(02 {t("common.reviews")})</p>
+                  </div>
+                  <span className="dark-gray">|</span>
+                  <div className="d-flex align-items-center gap-4">
+                    <span className="dark-gray fw-500">Đã bán:</span>
+                    <span className="color-primary fw-700">{product?.sold ?? 0}</span>
+                  </div>
+                </div>
                 <div className="d-flex align-items-center gap-16 mb-24">
                   <h4 className="color-primary fw-700">
                     {product ? formatOrderMoney(product.price, i18n.language) : "$59.00"}
                   </h4>
                 </div>
+                {(product?.category?.name || product?.brand?.name) && (
+                  <p className="dark-gray mb-16 font-sm">
+                    {[product?.category?.name, product?.brand?.name].filter(Boolean).join(" • ")}
+                  </p>
+                )}
                 {product?.stockQuantity != null && (
                   <p className="fw-500 mb-16">
                     {t("productDetail.remainingStock", "Remaining:")}{" "}
@@ -275,7 +283,7 @@ export const ProductDetail = () => {
                 </div>
                 <p className="medium-black fw-500 mb-24">
                   {t("common.sku")}:{" "}
-                  <span className="dark-gray fw-400">{product?.sku || `SKU-${productId}`}</span>
+                  <span className="dark-gray fw-400">{product?.sku || "AK-251-KT"}</span>
                 </p>
                 <div className="row row-gap-2 mb-24">
                   <div className="col-sm-6">
@@ -355,9 +363,8 @@ export const ProductDetail = () => {
             <ul className="nav nav-tabs border-bottom mb-32 justify-content-center">
               <li className="nav-item">
                 <button
-                  className={`nav-link border-0 fw-600 ${
-                    activeTab === "desc" ? "active text-primary" : "text-muted"
-                  }`}
+                  className={`nav-link border-0 fw-600 ${activeTab === "desc" ? "active text-primary" : "text-muted"
+                    }`}
                   onClick={() => setActiveTab("desc")}
                 >
                   {t("productDetail.description")}
@@ -365,11 +372,10 @@ export const ProductDetail = () => {
               </li>
               <li className="nav-item">
                 <button
-                  className={`nav-link border-0 fw-600 ${
-                    activeTab === "additional"
-                      ? "active text-primary"
-                      : "text-muted"
-                  }`}
+                  className={`nav-link border-0 fw-600 ${activeTab === "additional"
+                    ? "active text-primary"
+                    : "text-muted"
+                    }`}
                   onClick={() => setActiveTab("additional")}
                 >
                   {t("productDetail.additionalInfo")}
@@ -377,11 +383,10 @@ export const ProductDetail = () => {
               </li>
               <li className="nav-item">
                 <button
-                  className={`nav-link border-0 fw-600 ${
-                    activeTab === "review"
-                      ? "active text-primary"
-                      : "text-muted"
-                  }`}
+                  className={`nav-link border-0 fw-600 ${activeTab === "review"
+                    ? "active text-primary"
+                    : "text-muted"
+                    }`}
                   onClick={() => setActiveTab("review")}
                 >
                   {t("productDetail.reviewsTab", { count: reviewCount })}
@@ -392,12 +397,20 @@ export const ProductDetail = () => {
             <div className="tab-content">
               {activeTab === "desc" && (
                 <div className="tab-pane fade show active p-24 bg-white br-12">
-                  <p
-                    className="mb-0 dark-gray"
-                    style={{ whiteSpace: "pre-line", lineHeight: "1.8", fontSize: "15px" }}
+                  <div
+                    style={{
+                      whiteSpace: "pre-line",
+                      lineHeight: "1.8",
+                      fontSize: "15px",
+                      color: "#374151",
+                    }}
                   >
-                    {product?.description || t("productDetail.noDescription", "No detailed description available for this product.")}
-                  </p>
+                    {product?.description ? (
+                      product.description
+                    ) : (
+                      <p className="text-muted mb-0">Chưa có mô tả cho sản phẩm này.</p>
+                    )}
+                  </div>
                 </div>
               )}
               {activeTab === "additional" && (
@@ -467,7 +480,7 @@ export const ProductDetail = () => {
                     <span className="sale-label subtitle fw-400 white">
                       {prod.badge === "Sale" ? t("common.sale") : prod.badge}
                     </span>
-                    <Link to={`/product/${prod.id}`} className="image">
+                    <Link to="/shop" className="image">
                       <img
                         src={prod.image}
                         className="product-image"
@@ -513,7 +526,7 @@ export const ProductDetail = () => {
                   <div className="product-desc">
                     <div>
                       <Link
-                        to={`/product/${prod.id}`}
+                        to="/shop"
                         className="product-title h6 fw-700 mb-8"
                       >
                         {prod.title}

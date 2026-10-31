@@ -1,6 +1,6 @@
 // Migrated from: index.html, lines 198-2992
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / br / input self-closing, Link integration, CartContext integration, i18n support
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getFeaturedProducts, getBestSellerProducts, getProductImage, getBrands, getProducts } from "../../services/productService";
@@ -8,6 +8,15 @@ import { formatOrderMoney } from "../../utils/orderFormatters";
 import CountdownTimer from "../../components/ui/CountdownTimer";
 import ProductRatingSold from "../../components/shared/ProductRatingSold";
 import { useCartContext } from "../../providers/CartContext";
+import { getProducts, getProductImage } from "../../services/productService";
+
+const formatCurrency = (amount) => {
+  if (amount == null) return "—";
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(amount);
+};
 
 const RatingStars = () => (
   <div className="rating-stars">
@@ -29,27 +38,41 @@ const RatingStars = () => (
   </div>
 );
 
-const ProductCard = ({ product, openQuickView, t }) => {
-  const { toggleWishlist, isInWishlist, addToCart } = useCartContext();
-  const { i18n } = useTranslation();
-  const prodId = product.id || product.productId;
+const ProductCard = ({ product, openCart, openQuickView, t }) => {
+  const { toggleWishlist, isInWishlist } = useCartContext();
+  const prodId = product.productId || product.id;
   const isWishlisted = isInWishlist(prodId);
+  const displayImage = getProductImage(product);
   const normalizedProduct = {
     ...product,
+    id: prodId,
+    productId: prodId,
     name: product.name || product.title,
-    imageUrl: product.imageUrl || product.image,
+    imageUrl: product.imageUrl || displayImage,
   };
 
   return (
     <div className="latest-product-card">
       <div className="image-box mb-16">
-        {product.badge && (
+        {product.sold && product.sold >= 50 ? (
+          <span className="sale-label subtitle fw-400 white">
+            {t("common.sale") || "Hot"}
+          </span>
+        ) : product.badge ? (
           <span className="sale-label subtitle fw-400 white">
             {product.badge === "Sale" ? t("common.sale") : product.badge}
           </span>
-        )}
+        ) : null}
         <Link to={`/product/${prodId}`} className="image">
-          <img src={product.image} className="product-image" alt={product.title || product.name || ""} />
+          <img
+            src={displayImage}
+            className="product-image"
+            alt={product.name || product.title || ""}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "/assets/media/products/product-1.png";
+            }}
+          />
         </Link>
         <div className="side-icons">
           <ul className="list-unstyled">
@@ -84,31 +107,41 @@ const ProductCard = ({ product, openQuickView, t }) => {
             </li>
           </ul>
         </div>
-      <a
-        href="#cart"
-        className="cus-btn"
-        onClick={(e) => {
-          e.preventDefault();
-          addToCart(product, 1);
-        }}
-      >
-        <span className="btn-text">{t("common.addCart")}</span>
-        <span>{t("common.goToCart")}</span>
-      </a>
-    </div>
-    <div className="product-desc">
-      <div>
-        <Link
-          to={`/product/${prodId}`}
-          className="product-title h6 fw-700 mb-8"
+        <a
+          href="#cart"
+          className="cus-btn"
+          onClick={(e) => {
+            e.preventDefault();
+            openCart();
+          }}
         >
-          {product.title}
-        </Link>
-        <ProductRatingSold product={product} variant="card" className="mb-8" />
-        <h5 className="medium-black fw-700">{formatOrderMoney(product.price, i18n.language)}</h5>
+          <span className="btn-text">{t("common.addCart")}</span>
+          <span>{t("common.goToCart")}</span>
+        </a>
+      </div>
+      <div className="product-desc">
+        <div>
+          <Link
+            to={`/product/${prodId}`}
+            className="product-title h6 fw-700 mb-8"
+            title={product.name || product.title}
+          >
+            {product.name || product.title}
+          </Link>
+          <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
+            <RatingStars />
+            <span className="fw-500 light-gray font-sm">
+              ({product.sold != null ? `${product.sold} đã bán` : "0 đã bán"})
+            </span>
+          </div>
+          <h5 className="medium-black fw-700">
+            {typeof product.price === "number" || (product.price && !isNaN(product.price))
+              ? formatCurrency(product.price)
+              : product.price || "—"}
+          </h5>
+        </div>
       </div>
     </div>
-  </div>
   );
 };
 
@@ -120,27 +153,84 @@ export const Home = () => {
   const { openQuickView } = useCartContext();
   const { t } = useTranslation();
 
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [bestSellerProducts, setBestSellerProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  // Fetch real products from backend API
+  useEffect(() => {
+    let active = true;
+    setLoadingProducts(true);
+
+    Promise.all([
+      // Sản phẩm nổi bật: dựa trên sản phẩm có số lượng cao nhất (stockQuantity,desc)
+      getProducts({ page: 0, size: 8, sort: "stockQuantity,desc" }),
+      // Sản phẩm bán chạy: dựa trên sản phẩm có lượt mua cao nhất (sold,desc)
+      getProducts({ page: 0, size: 8, sort: "sold,desc" }),
+    ])
+      .then(([featuredRes, bestSellerRes]) => {
+        if (!active) return;
+        const featuredData = featuredRes.data?.data?.content || featuredRes.data?.content || featuredRes.data || [];
+        const bestSellerData = bestSellerRes.data?.data?.content || bestSellerRes.data?.content || bestSellerRes.data || [];
+        setFeaturedProducts(featuredData);
+        setBestSellerProducts(bestSellerData);
+      })
+      .catch((err) => {
+        console.error("Error fetching home products:", err);
+      })
+      .finally(() => {
+        if (active) setLoadingProducts(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Slick Slider for featured products
+  useEffect(() => {
+    if (featuredProducts.length === 0) return;
+
+    const timer = setTimeout(() => {
+      if (window.$ && window.$.fn && window.$.fn.slick) {
+        const $featured = window.$(".featured-product-slider");
+        if ($featured.length) {
+          if ($featured.hasClass("slick-initialized")) {
+            $featured.slick("unslick");
+          }
+          $featured.slick({
+            slidesToShow: 4,
+            slidesToScroll: 1,
+            autoplay: true,
+            autoplaySpeed: 3000,
+            dots: false,
+            arrows: false,
+            centerPadding: "0",
+            cssEase: "linear",
+            responsive: [
+              { breakpoint: 1200, settings: { slidesToShow: 3 } },
+              { breakpoint: 821, settings: { slidesToShow: 2 } },
+              { breakpoint: 768, settings: { slidesToShow: 1 } },
+            ],
+          });
+        }
+      }
+    }, 150);
+
+    return () => {
+      clearTimeout(timer);
+      if (window.$ && window.$.fn && window.$.fn.slick) {
+        const $featured = window.$(".featured-product-slider");
+        if ($featured.length && $featured.hasClass("slick-initialized")) {
+          $featured.slick("unslick");
+        }
+      }
+    };
+  }, [featuredProducts]);
+
+  // Slick Slider for brands
   useEffect(() => {
     if (window.$ && window.$.fn && window.$.fn.slick) {
-      const $featured = window.$(".featured-product-slider");
-      if ($featured.length && featuredProducts.length > 0 && !$featured.hasClass("slick-initialized")) {
-        $featured.slick({
-          slidesToShow: 4,
-          slidesToScroll: 1,
-          autoplay: true,
-          autoplaySpeed: 3000,
-          dots: false,
-          arrows: false,
-          centerPadding: "0",
-          cssEase: "linear",
-          responsive: [
-            { breakpoint: 1200, settings: { slidesToShow: 3 } },
-            { breakpoint: 821, settings: { slidesToShow: 2 } },
-            { breakpoint: 768, settings: { slidesToShow: 1 } },
-          ],
-        });
-      }
-
       const $brand = window.$(".brand-slider");
       if ($brand.length && !$brand.hasClass("slick-initialized")) {
         $brand.slick({
@@ -165,11 +255,6 @@ export const Home = () => {
 
     return () => {
       if (window.$ && window.$.fn && window.$.fn.slick) {
-        if (
-          window.$(".featured-product-slider").hasClass("slick-initialized")
-        ) {
-          window.$(".featured-product-slider").slick("unslick");
-        }
         if (window.$(".brand-slider").hasClass("slick-initialized")) {
           window.$(".brand-slider").slick("unslick");
         }
@@ -184,71 +269,6 @@ export const Home = () => {
     title: product.name,
     image: getProductImage(product),
   });
-
-  useEffect(() => {
-    let active = true;
-    // Featured: top-rated products
-    getFeaturedProducts(8)
-      .then((response) => {
-        const list = Array.isArray(response.data) ? response.data : [];
-        if (active) setFeaturedProducts(list.map(normalizeProduct));
-      })
-      .catch(() => { if (active) setFeaturedProducts([]); });
-
-    // Best Seller: top-sold products
-    getBestSellerProducts(8)
-      .then((response) => {
-        const list = Array.isArray(response.data) ? response.data : [];
-        if (active) setBestSellerProducts(list.map(normalizeProduct));
-      })
-      .catch(() => { if (active) setBestSellerProducts([]); });
-
-    // Brands from DB
-    Promise.allSettled([getBrands(), getProducts({ size: 100 })])
-      .then(([brandSettled, prodSettled]) => {
-        if (!active) return;
-        const brandRes = brandSettled.status === "fulfilled" ? brandSettled.value : null;
-        const prodRes = prodSettled.status === "fulfilled" ? prodSettled.value : null;
-
-        // API /brands trả về array trực tiếp
-        const rawBrands = brandRes && Array.isArray(brandRes.data)
-          ? brandRes.data
-          : (brandRes?.data?.data ?? brandRes?.data?.content ?? []);
-
-        // API /products trả về { content, totalPages, ... }
-        const rawProds = prodRes?.data?.content ?? (Array.isArray(prodRes?.data) ? prodRes.data : []);
-        const delays = ["200ms", "300ms", "400ms", "500ms", "600ms", "700ms", "800ms"];
-        const mapped = rawBrands.map((b, index) => {
-          const bid = b.brandId ?? b.id;
-          const prodsBrand = rawProds.filter((p) => {
-            const pbid = p.brand?.brandId ?? p.brand?.id ?? p.brandId;
-            return pbid === bid;
-          });
-          const firstProdImg = prodsBrand.length > 0 ? getProductImage(prodsBrand[0]) : null;
-          const fallback = `/assets/media/collection/collection-${(index % 7) + 1}.png`;
-          return {
-            id: bid,
-            name: b.name ?? b.brandName,
-            count: prodsBrand.length,
-            image: firstProdImg || fallback,
-            delay: delays[index % delays.length],
-          };
-        });
-        setBrands(mapped);
-        setBrandsLoaded(true);
-      })
-      .catch((err) => {
-        console.error("Failed to load brands:", err);
-        if (active) {
-          setBrands([]);
-          setBrandsLoaded(true);
-        }
-      });
-
-    return () => { active = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
 
   const testimonials = [
     {
@@ -478,7 +498,7 @@ export const Home = () => {
           <div className="featured-product-slider">
             {featuredProducts.map((prod) => (
               <ProductCard
-                key={prod.id}
+                key={prod.productId || prod.id}
                 product={prod}
                 openQuickView={openQuickView}
                 t={t}
@@ -510,11 +530,12 @@ export const Home = () => {
           <div className="row row-gap-4">
             {bestSellerProducts.map((prod) => (
               <div
-                key={prod.id}
+                key={prod.productId || prod.id}
                 className="col-xl-3 col-lg-4 col-md-6 col-sm-6"
               >
                 <ProductCard
                   product={prod}
+                  openCart={openCart}
                   openQuickView={openQuickView}
                   t={t}
                 />

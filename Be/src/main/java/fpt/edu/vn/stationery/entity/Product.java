@@ -43,6 +43,7 @@ public class Product {
     private Integer stockQuantity = 0;
 
     @Column(name = "sold", nullable = false)
+    @Builder.Default
     private Integer sold = 0;
 
     @Column(name = "description", columnDefinition = "NVARCHAR(1000)")

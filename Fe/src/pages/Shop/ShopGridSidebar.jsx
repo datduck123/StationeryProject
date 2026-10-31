@@ -11,8 +11,15 @@ import { useCartContext } from "../../providers/CartContext";
 import { getProducts, getCategories, getBrands, getProductImage } from "../../services/productService";
 import ProductRatingSold from "../../components/shared/ProductRatingSold";
 import { onProductChange } from "../../utils/syncEvents";
-import { formatOrderMoney } from "../../utils/orderFormatters";
-import "./ShopGridSidebar.css";
+
+const SORT_OPTIONS = [
+  { label: "Mặc định", value: "" },
+  { label: "Bán chạy nhất", value: "sold,desc" },
+  { label: "Giá: Thấp → Cao", value: "price,asc" },
+  { label: "Giá: Cao → Thấp", value: "price,desc" },
+  { label: "Tên A → Z", value: "name,asc" },
+  { label: "Tên Z → A", value: "name,desc" },
+];
 
 const PAGE_SIZE = 12;
 
@@ -939,7 +946,12 @@ export const ShopGridSidebar = () => {
                                   {prod.category.name}
                                 </p>
                               )}
-                              <ProductRatingSold product={prod} variant="card" className="mb-8" />
+                              <div className="d-flex align-items-center gap-8 justify-content-center mb-8 flex-wrap">
+                                <span className="color-primary">★★★★★</span>
+                                <span className="dark-gray font-sm fw-500">
+                                  ({prod.sold != null ? `${prod.sold} đã bán` : "0 đã bán"})
+                                </span>
+                              </div>
                               <h5 className="medium-black fw-700">
                                 {formatOrderMoney(prod.price, i18n.language)}
                               </h5>
