@@ -57,8 +57,8 @@ class ReviewApiSecurityTest {
     @Test
     void anonymousCustomerCannotSubmitOrDelete() throws Exception {
         mvc.perform(post("/api/reviews").contentType(MediaType.APPLICATION_JSON).content(REVIEW))
-                .andExpect(status().isForbidden());
-        mvc.perform(delete("/api/admin/reviews/1")).andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
+        mvc.perform(delete("/api/admin/reviews/1")).andExpect(status().isUnauthorized());
         verifyNoInteractions(reviewService);
     }
 

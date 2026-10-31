@@ -228,7 +228,7 @@ public class AdminProductControllerTest {
         mockMvc.perform(post("/api/admin/products")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validRequest)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     // 11. Forbidden (CUSTOMER role -> 403 Forbidden)
@@ -256,3 +256,4 @@ public class AdminProductControllerTest {
                 .andExpect(status().isOk());
     }
 }
+

@@ -20,7 +20,6 @@ import fpt.edu.vn.stationery.exception.BadRequestException;
 import fpt.edu.vn.stationery.exception.ResourceNotFoundException;
 import fpt.edu.vn.stationery.mapper.OrderMapper;
 import fpt.edu.vn.stationery.repository.OrderRepository;
-import fpt.edu.vn.stationery.repository.ProductRepository;
 import fpt.edu.vn.stationery.repository.CartItemRepository;
 import fpt.edu.vn.stationery.repository.VoucherRepository;
 import fpt.edu.vn.stationery.repository.PaymentRepository;
@@ -327,18 +326,6 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setOrderStatus(next);
-
-        // When order reaches DELIVERED, increment sold count for all items in order
-        if ("DELIVERED".equals(next) && !"DELIVERED".equals(previous)) {
-            if (order.getOrderItems() != null) {
-                for (OrderItem item : order.getOrderItems()) {
-                    if (item.getProductId() != null && item.getQuantity() != null && item.getQuantity() > 0) {
-                        productRepository.incrementSoldCount(item.getProductId(), item.getQuantity());
-                    }
-                }
-            }
-        }
-
         orderRepository.saveAndFlush(order);
         eventPublisher.publishEvent(new OrderStatusChangedEvent(
                 order.getOrderId(), previous, next, order.getUser().getUserId()));

@@ -11,15 +11,8 @@ import { useCartContext } from "../../providers/CartContext";
 import { getProducts, getCategories, getBrands, getProductImage } from "../../services/productService";
 import ProductRatingSold from "../../components/shared/ProductRatingSold";
 import { onProductChange } from "../../utils/syncEvents";
-
-const SORT_OPTIONS = [
-  { label: "Mặc định", value: "" },
-  { label: "Bán chạy nhất", value: "sold,desc" },
-  { label: "Giá: Thấp → Cao", value: "price,asc" },
-  { label: "Giá: Cao → Thấp", value: "price,desc" },
-  { label: "Tên A → Z", value: "name,asc" },
-  { label: "Tên Z → A", value: "name,desc" },
-];
+import { formatOrderMoney } from "../../utils/orderFormatters";
+import "./ShopGridSidebar.css";
 
 const PAGE_SIZE = 12;
 
@@ -85,32 +78,21 @@ export const ShopGridSidebar = () => {
 
   // ── Filter / Pagination state ────────────────────────────────────────────
   const [searchParams, setSearchParams] = useSearchParams();
-  const urlKeyword = searchParams.get("keyword") || searchParams.get("search") || "";
-  const urlBrandId = searchParams.get("brandId") || searchParams.get("brand") || null;
-  const urlCategoryId = searchParams.get("categoryId") || searchParams.get("category") || null;
 
-  const [keyword, setKeyword] = useState(urlKeyword);
+  // Derived filter state directly from URL searchParams (Single Source of Truth, avoids stale closures & desync)
+  const keyword = searchParams.get("keyword") || searchParams.get("search") || "";
+  const rawBrandId = searchParams.get("brandId") || searchParams.get("brand");
+  const selectedBrandId = rawBrandId ? Number(rawBrandId) : null;
+  const rawCategoryId = searchParams.get("categoryId") || searchParams.get("category");
+  const selectedCategoryId = rawCategoryId ? Number(rawCategoryId) : null;
+  const stockFilter = searchParams.get("stock") || null; // "inStock" | "outStock" | null
+  const rawMinPrice = searchParams.get("minPrice");
+  const minPrice = rawMinPrice !== null && rawMinPrice !== undefined && rawMinPrice !== "" ? Number(rawMinPrice) : null;
+  const rawMaxPrice = searchParams.get("maxPrice");
+  const maxPrice = rawMaxPrice !== null && rawMaxPrice !== undefined && rawMaxPrice !== "" ? Number(rawMaxPrice) : null;
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState(urlCategoryId ? Number(urlCategoryId) : null);
-  const [selectedBrandId, setSelectedBrandId] = useState(urlBrandId ? Number(urlBrandId) : null);
-  const [stockFilter, setStockFilter] = useState(null);
-  const [minPrice, setMinPrice] = useState(null);
-  const [maxPrice, setMaxPrice] = useState(null);
   const [sortValue, setSortValue] = useState("");
   const [currentPage, setCurrentPage] = useState(0);
-
-  // Sync filter state khi URL params thay đổi (ví dụ click brand từ trang Home)
-  useEffect(() => {
-    const q = searchParams.get("keyword") || searchParams.get("search") || "";
-    const bId = searchParams.get("brandId") || searchParams.get("brand") || null;
-    const cId = searchParams.get("categoryId") || searchParams.get("category") || null;
-    const parsedBrandId = bId ? Number(bId) : null;
-    const parsedCategoryId = cId ? Number(cId) : null;
-
-    setKeyword((prev) => (prev !== q ? q : prev));
-    setSelectedBrandId((prev) => (prev !== parsedBrandId ? parsedBrandId : prev));
-    setSelectedCategoryId((prev) => (prev !== parsedCategoryId ? parsedCategoryId : prev));
-  }, [searchParams]);
 
   // ── Data state ───────────────────────────────────────────────────────────
   const [products, setProducts] = useState([]);
@@ -246,33 +228,93 @@ export const ShopGridSidebar = () => {
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   const handleCategoryChange = (id) => {
-    const nextId = selectedCategoryId === id ? null : id;
-    setSelectedCategoryId(nextId);
     setCurrentPage(0);
-
-    const nextParams = new URLSearchParams(searchParams);
-    if (nextId) {
-      nextParams.set("categoryId", String(nextId));
-    } else {
-      nextParams.delete("categoryId");
-      nextParams.delete("category");
-    }
-    setSearchParams(nextParams, { replace: true });
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      const current = nextParams.get("categoryId") || nextParams.get("category");
+      if (current && Number(current) === Number(id)) {
+        nextParams.delete("categoryId");
+        nextParams.delete("category");
+      } else {
+        nextParams.set("categoryId", String(id));
+        nextParams.delete("category");
+      }
+      return nextParams;
+    }, { replace: true });
   };
 
   const handleBrandChange = (id) => {
-    const nextId = selectedBrandId === id ? null : id;
-    setSelectedBrandId(nextId);
     setCurrentPage(0);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      const current = nextParams.get("brandId") || nextParams.get("brand");
+      if (current && Number(current) === Number(id)) {
+        nextParams.delete("brandId");
+        nextParams.delete("brand");
+      } else {
+        nextParams.set("brandId", String(id));
+        nextParams.delete("brand");
+      }
+      return nextParams;
+    }, { replace: true });
+  };
 
-    const nextParams = new URLSearchParams(searchParams);
-    if (nextId) {
-      nextParams.set("brandId", String(nextId));
-    } else {
-      nextParams.delete("brandId");
-      nextParams.delete("brand");
-    }
-    setSearchParams(nextParams, { replace: true });
+  const handleStockChange = (type) => {
+    setCurrentPage(0);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      const current = nextParams.get("stock");
+      if (current === type) {
+        nextParams.delete("stock");
+      } else {
+        nextParams.set("stock", type);
+      }
+      return nextParams;
+    }, { replace: true });
+  };
+
+  const handleTagClick = (tag) => {
+    setCurrentPage(0);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      const current = nextParams.get("keyword") || nextParams.get("search") || "";
+      if (current.toLowerCase() === tag.toLowerCase()) {
+        nextParams.delete("keyword");
+        nextParams.delete("search");
+      } else {
+        nextParams.set("keyword", tag);
+        nextParams.delete("search");
+      }
+      return nextParams;
+    }, { replace: true });
+  };
+
+  const handleApplyPrice = (min, max) => {
+    setCurrentPage(0);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      if (min !== null && min !== undefined && min > 0) {
+        nextParams.set("minPrice", String(min));
+      } else {
+        nextParams.delete("minPrice");
+      }
+      if (max !== null && max !== undefined && max < 150000) {
+        nextParams.set("maxPrice", String(max));
+      } else {
+        nextParams.delete("maxPrice");
+      }
+      return nextParams;
+    }, { replace: true });
+  };
+
+  const handleResetPrice = () => {
+    setCurrentPage(0);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      nextParams.delete("minPrice");
+      nextParams.delete("maxPrice");
+      return nextParams;
+    }, { replace: true });
   };
 
   const handleSortSelect = (label) => {
@@ -298,14 +340,8 @@ export const ShopGridSidebar = () => {
   );
 
   const resetAllFilters = () => {
-    setStockFilter(null);
-    setMinPrice(null);
-    setMaxPrice(null);
-    setSelectedCategoryId(null);
-    setSelectedBrandId(null);
-    setKeyword("");
-    setSearchParams({}, { replace: true });
     setCurrentPage(0);
+    setSearchParams(new URLSearchParams(), { replace: true });
   };
 
   // ── Sidebar content (shared between desktop & mobile) ────────────────────
@@ -349,7 +385,7 @@ export const ShopGridSidebar = () => {
           <div className="content-block mt-12">
             <div
               className={`shop-filter-option ${stockFilter === "inStock" ? "is-selected" : ""}`}
-              onClick={() => setStockFilter((prev) => (prev === "inStock" ? null : "inStock"))}
+              onClick={() => handleStockChange("inStock")}
             >
               <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
                 <input
@@ -366,7 +402,7 @@ export const ShopGridSidebar = () => {
             </div>
             <div
               className={`shop-filter-option ${stockFilter === "outStock" ? "is-selected" : ""}`}
-              onClick={() => setStockFilter((prev) => (prev === "outStock" ? null : "outStock"))}
+              onClick={() => handleStockChange("outStock")}
             >
               <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
                 <input
@@ -402,16 +438,8 @@ export const ShopGridSidebar = () => {
               maxLimit={150000}
               step={5000}
               isFiltered={minPrice !== null || maxPrice !== null}
-              onApplyPrice={(min, max) => {
-                setMinPrice(min);
-                setMaxPrice(max);
-                setCurrentPage(0);
-              }}
-              onResetPrice={() => {
-                setMinPrice(null);
-                setMaxPrice(null);
-                setCurrentPage(0);
-              }}
+              onApplyPrice={handleApplyPrice}
+              onResetPrice={handleResetPrice}
             />
           </div>
         )}
@@ -433,26 +461,29 @@ export const ShopGridSidebar = () => {
             ) : categories.length === 0 ? (
               <p className="dark-gray py-8" style={{ fontSize: "13px" }}>{t("shop.noCategories", "No categories available")}</p>
             ) : (
-              categories.map((cat) => (
-                <div
-                  key={cat.id}
-                  className={`shop-filter-option ${selectedCategoryId === cat.id ? "is-selected" : ""}`}
-                  onClick={() => handleCategoryChange(cat.id)}
-                >
-                  <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
-                    <input
-                      type="checkbox"
-                      className="inp-cbx"
-                      checked={selectedCategoryId === cat.id}
-                      readOnly
-                      tabIndex={-1}
-                    />
-                    <label className="cbx shop-filter-label" style={{ pointerEvents: "none", marginBottom: 0 }}>
-                      {cat.name}
-                    </label>
+              categories.map((cat) => {
+                const isSelected = selectedCategoryId !== null && Number(selectedCategoryId) === Number(cat.id);
+                return (
+                  <div
+                    key={cat.id}
+                    className={`shop-filter-option ${isSelected ? "is-selected" : ""}`}
+                    onClick={() => handleCategoryChange(cat.id)}
+                  >
+                    <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
+                      <input
+                        type="checkbox"
+                        className="inp-cbx"
+                        checked={isSelected}
+                        readOnly
+                        tabIndex={-1}
+                      />
+                      <label className="cbx shop-filter-label" style={{ pointerEvents: "none", marginBottom: 0 }}>
+                        {cat.name}
+                      </label>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
@@ -474,26 +505,29 @@ export const ShopGridSidebar = () => {
             ) : brands.length === 0 ? (
               <p className="dark-gray py-8" style={{ fontSize: "13px" }}>{t("shop.noBrands", "No brands available")}</p>
             ) : (
-              brands.map((brand) => (
-                <div
-                  key={brand.id}
-                  className={`shop-filter-option ${selectedBrandId === brand.id ? "is-selected" : ""}`}
-                  onClick={() => handleBrandChange(brand.id)}
-                >
-                  <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
-                    <input
-                      type="checkbox"
-                      className="inp-cbx"
-                      checked={selectedBrandId === brand.id}
-                      readOnly
-                      tabIndex={-1}
-                    />
-                    <label className="cbx shop-filter-label" style={{ pointerEvents: "none", marginBottom: 0 }}>
-                      {brand.name}
-                    </label>
+              brands.map((brand) => {
+                const isSelected = selectedBrandId !== null && Number(selectedBrandId) === Number(brand.id);
+                return (
+                  <div
+                    key={brand.id}
+                    className={`shop-filter-option ${isSelected ? "is-selected" : ""}`}
+                    onClick={() => handleBrandChange(brand.id)}
+                  >
+                    <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
+                      <input
+                        type="checkbox"
+                        className="inp-cbx"
+                        checked={isSelected}
+                        readOnly
+                        tabIndex={-1}
+                      />
+                      <label className="cbx shop-filter-label" style={{ pointerEvents: "none", marginBottom: 0 }}>
+                        {brand.name}
+                      </label>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}
@@ -518,14 +552,7 @@ export const ShopGridSidebar = () => {
                     key={tag}
                     type="button"
                     className={`tag ${isTagActive ? "active" : ""}`}
-                    onClick={() => {
-                      if (isTagActive) {
-                        setKeyword("");
-                      } else {
-                        setKeyword(tag);
-                      }
-                      setCurrentPage(0);
-                    }}
+                    onClick={() => handleTagClick(tag)}
                     style={{
                       padding: "6px 14px",
                       borderRadius: "20px",
@@ -702,9 +729,9 @@ export const ShopGridSidebar = () => {
                     {loading
                       ? t("common.loading", "Loading...")
                       : t("shop.showingProductCount", {
-                          count: products.length,
+                          count: filteredProducts.length,
                           total: totalElements,
-                          defaultValue: `Showing ${products.length} / ${totalElements} products`,
+                          defaultValue: `Showing ${filteredProducts.length} / ${totalElements} products`,
                         })}
                   </p>
                   <button
@@ -765,7 +792,7 @@ export const ShopGridSidebar = () => {
                     <span>{t("shop.retryButton", "Try again")}</span>
                   </button>
                 </div>
-              ) : products.length === 0 ? (
+              ) : filteredProducts.length === 0 ? (
                 <div
                   className="text-center py-60 px-24 my-32"
                   style={{
@@ -805,17 +832,10 @@ export const ShopGridSidebar = () => {
                   <p className="dark-gray mb-24" style={{ maxWidth: "420px", margin: "0 auto 20px", fontSize: "14px" }}>
                     {t("shop.noProductsDesc", "Sorry, no products match your search keyword or price range.")}
                   </p>
-                  {(selectedCategoryId || selectedBrandId || minPrice !== null || maxPrice !== null || stockFilter !== null) && (
+                  {hasActiveFilters && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedCategoryId(null);
-                        setSelectedBrandId(null);
-                        setStockFilter(null);
-                        setMinPrice(null);
-                        setMaxPrice(null);
-                        setCurrentPage(0);
-                      }}
+                      onClick={resetAllFilters}
                       style={{
                         display: "inline-flex",
                         alignItems: "center",
@@ -946,12 +966,7 @@ export const ShopGridSidebar = () => {
                                   {prod.category.name}
                                 </p>
                               )}
-                              <div className="d-flex align-items-center gap-8 justify-content-center mb-8 flex-wrap">
-                                <span className="color-primary">★★★★★</span>
-                                <span className="dark-gray font-sm fw-500">
-                                  ({prod.sold != null ? `${prod.sold} đã bán` : "0 đã bán"})
-                                </span>
-                              </div>
+                              <ProductRatingSold product={prod} variant="card" className="mb-8" />
                               <h5 className="medium-black fw-700">
                                 {formatOrderMoney(prod.price, i18n.language)}
                               </h5>

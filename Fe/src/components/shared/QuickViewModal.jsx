@@ -167,25 +167,8 @@ export const QuickViewModal = () => {
                   .join(" · ")}
               </p>
 
-              {/* Stars & Sold */}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  marginBottom: "16px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span style={{ color: "#f59e0b", fontSize: "16px" }}>★★★★★</span>
-                  <span style={{ fontSize: "13px", color: "#6b7280" }}>(02 đánh giá)</span>
-                </div>
-                <span style={{ color: "#d1d5db" }}>|</span>
-                <span style={{ fontSize: "13px", color: "#4b5563" }}>
-                  Đã bán: <strong style={{ color: "#111827" }}>{prod.sold ?? 0}</strong>
-                </span>
-              </div>
+              {/* Stars & Sold count (Lazada style) */}
+              <ProductRatingSold product={prod} variant="quickview" className="mb-16" />
 
               {/* Price */}
               <div style={{ marginBottom: "16px" }}>
