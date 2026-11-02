@@ -17,6 +17,16 @@ public class ProductSpecification {
             Long brandId,
             BigDecimal minPrice,
             BigDecimal maxPrice) {
+        return filterPublicProducts(keyword, categoryId, brandId, minPrice, maxPrice, null);
+    }
+
+    public static Specification<Product> filterPublicProducts(
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String stock) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -47,6 +57,16 @@ public class ProductSpecification {
             // 6. Max price filter
             if (maxPrice != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("price"), maxPrice));
+            }
+
+            // 7. Stock status filter (inStock: stockQuantity > 0, outStock: stockQuantity <= 0)
+            if (stock != null && !stock.isBlank()) {
+                String s = stock.trim();
+                if ("inStock".equalsIgnoreCase(s)) {
+                    predicates.add(cb.greaterThan(root.get("stockQuantity"), 0));
+                } else if ("outStock".equalsIgnoreCase(s) || "outOfStock".equalsIgnoreCase(s)) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("stockQuantity"), 0));
+                }
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
