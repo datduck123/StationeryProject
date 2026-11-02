@@ -209,7 +209,8 @@
     "orderSummary": "Order Summary",
     "productsCount": "Products ({{count}})",
     "voucherDiscount": "Voucher Discount",
-    "shippingStandard": "Standard (Free > 100.000 đ)",
+    "shippingStandard": "Standard - 20.000 đ (Free ≥ 100.000 đ)",
+    "shippingExpress": "Express - 40.000 đ",
     "paymentMethod": "Payment Method",
     "voucherActivated": "Activated Voucher ID:",
     "processing": "Processing..."
@@ -222,7 +223,7 @@
     "buyNow": "Buy Now",
     "relatedProducts": "Related Products",
     "share": "Share",
-    "freeShipping": "Free shipping on orders over $50",
+    "freeShipping": "Free shipping on orders from 100.000 đ",
     "satisfaction": "Satisfaction Guaranteed or money back",
     "reviewSubmitted": "Review submitted successfully!",
     "remainingStock": "Only",

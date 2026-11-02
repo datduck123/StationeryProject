@@ -30,20 +30,20 @@ import java.util.stream.Collectors;
 @Slf4j
 public class CartCalculationServiceImpl implements CartCalculationService {
 
-    private static final String METHOD_STANDARD = "STANDARD";
-    private static final String METHOD_EXPRESS = "EXPRESS";
+    public static final String METHOD_STANDARD = "STANDARD";
+    public static final String METHOD_EXPRESS = "EXPRESS";
 
-    // Cước vận chuyển cơ bản
-    private static final BigDecimal STANDARD_BASE_FEE = BigDecimal.valueOf(5.00);
-    private static final BigDecimal EXPRESS_BASE_FEE = BigDecimal.valueOf(15.00);
+    // Cước vận chuyển cơ bản (VNĐ)
+    public static final BigDecimal STANDARD_BASE_FEE = new BigDecimal("20000");
+    public static final BigDecimal EXPRESS_BASE_FEE = new BigDecimal("40000");
 
-    // Ngưỡng miễn phí vận chuyển cho STANDARD
-    private static final BigDecimal STANDARD_FREESHIP_THRESHOLD = BigDecimal.valueOf(100.00);
+    // Ngưỡng miễn phí vận chuyển cho STANDARD (100.000 VNĐ)
+    public static final BigDecimal STANDARD_FREESHIP_THRESHOLD = new BigDecimal("100000");
 
-    // Khối lượng ước tính mặc định cho mỗi món văn phòng phẩm: 0.200 kg
-    private static final BigDecimal DEFAULT_UNIT_WEIGHT_KG = BigDecimal.valueOf(0.200);
-    private static final BigDecimal OVERWEIGHT_THRESHOLD_KG = BigDecimal.valueOf(5.000);
-    private static final BigDecimal OVERWEIGHT_FEE_PER_KG = BigDecimal.valueOf(1.00);
+    // Khối lượng ước tính mặc định nếu sản phẩm chưa có thông số: 0.200 kg
+    public static final BigDecimal DEFAULT_UNIT_WEIGHT_KG = new BigDecimal("0.200");
+    public static final BigDecimal OVERWEIGHT_THRESHOLD_KG = new BigDecimal("5.000");
+    public static final BigDecimal OVERWEIGHT_FEE_PER_KG = new BigDecimal("5000");
 
     private final ProductRepository productRepository;
     private final CartItemRepository cartItemRepository;
@@ -140,7 +140,9 @@ public class CartCalculationServiceImpl implements CartCalculationService {
             int currentStock = product.getStockQuantity() != null ? Math.max(0, product.getStockQuantity()) : 0;
             boolean isInactive = product.getStatus() != ProductStatus.ACTIVE;
             BigDecimal unitPrice = product.getPrice() != null ? product.getPrice() : BigDecimal.ZERO;
-            BigDecimal unitWeight = DEFAULT_UNIT_WEIGHT_KG;
+            BigDecimal unitWeight = (product.getWeightKg() != null && product.getWeightKg().compareTo(BigDecimal.ZERO) > 0)
+                    ? product.getWeightKg()
+                    : DEFAULT_UNIT_WEIGHT_KG;
 
             int finalQuantity = requestedQuantity;
             boolean itemStockAdjusted = false;
@@ -312,7 +314,18 @@ public class CartCalculationServiceImpl implements CartCalculationService {
     /**
      * Tính toán phí giao hàng theo phương thức, tạm tính và trọng lượng
      */
-    private BigDecimal calculateShippingFee(String shippingMethod, BigDecimal subtotal, BigDecimal totalWeightKg) {
+    @Override
+    public BigDecimal calculateShippingFee(String shippingMethod, BigDecimal subtotal, BigDecimal totalWeightKg) {
+        return computeShippingFee(shippingMethod, subtotal, totalWeightKg);
+    }
+
+    /**
+     * Hàm dùng chung (Single Source of Truth) tính phí vận chuyển theo VNĐ cho Cart, Checkout và Order.
+     * - STANDARD: 20.000 ₫ (Miễn phí khi subtotal >= 100.000 ₫)
+     * - EXPRESS: 40.000 ₫
+     * - Phụ phí quá cân: +5.000 ₫ cho mỗi kg vượt quá 5.0 kg
+     */
+    public static BigDecimal computeShippingFee(String shippingMethod, BigDecimal subtotal, BigDecimal totalWeightKg) {
         // Nếu không có sản phẩm nào hợp lệ, phí vận chuyển bằng 0
         if (subtotal == null || subtotal.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO;
@@ -322,7 +335,7 @@ public class CartCalculationServiceImpl implements CartCalculationService {
         if (METHOD_EXPRESS.equalsIgnoreCase(shippingMethod)) {
             baseFee = EXPRESS_BASE_FEE;
         } else {
-            // STANDARD: áp dụng miễn phí vận chuyển nếu đạt ngưỡng
+            // STANDARD: áp dụng miễn phí vận chuyển nếu đạt ngưỡng >= 100.000 ₫
             if (subtotal.compareTo(STANDARD_FREESHIP_THRESHOLD) >= 0) {
                 baseFee = BigDecimal.ZERO;
             } else {
@@ -330,11 +343,11 @@ public class CartCalculationServiceImpl implements CartCalculationService {
             }
         }
 
-        // Tính phụ phí nếu vượt quá 5kg
+        // Tính phụ phí nếu vượt quá 5kg (5.000 ₫ / kg vượt)
         BigDecimal overweightFee = BigDecimal.ZERO;
         if (totalWeightKg != null && totalWeightKg.compareTo(OVERWEIGHT_THRESHOLD_KG) > 0) {
             BigDecimal extraKg = totalWeightKg.subtract(OVERWEIGHT_THRESHOLD_KG);
-            overweightFee = extraKg.multiply(OVERWEIGHT_FEE_PER_KG);
+            overweightFee = extraKg.multiply(OVERWEIGHT_FEE_PER_KG).setScale(0, RoundingMode.HALF_UP);
         }
 
         return baseFee.add(overweightFee);

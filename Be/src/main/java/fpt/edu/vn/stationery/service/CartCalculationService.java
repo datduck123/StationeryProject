@@ -3,6 +3,8 @@ package fpt.edu.vn.stationery.service;
 import fpt.edu.vn.stationery.dto.request.CartCalculationRequestDTO;
 import fpt.edu.vn.stationery.dto.response.CartResponseDTO;
 
+import java.math.BigDecimal;
+
 public interface CartCalculationService {
 
     /**
@@ -38,4 +40,14 @@ public interface CartCalculationService {
      * @return CartResponseDTO Kết quả đã được xác thực an toàn cho checkout
      */
     CartResponseDTO validateAndCalculateForCheckout(CartCalculationRequestDTO request, Long userId);
+
+    /**
+     * Tính phí vận chuyển thống nhất cho cả Giỏ hàng, Checkout và Đặt hàng.
+     *
+     * @param shippingMethod Phương thức vận chuyển (STANDARD / EXPRESS)
+     * @param subtotal Tạm tính đơn hàng (VNĐ)
+     * @param totalWeightKg Tổng khối lượng đơn hàng (kg)
+     * @return Phí vận chuyển (VNĐ)
+     */
+    BigDecimal calculateShippingFee(String shippingMethod, BigDecimal subtotal, BigDecimal totalWeightKg);
 }
