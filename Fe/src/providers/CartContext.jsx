@@ -407,7 +407,8 @@ export const CartProvider = ({ children }) => {
 
   const openQuickView = useCallback((product, e) => {
     if (e?.preventDefault) e.preventDefault();
-    setQuickViewProduct(product);
+    if (product?.preventDefault) return;
+    if (product) setQuickViewProduct(product);
   }, []);
 
   const closeQuickView = useCallback((e) => {
