@@ -20,6 +20,7 @@ export const getProducts = (params = {}) => {
   if (params.brandId) query.brandId = params.brandId;
   if (params.minPrice !== undefined && params.minPrice !== null && params.minPrice !== "") query.minPrice = params.minPrice;
   if (params.maxPrice !== undefined && params.maxPrice !== null && params.maxPrice !== "") query.maxPrice = params.maxPrice;
+  if (params.stock) query.stock = params.stock;
   if (params.sort) query.sort = params.sort;
 
   return api.get("/products", { params: query });
