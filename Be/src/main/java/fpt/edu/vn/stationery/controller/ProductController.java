@@ -30,8 +30,9 @@ public class ProductController {
             @RequestParam(required = false) Long brandId,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) String stock,
             @RequestParam(required = false, defaultValue = "price,asc") String sort) {
-        PageDTO<ProductResponseDTO> response = productService.getProducts(page, size, keyword, categoryId, brandId, minPrice, maxPrice, sort);
+        PageDTO<ProductResponseDTO> response = productService.getProducts(page, size, keyword, categoryId, brandId, minPrice, maxPrice, stock, sort);
         return ResponseEntity.ok(response);
     }
 

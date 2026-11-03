@@ -46,7 +46,10 @@ export const ProductRatingSold = ({
 }) => {
   const { t, i18n } = useTranslation();
   const { rating, reviewCount, soldCount } = getProductMetrics(product, propRating, propReviewCount);
-  const roundedStars = reviewCount > 0 ? Math.min(5, Math.max(1, Math.round(rating))) : 0;
+  const rawStar = Math.round(Number(rating) || 0);
+  const starScore = Math.max(0, Math.min(5, isNaN(rawStar) ? 0 : rawStar));
+  const roundedStars = reviewCount > 0 ? Math.max(1, starScore) : 0;
+  const emptyStars = Math.max(0, 5 - roundedStars);
   const formattedSold = formatSoldCount(soldCount, i18n.language);
 
   if (variant === "detail") {
@@ -65,7 +68,7 @@ export const ProductRatingSold = ({
                 aria-label={`${rating.toFixed(1)} / 5 ${t("reviews.stars", "sao")}`}
               >
                 {"★".repeat(roundedStars)}
-                <span style={{ color: "#e2e8f0" }}>{"★".repeat(5 - roundedStars)}</span>
+                <span style={{ color: "#e2e8f0" }}>{"★".repeat(emptyStars)}</span>
               </div>
               <span className="fw-700 text-dark" style={{ fontSize: "15px" }}>
                 {rating.toFixed(1)}
@@ -125,7 +128,7 @@ export const ProductRatingSold = ({
                 style={{ color: "#ffb800", fontSize: "14px", letterSpacing: "1px" }}
               >
                 {"★".repeat(roundedStars)}
-                <span style={{ color: "#e2e8f0" }}>{"★".repeat(5 - roundedStars)}</span>
+                <span style={{ color: "#e2e8f0" }}>{"★".repeat(emptyStars)}</span>
               </div>
               <span className="fw-700 text-dark">{rating.toFixed(1)}</span>
               <span className="text-muted">({reviewCount})</span>

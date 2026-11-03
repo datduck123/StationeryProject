@@ -217,6 +217,8 @@
   },
   "productDetail": {
     "title": "Chi Tiết Sản Phẩm",
+    "productOutOfStock": "Sản Phẩm Này Hết Hàng",
+    "outOfStockDesc": "Sản phẩm hiện đang tạm hết hàng. Quý khách vui lòng quay lại sau hoặc tham khảo các sản phẩm tương tự.",
     "description": "Mô Tả Sản Phẩm",
     "additionalInfo": "Thông Tin Bổ Sung",
     "reviewsTab": "Đánh Giá ({{count}})",

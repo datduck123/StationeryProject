@@ -236,6 +236,52 @@ public class ProductServiceImplTest {
         assertTrue(capturedPageable.getSort().getOrderFor("price").isDescending());
     }
 
+    @Test
+    @DisplayName("7a. Stock Filter: inStock filters only in-stock items")
+    void testStockFilterInStock() {
+        Page<Product> page = new PageImpl<>(List.of(activeProduct));
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
+
+        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 12, null, null, null, null, null, "inStock", "price,asc");
+
+        assertNotNull(result);
+        assertEquals(1, result.getContent().size());
+        verify(productRepository).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("7b. Stock Filter: outStock filters out-of-stock items")
+    void testStockFilterOutStock() {
+        Product outOfStockProd = Product.builder()
+                .productId(3L)
+                .category(category)
+                .brand(brand)
+                .sku("TL-OUT01")
+                .name("Sold Out Marker")
+                .price(new BigDecimal("25000.00"))
+                .weightKg(new BigDecimal("0.020"))
+                .stockQuantity(0)
+                .status(ProductStatus.ACTIVE)
+                .build();
+        ProductResponseDTO outDto = ProductResponseDTO.builder()
+                .productId(3L)
+                .name("Sold Out Marker")
+                .stockQuantity(0)
+                .build();
+
+        Page<Product> page = new PageImpl<>(List.of(outOfStockProd));
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(productMapper.toDto(outOfStockProd)).thenReturn(outDto);
+
+        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 12, null, null, null, null, null, "outStock", "price,asc");
+
+        assertNotNull(result);
+        assertEquals(1, result.getContent().size());
+        assertEquals(0, result.getContent().get(0).getStockQuantity());
+        verify(productRepository).findAll(any(Specification.class), any(Pageable.class));
+    }
+
     // 8. Empty Result Test
     @Test
     @DisplayName("8. Empty Result: returns valid PageDTO with empty list and zero totals")

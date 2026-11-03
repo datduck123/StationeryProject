@@ -209,7 +209,66 @@ export const ProductDetail = () => {
                     {product ? formatOrderMoney(product.price, i18n.language) : "$59.00"}
                   </h4>
                 </div>
-                {product?.stockQuantity != null && (
+
+                {/* Out of Stock dynamic message */}
+                {isOutOfStock && (
+                  <div
+                    className="alert alert-danger d-flex align-items-center gap-12 p-16 mb-24"
+                    style={{
+                      borderRadius: "12px",
+                      backgroundColor: "#fef2f2",
+                      border: "1.5px solid #fecaca",
+                      color: "#991b1b",
+                    }}
+                    role="alert"
+                  >
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#dc2626"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ flexShrink: 0 }}
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <div>
+                      <h6 className="fw-700 mb-1" style={{ color: "#991b1b", fontSize: "16px" }}>
+                        {t("productDetail.productOutOfStock", "Sản Phẩm Này Hết Hàng")}
+                      </h6>
+                      <p className="mb-0" style={{ fontSize: "13px", color: "#b91c1c" }}>
+                        {t("productDetail.outOfStockDesc", "Sản phẩm hiện đang tạm hết hàng. Quý khách vui lòng quay lại sau hoặc tham khảo các sản phẩm tương tự.")}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {isOutOfStock ? (
+                  <p className="fw-500 mb-16">
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        backgroundColor: "#fee2e2",
+                        color: "#dc2626",
+                        fontWeight: 700,
+                        fontSize: "13px",
+                        padding: "5px 14px",
+                        borderRadius: "20px",
+                        border: "1px solid #fecaca",
+                      }}
+                    >
+                      <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#dc2626" }}></span>
+                      {t("common.outOfStock", "Hết hàng")}
+                    </span>
+                  </p>
+                ) : product?.stockQuantity != null ? (
                   <p className="fw-500 mb-16">
                     {t("productDetail.remainingStock", "Remaining:")}{" "}
                     <span className="color-primary fw-700">{product.stockQuantity}</span>{" "}
@@ -220,17 +279,28 @@ export const ProductDetail = () => {
                       </span>
                     )}
                   </p>
-                )}
+                ) : null}
+
                 <p className="fw-500 medium-black mb-8">
                   {t("common.quantity")}:
                 </p>
                 <div className="quantity mb-24">
-                  <div className="input-area quantity-wrap">
+                  <div
+                    className="input-area quantity-wrap"
+                    style={isOutOfStock ? {
+                      opacity: 0.5,
+                      pointerEvents: "none",
+                      cursor: "not-allowed",
+                      backgroundColor: "#f1f5f9",
+                      borderColor: "#cbd5e1"
+                    } : {}}
+                  >
                     <button
                       className="decrement"
                       type="button"
                       disabled={isAtMin || isOutOfStock}
                       onClick={handleDecrement}
+                      style={isOutOfStock ? { cursor: "not-allowed" } : {}}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -249,7 +319,10 @@ export const ProductDetail = () => {
                       name="quantity"
                       disabled={isOutOfStock}
                       className="number text-center"
-                      style={{ width: "48px" }}
+                      style={{
+                        width: "48px",
+                        ...(isOutOfStock ? { cursor: "not-allowed", backgroundColor: "transparent", color: "#94a3b8" } : {})
+                      }}
                       {...inputProps}
                     />
                     <button
@@ -257,6 +330,7 @@ export const ProductDetail = () => {
                       type="button"
                       disabled={isAtMax || isOutOfStock}
                       onClick={handleIncrement}
+                      style={isOutOfStock ? { cursor: "not-allowed" } : {}}
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -281,25 +355,45 @@ export const ProductDetail = () => {
                   <div className="col-sm-6">
                     <button
                       type="button"
-                      className="w-100 text-center cus-btn-2 border-0"
+                      className={`w-100 text-center cus-btn-2 border-0 ${isOutOfStock ? "disabled pe-none opacity-50" : ""}`}
                       disabled={isOutOfStock}
-                      onClick={() => addToCart(productId, numericValue, true)}
+                      style={isOutOfStock ? {
+                        backgroundColor: "#e2e8f0",
+                        color: "#94a3b8",
+                        borderColor: "#cbd5e1",
+                        cursor: "not-allowed",
+                        pointerEvents: "none",
+                        boxShadow: "none",
+                      } : {}}
+                      onClick={() => !isOutOfStock && addToCart(productId, numericValue, true)}
                     >
-                      <span className="btn-text">{t("common.addCart")}</span>
-                      <span>{t("common.addCart")}</span>
+                      <span className="btn-text">{isOutOfStock ? t("common.outOfStock", "Hết hàng") : t("common.addCart")}</span>
+                      <span>{isOutOfStock ? t("common.outOfStock", "Hết hàng") : t("common.addCart")}</span>
                     </button>
                   </div>
                   <div className="col-sm-6">
-                    <Link
-                      to="/checkout.html"
+                    <button
+                      type="button"
                       className={`w-100 text-center cus-btn ${isOutOfStock ? "disabled pe-none opacity-50" : ""}`}
-                      onClick={async (event) => { event.preventDefault(); if (isOutOfStock) return; if (await addToCart(product, numericValue, { open: false })) navigate("/checkout"); }}
+                      disabled={isOutOfStock}
+                      style={isOutOfStock ? {
+                        backgroundColor: "#94a3b8",
+                        borderColor: "#94a3b8",
+                        cursor: "not-allowed",
+                        pointerEvents: "none",
+                        boxShadow: "none",
+                      } : {}}
+                      onClick={async (event) => {
+                        event.preventDefault();
+                        if (isOutOfStock) return;
+                        if (await addToCart(product, numericValue, { open: false })) navigate("/checkout");
+                      }}
                     >
                       <span className="btn-text">
-                        {t("productDetail.buyNow")}
+                        {isOutOfStock ? t("common.outOfStock", "Hết hàng") : t("productDetail.buyNow")}
                       </span>
-                      <span>{t("productDetail.buyNow")}</span>
-                    </Link>
+                      <span>{isOutOfStock ? t("common.outOfStock", "Hết hàng") : t("productDetail.buyNow")}</span>
+                    </button>
                   </div>
                 </div>
                 <div className="info-container">
@@ -494,7 +588,11 @@ export const ProductDetail = () => {
                             href="#quickview"
                             className="btn"
                             title={t("modals.quickView", "Quick View")}
-                            onClick={(e) => openQuickView(prod, e)}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openQuickView(prod, e);
+                            }}
                           >
                             <i className="fa-regular fa-eye"></i>
                           </a>

@@ -68,6 +68,21 @@ public class ProductServiceImpl implements ProductService {
             java.math.BigDecimal minPrice,
             java.math.BigDecimal maxPrice,
             String sort) {
+        return getProducts(page, size, keyword, categoryId, brandId, minPrice, maxPrice, null, sort);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageDTO<ProductResponseDTO> getProducts(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            java.math.BigDecimal minPrice,
+            java.math.BigDecimal maxPrice,
+            String stock,
+            String sort) {
         validatePagination(page, size);
 
         if (categoryId != null && categoryId <= 0) {
@@ -89,7 +104,7 @@ public class ProductServiceImpl implements ProductService {
         Sort sortObj = parseSort(sort);
         Pageable pageable = PageRequest.of(page, size, sortObj);
 
-        Specification<Product> spec = ProductSpecification.filterPublicProducts(keyword, categoryId, brandId, minPrice, maxPrice);
+        Specification<Product> spec = ProductSpecification.filterPublicProducts(keyword, categoryId, brandId, minPrice, maxPrice, stock);
         Page<Product> productPage = productRepository.findAll(spec, pageable);
 
         Page<ProductResponseDTO> dtoPage = productPage.map(this::toEnrichedDto);

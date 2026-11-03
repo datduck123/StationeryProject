@@ -34,6 +34,7 @@ const ProductCard = ({ product, openQuickView, t }) => {
   const { i18n } = useTranslation();
   const prodId = product.id || product.productId;
   const isWishlisted = isInWishlist(prodId);
+  const inStock = (product.stockQuantity ?? product.stock_quantity ?? 0) > 0;
   const normalizedProduct = {
     ...product,
     name: product.name || product.title,
@@ -41,15 +42,41 @@ const ProductCard = ({ product, openQuickView, t }) => {
   };
 
   return (
-    <div className="latest-product-card">
-      <div className="image-box mb-16">
-        {product.badge && (
+    <div className={`latest-product-card ${!inStock ? "is-out-of-stock" : ""}`}>
+      <div className="image-box mb-16" style={{ position: "relative" }}>
+        {product.badge && inStock && (
           <span className="sale-label subtitle fw-400 white">
             {product.badge === "Sale" ? t("common.sale") : product.badge}
           </span>
         )}
+        {!inStock && (
+          <span
+            style={{
+              position: "absolute",
+              top: "10px",
+              left: "10px",
+              background: "#dc2626",
+              color: "#fff",
+              fontSize: "11px",
+              fontWeight: 700,
+              padding: "4px 9px",
+              borderRadius: "6px",
+              zIndex: 3,
+              boxShadow: "0 2px 8px rgba(220, 38, 38, 0.4)",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
+          >
+            {t("common.outOfStock", "Hết hàng")}
+          </span>
+        )}
         <Link to={`/product/${prodId}`} className="image">
-          <img src={product.image} className="product-image" alt={product.title || product.name || ""} />
+          <img
+            src={product.image}
+            className="product-image"
+            alt={product.title || product.name || ""}
+            style={!inStock ? { opacity: 0.82 } : {}}
+          />
         </Link>
         <div className="side-icons">
           <ul className="list-unstyled">
@@ -76,6 +103,7 @@ const ProductCard = ({ product, openQuickView, t }) => {
                 title={t("modals.quickView", "Quick View")}
                 onClick={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   openQuickView(normalizedProduct, e);
                 }}
               >
@@ -84,17 +112,35 @@ const ProductCard = ({ product, openQuickView, t }) => {
             </li>
           </ul>
         </div>
-      <a
-        href="#cart"
-        className="cus-btn"
-        onClick={(e) => {
-          e.preventDefault();
-          addToCart(product, 1);
-        }}
-      >
-        <span className="btn-text">{t("common.addCart")}</span>
-        <span>{t("common.goToCart")}</span>
-      </a>
+      {inStock ? (
+        <a
+          href="#cart"
+          className="cus-btn"
+          onClick={(e) => {
+            e.preventDefault();
+            addToCart(product, 1);
+          }}
+        >
+          <span className="btn-text">{t("common.addCart")}</span>
+          <span>{t("common.goToCart")}</span>
+        </a>
+      ) : (
+        <button
+          type="button"
+          className="cus-btn"
+          disabled
+          style={{
+            backgroundColor: "#94a3b8",
+            borderColor: "#94a3b8",
+            cursor: "not-allowed",
+            opacity: 0.85,
+            pointerEvents: "none",
+          }}
+        >
+          <span className="btn-text">{t("common.outOfStock", "Hết hàng")}</span>
+          <span>{t("common.outOfStock", "Hết hàng")}</span>
+        </button>
+      )}
     </div>
     <div className="product-desc">
       <div>
@@ -105,7 +151,23 @@ const ProductCard = ({ product, openQuickView, t }) => {
           {product.title}
         </Link>
         <ProductRatingSold product={product} variant="card" className="mb-8" />
-        <h5 className="medium-black fw-700">{formatOrderMoney(product.price, i18n.language)}</h5>
+        <div className="d-flex align-items-center justify-content-between">
+          <h5 className="medium-black fw-700 mb-0">{formatOrderMoney(product.price, i18n.language)}</h5>
+          {!inStock && (
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#dc2626",
+                backgroundColor: "#fee2e2",
+                padding: "2px 8px",
+                borderRadius: "6px",
+              }}
+            >
+              {t("common.outOfStock", "Hết hàng")}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   </div>

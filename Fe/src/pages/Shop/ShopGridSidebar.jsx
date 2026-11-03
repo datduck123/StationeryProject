@@ -86,6 +86,9 @@ export const ShopGridSidebar = () => {
   const rawCategoryId = searchParams.get("categoryId") || searchParams.get("category");
   const selectedCategoryId = rawCategoryId ? Number(rawCategoryId) : null;
   const stockFilter = searchParams.get("stock") || null; // "inStock" | "outStock" | null
+  const inStockSelected = stockFilter === "inStock";
+  const outStockSelected = stockFilter === "outStock";
+  const stockActiveCount = stockFilter ? 1 : 0;
   const rawMinPrice = searchParams.get("minPrice");
   const minPrice = rawMinPrice !== null && rawMinPrice !== undefined && rawMinPrice !== "" ? Number(rawMinPrice) : null;
   const rawMaxPrice = searchParams.get("maxPrice");
@@ -96,7 +99,6 @@ export const ShopGridSidebar = () => {
 
   // ── Data state ───────────────────────────────────────────────────────────
   const [products, setProducts] = useState([]);
-  const [filteredProducts, setFilteredProducts] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [categories, setCategories] = useState([]);
@@ -156,6 +158,7 @@ export const ShopGridSidebar = () => {
         brandId: selectedBrandId || undefined,
         minPrice: minPrice !== null ? minPrice : undefined,
         maxPrice: maxPrice !== null ? maxPrice : undefined,
+        stock: stockFilter || undefined,
         sort: sortValue || undefined,
       });
 
@@ -192,7 +195,7 @@ export const ShopGridSidebar = () => {
         setLoading(false);
       }
     }
-  }, [currentPage, keyword, selectedCategoryId, selectedBrandId, minPrice, maxPrice, sortValue, t]);
+  }, [currentPage, keyword, selectedCategoryId, selectedBrandId, minPrice, maxPrice, stockFilter, sortValue, t]);
 
   // ── Auto-adjust page if current page exceeds total pages ─────────────────
   useEffect(() => {
@@ -200,17 +203,6 @@ export const ShopGridSidebar = () => {
       setCurrentPage(Math.max(0, totalPages - 1));
     }
   }, [totalPages, currentPage]);
-
-  // ── Apply client-side stock filter after fetch ────────────────────────────
-  useEffect(() => {
-    if (!stockFilter) {
-      setFilteredProducts(products);
-    } else if (stockFilter === "inStock") {
-      setFilteredProducts(products.filter((p) => (p.stockQuantity ?? p.stock_quantity ?? 0) > 0));
-    } else if (stockFilter === "outStock") {
-      setFilteredProducts(products.filter((p) => (p.stockQuantity ?? p.stock_quantity ?? 0) <= 0));
-    }
-  }, [products, stockFilter]);
 
   useEffect(() => {
     fetchProducts();
@@ -331,7 +323,7 @@ export const ShopGridSidebar = () => {
   };
 
   const hasActiveFilters = Boolean(
-    stockFilter ||
+    stockActiveCount > 0 ||
     minPrice !== null ||
     maxPrice !== null ||
     selectedCategoryId !== null ||
@@ -379,19 +371,19 @@ export const ShopGridSidebar = () => {
           title={t("shop.availability", "Availability")}
           isOpen={openCategories.availability}
           onToggle={() => toggleCategory("availability")}
-          activeCount={stockFilter ? 1 : null}
+          activeCount={stockActiveCount > 0 ? stockActiveCount : null}
         />
         {openCategories.availability && (
           <div className="content-block mt-12">
             <div
-              className={`shop-filter-option ${stockFilter === "inStock" ? "is-selected" : ""}`}
+              className={`shop-filter-option ${inStockSelected ? "is-selected" : ""}`}
               onClick={() => handleStockChange("inStock")}
             >
               <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
                 <input
                   type="checkbox"
                   className="inp-cbx"
-                  checked={stockFilter === "inStock"}
+                  checked={inStockSelected}
                   readOnly
                   tabIndex={-1}
                 />
@@ -401,14 +393,14 @@ export const ShopGridSidebar = () => {
               </div>
             </div>
             <div
-              className={`shop-filter-option ${stockFilter === "outStock" ? "is-selected" : ""}`}
+              className={`shop-filter-option ${outStockSelected ? "is-selected" : ""}`}
               onClick={() => handleStockChange("outStock")}
             >
               <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
                 <input
                   type="checkbox"
                   className="inp-cbx"
-                  checked={stockFilter === "outStock"}
+                  checked={outStockSelected}
                   readOnly
                   tabIndex={-1}
                 />
@@ -729,9 +721,9 @@ export const ShopGridSidebar = () => {
                     {loading
                       ? t("common.loading", "Loading...")
                       : t("shop.showingProductCount", {
-                          count: filteredProducts.length,
+                          count: products.length,
                           total: totalElements,
-                          defaultValue: `Showing ${filteredProducts.length} / ${totalElements} products`,
+                          defaultValue: `Showing ${products.length} / ${totalElements} products`,
                         })}
                   </p>
                   <button
@@ -792,7 +784,7 @@ export const ShopGridSidebar = () => {
                     <span>{t("shop.retryButton", "Try again")}</span>
                   </button>
                 </div>
-              ) : filteredProducts.length === 0 ? (
+              ) : products.length === 0 ? (
                 <div
                   className="text-center py-60 px-24 my-32"
                   style={{
@@ -864,7 +856,7 @@ export const ShopGridSidebar = () => {
                 </div>
               ) : (
                 <div className="row row-gap-4 mb-48">
-                  {filteredProducts.map((prod) => {
+                  {products.map((prod) => {
                     const prodId = prod.id || prod.productId;
                     const isWishlisted = isInWishlist(prodId);
                     const inStock = (prod.stockQuantity ?? prod.stock_quantity ?? 0) > 0;
@@ -874,13 +866,14 @@ export const ShopGridSidebar = () => {
                         className="col-xxl-3 col-xl-4 col-md-6 col-sm-6 wow fadeInUp animated"
                         data-wow-delay="400ms"
                       >
-                        <div className="latest-product-card">
-                          <div className="image-box mb-16">
+                        <div className={`latest-product-card ${!inStock ? "is-out-of-stock" : ""}`}>
+                          <div className="image-box mb-16" style={{ position: "relative" }}>
                             <Link to={`/product/${prodId}`} className="image">
                               <img
                                 src={getProductImage(prod)}
                                 className="product-image"
                                 alt={prod.name}
+                                style={!inStock ? { opacity: 0.82 } : {}}
                                 onError={(e) => {
                                   e.target.onerror = null;
                                   e.target.src = "/assets/media/products/product-7.png";
@@ -893,16 +886,19 @@ export const ShopGridSidebar = () => {
                                   position: "absolute",
                                   top: "10px",
                                   left: "10px",
-                                  background: "#ef4444",
+                                  background: "#dc2626",
                                   color: "#fff",
                                   fontSize: "11px",
                                   fontWeight: 700,
-                                  padding: "3px 8px",
+                                  padding: "4px 9px",
                                   borderRadius: "6px",
-                                  zIndex: 2,
+                                  zIndex: 3,
+                                  boxShadow: "0 2px 8px rgba(220, 38, 38, 0.4)",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.5px",
                                 }}
                               >
-                                {t("common.outOfStock", "Out of Stock")}
+                                {t("common.outOfStock", "Hết hàng")}
                               </span>
                             )}
                             <div className="side-icons">
@@ -928,6 +924,7 @@ export const ShopGridSidebar = () => {
                                     title={t("modals.quickView", "Xem nhanh")}
                                     onClick={(e) => {
                                       e.preventDefault();
+                                      e.stopPropagation();
                                       openQuickView(prod);
                                     }}
                                   >
@@ -936,19 +933,39 @@ export const ShopGridSidebar = () => {
                                 </li>
                               </ul>
                             </div>
-                            <Link
-                              to="/cart.html"
-                              className="cus-btn"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                addToCart(prodId, 1, true);
-                              }}
-                            >
-                              <span className="btn-text">
-                                {t("common.addCart")}
-                              </span>
-                              <span>{t("common.goToCart")}</span>
-                            </Link>
+                            {inStock ? (
+                              <Link
+                                to="/cart.html"
+                                className="cus-btn"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  addToCart(prodId, 1, true);
+                                }}
+                              >
+                                <span className="btn-text">
+                                  {t("common.addCart")}
+                                </span>
+                                <span>{t("common.goToCart")}</span>
+                              </Link>
+                            ) : (
+                              <button
+                                type="button"
+                                className="cus-btn"
+                                disabled
+                                style={{
+                                  backgroundColor: "#94a3b8",
+                                  borderColor: "#94a3b8",
+                                  cursor: "not-allowed",
+                                  opacity: 0.85,
+                                  pointerEvents: "none",
+                                }}
+                              >
+                                <span className="btn-text">
+                                  {t("common.outOfStock", "Hết hàng")}
+                                </span>
+                                <span>{t("common.outOfStock", "Hết hàng")}</span>
+                              </button>
+                            )}
                           </div>
                           <div className="product-desc">
                             <div>
@@ -967,9 +984,25 @@ export const ShopGridSidebar = () => {
                                 </p>
                               )}
                               <ProductRatingSold product={prod} variant="card" className="mb-8" />
-                              <h5 className="medium-black fw-700">
-                                {formatOrderMoney(prod.price, i18n.language)}
-                              </h5>
+                              <div className="d-flex align-items-center justify-content-between">
+                                <h5 className="medium-black fw-700 mb-0">
+                                  {formatOrderMoney(prod.price, i18n.language)}
+                                </h5>
+                                {!inStock && (
+                                  <span
+                                    style={{
+                                      fontSize: "12px",
+                                      fontWeight: 700,
+                                      color: "#dc2626",
+                                      backgroundColor: "#fee2e2",
+                                      padding: "2px 8px",
+                                      borderRadius: "6px",
+                                    }}
+                                  >
+                                    {t("common.outOfStock", "Hết hàng")}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
