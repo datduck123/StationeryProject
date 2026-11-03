@@ -314,7 +314,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
                   checked={formData.shippingMethod === "STANDARD"}
                   onChange={handleChange}
                 />
-                <label htmlFor="standard">{t("checkout.shippingStandard", "Standard (Free > 100.000 đ)")}</label>
+                <label htmlFor="standard">{t("checkout.shippingStandard", "Standard - 20.000 đ (Free ≥ 100.000 đ)")}</label>
               </div>
               <div className="cus-radio">
                 <input
@@ -325,7 +325,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
                   checked={formData.shippingMethod === "EXPRESS"}
                   onChange={handleChange}
                 />
-                <label htmlFor="express">Express</label>
+                <label htmlFor="express">{t("checkout.shippingExpress", "Express - 40.000 đ")}</label>
               </div>
             </div>
           </li>

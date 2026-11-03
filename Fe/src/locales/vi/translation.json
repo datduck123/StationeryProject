@@ -209,7 +209,8 @@
     "orderSummary": "Tóm tắt đơn hàng",
     "productsCount": "Sản phẩm ({{count}})",
     "voucherDiscount": "Voucher giảm giá",
-    "shippingStandard": "Standard (Miễn phí > 100.000 đ)",
+    "shippingStandard": "Standard - 20.000 đ (Miễn phí ≥ 100.000 đ)",
+    "shippingExpress": "Express - 40.000 đ",
     "paymentMethod": "Phương thức thanh toán",
     "voucherActivated": "Đã kích hoạt Voucher ID:",
     "processing": "Đang xử lý..."
@@ -222,7 +223,7 @@
     "buyNow": "Mua Ngay",
     "relatedProducts": "Sản Phẩm Liên Quan",
     "share": "Chia Sẻ",
-    "freeShipping": "Miễn phí vận chuyển cho đơn hàng từ 500.000đ",
+    "freeShipping": "Miễn phí vận chuyển cho đơn hàng từ 100.000đ",
     "satisfaction": "Cam kết hài lòng 100% hoặc hoàn tiền",
     "reviewSubmitted": "Đã gửi đánh giá thành công!",
     "remainingStock": "Còn lại:",

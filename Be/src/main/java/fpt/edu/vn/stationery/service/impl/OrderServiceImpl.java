@@ -122,7 +122,7 @@ public class OrderServiceImpl implements OrderService {
         }
         String shippingMethod = request.getShippingMethod() == null ? "STANDARD" : request.getShippingMethod();
         String paymentMethod = request.getPaymentMethod() == null ? "COD" : request.getPaymentMethod();
-        BigDecimal shippingFee = new BigDecimal("EXPRESS".equals(shippingMethod) ? "40000" : "20000");
+        BigDecimal shippingFee = CartCalculationServiceImpl.computeShippingFee(shippingMethod, subtotal, totalWeight);
         Order order = Order.builder().user(user).voucherId(voucher == null ? null : voucher.getVoucherId())
                 .subtotal(subtotal).discountAmount(discount).shippingMethod(shippingMethod)
                 .totalWeight(totalWeight).shippingFee(shippingFee)

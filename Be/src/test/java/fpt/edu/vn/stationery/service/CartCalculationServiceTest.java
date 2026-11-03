@@ -52,7 +52,8 @@ class CartCalculationServiceTest {
                 .productId(1L)
                 .name("Thiên Long Ballpoint Pen")
                 .sku("TL-PEN-01")
-                .price(BigDecimal.valueOf(10.00))
+                .price(BigDecimal.valueOf(10000))
+                .weightKg(BigDecimal.valueOf(0.200))
                 .stockQuantity(20)
                 .status(ProductStatus.ACTIVE)
                 .build();
@@ -61,7 +62,8 @@ class CartCalculationServiceTest {
                 .productId(2L)
                 .name("Campus Notebook 200p")
                 .sku("NB-CAMPUS-02")
-                .price(BigDecimal.valueOf(25.00))
+                .price(BigDecimal.valueOf(25000))
+                .weightKg(BigDecimal.valueOf(0.500))
                 .stockQuantity(5)
                 .status(ProductStatus.ACTIVE)
                 .build();
@@ -74,8 +76,8 @@ class CartCalculationServiceTest {
 
         CartCalculationRequestDTO request = CartCalculationRequestDTO.builder()
                 .items(List.of(
-                        CartItemInputDTO.builder().productId(1L).quantity(2).build(), // 2 * 10 = 20
-                        CartItemInputDTO.builder().productId(2L).quantity(2).build()  // 2 * 25 = 50
+                        CartItemInputDTO.builder().productId(1L).quantity(2).build(), // 2 * 10000 = 20000
+                        CartItemInputDTO.builder().productId(2L).quantity(2).build()  // 2 * 25000 = 50000
                 ))
                 .shippingMethod("STANDARD")
                 .build();
@@ -84,9 +86,9 @@ class CartCalculationServiceTest {
 
         assertNotNull(result);
         assertFalse(result.isStockChanged());
-        assertEquals(0, BigDecimal.valueOf(70.00).compareTo(result.getSubtotal()));
-        assertEquals(0, BigDecimal.valueOf(5.00).compareTo(result.getShippingFee())); // Dưới 100 -> ship 5$
-        assertEquals(0, BigDecimal.valueOf(75.00).compareTo(result.getTotalCost()));
+        assertEquals(0, BigDecimal.valueOf(70000).compareTo(result.getSubtotal()));
+        assertEquals(0, BigDecimal.valueOf(20000).compareTo(result.getShippingFee())); // Dưới 100.000đ -> ship 20.000đ
+        assertEquals(0, BigDecimal.valueOf(90000).compareTo(result.getTotalCost()));
         assertEquals(4, result.getTotalItemsCount());
         assertEquals(2, result.getItems().size());
 
@@ -120,9 +122,9 @@ class CartCalculationServiceTest {
         assertEquals(10, item.getRequestedQuantity());
         assertEquals(5, item.getFinalQuantity());
         assertTrue(item.isStockAdjusted());
-        assertEquals(0, BigDecimal.valueOf(125.00).compareTo(result.getSubtotal())); // 5 * 25 = 125
-        assertEquals(0, BigDecimal.ZERO.compareTo(result.getShippingFee())); // 125 >= 100 -> freeship!
-        assertEquals(0, BigDecimal.valueOf(125.00).compareTo(result.getTotalCost()));
+        assertEquals(0, BigDecimal.valueOf(125000).compareTo(result.getSubtotal())); // 5 * 25000 = 125000
+        assertEquals(0, BigDecimal.ZERO.compareTo(result.getShippingFee())); // 125.000 >= 100.000 -> freeship!
+        assertEquals(0, BigDecimal.valueOf(125000).compareTo(result.getTotalCost()));
     }
 
     @Test
@@ -171,7 +173,7 @@ class CartCalculationServiceTest {
     }
 
     @Test
-    @DisplayName("Phương thức giao hàng EXPRESS: tính cước 15.00")
+    @DisplayName("Phương thức giao hàng EXPRESS: tính cước 40.000đ")
     void calculate_whenExpressShipping_shouldApplyExpressBaseFee() {
         when(productRepository.findAllById(anySet())).thenReturn(List.of(product1));
 
@@ -182,8 +184,27 @@ class CartCalculationServiceTest {
 
         CartResponseDTO result = cartCalculationService.calculate(request, null);
 
-        assertEquals(0, BigDecimal.valueOf(15.00).compareTo(result.getShippingFee()));
-        assertEquals(0, BigDecimal.valueOf(25.00).compareTo(result.getTotalCost())); // 10 subtotal + 15 fee
+        assertEquals(0, BigDecimal.valueOf(40000).compareTo(result.getShippingFee()));
+        assertEquals(0, BigDecimal.valueOf(50000).compareTo(result.getTotalCost())); // 10.000 subtotal + 40.000 fee
+    }
+
+    @Test
+    @DisplayName("Đơn hàng vượt ngưỡng 5kg: tính thêm phụ phí quá cân 5.000đ/kg")
+    void calculate_whenOverweight_shouldAddOverweightFee() {
+        product1.setWeightKg(BigDecimal.valueOf(2.000)); // 2kg / món
+        when(productRepository.findAllById(anySet())).thenReturn(List.of(product1));
+
+        CartCalculationRequestDTO request = CartCalculationRequestDTO.builder()
+                .items(List.of(CartItemInputDTO.builder().productId(1L).quantity(4).build())) // 4 * 2kg = 8kg (vượt 3kg), 4 * 10.000 = 40.000đ
+                .shippingMethod("STANDARD")
+                .build();
+
+        CartResponseDTO result = cartCalculationService.calculate(request, null);
+
+        // baseFee = 20.000đ + overweightFee (3kg * 5.000đ = 15.000đ) = 35.000đ
+        assertEquals(0, BigDecimal.valueOf(8.000).compareTo(result.getTotalWeightKg()));
+        assertEquals(0, BigDecimal.valueOf(35000).compareTo(result.getShippingFee()));
+        assertEquals(0, BigDecimal.valueOf(75000).compareTo(result.getTotalCost()));
     }
 
     @Test
