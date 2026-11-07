@@ -9,6 +9,7 @@ IF NOT EXISTS (
 BEGIN
     ALTER TABLE Products ADD sold INT NOT NULL CONSTRAINT DF_Products_Sold DEFAULT 0;
 END;
+GO
 
 -- Backfill sold count from any existing DELIVERED orders in the database
 UPDATE p
