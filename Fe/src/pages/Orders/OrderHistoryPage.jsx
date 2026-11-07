@@ -62,6 +62,21 @@ const OrderHistoryPage = () => {
     setSelectedOrderNumber(null);
   }, []);
 
+  const markOrderItemReviewed = useCallback((orderId, orderItemId) => {
+    setPageData((current) => {
+      if (!current?.content) return current;
+      return {
+        ...current,
+        content: current.content.map((order) => order.orderId === orderId ? {
+          ...order,
+          orderItems: (order.orderItems || []).map((item) => item.orderItemId === orderItemId
+            ? { ...item, reviewed: true }
+            : item),
+        } : order),
+      };
+    });
+  }, []);
+
   const cancelOrder = async (orderId, orderNumber) => {
     if (!window.confirm(t("orders.confirmCancel", { number: orderNumber }))) return;
     setCancelingId(orderId);
@@ -174,7 +189,7 @@ const OrderHistoryPage = () => {
           </div>
         </div>
       </section>
-      <CustomerOrderDetailModal order={selectedOrder} orderNumber={selectedOrderNumber} onClose={closeDetails} />
+      <CustomerOrderDetailModal order={selectedOrder} orderNumber={selectedOrderNumber} onClose={closeDetails} onReviewed={markOrderItemReviewed} />
     </>
   );
 };

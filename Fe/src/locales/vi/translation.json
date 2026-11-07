@@ -399,8 +399,20 @@
       "customer": "Khách hàng",
       "status": "Trạng thái",
       "shipTo": "Giao đến",
-      "items": "Sản phẩm",
-      "total": "Tổng tiền"
+      "items": "Sản phẩm đã đặt",
+      "total": "Tổng thanh toán",
+      "customerSection": "Thông tin người đặt hàng",
+      "customerName": "Họ và tên khách hàng",
+      "email": "Email khách hàng",
+      "deliveryPhone": "Số điện thoại nhận hàng",
+      "productName": "Tên sản phẩm",
+      "unitPrice": "Đơn giá",
+      "quantity": "Số lượng",
+      "lineTotal": "Thành tiền",
+      "subtotal": "Tiền hàng",
+      "paymentStatus": "Trạng thái thanh toán",
+      "voucherCode": "Mã giảm giá",
+      "note": "Ghi chú đơn hàng"
     },
     "statusEditor": {
       "title": "Đổi trạng thái · Đơn hàng #{{id}}",

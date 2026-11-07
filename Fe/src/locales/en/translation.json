@@ -399,8 +399,20 @@
       "customer": "Customer",
       "status": "Status",
       "shipTo": "Ship to",
-      "items": "Items",
-      "total": "Total"
+      "items": "Products ordered",
+      "total": "Order total",
+      "customerSection": "Customer information",
+      "customerName": "Customer name",
+      "email": "Customer email",
+      "deliveryPhone": "Delivery phone number",
+      "productName": "Product name",
+      "unitPrice": "Unit price",
+      "quantity": "Quantity",
+      "lineTotal": "Line total",
+      "subtotal": "Items subtotal",
+      "paymentStatus": "Payment status",
+      "voucherCode": "Voucher code",
+      "note": "Order note"
     },
     "statusEditor": {
       "title": "Edit status · Order #{{id}}",

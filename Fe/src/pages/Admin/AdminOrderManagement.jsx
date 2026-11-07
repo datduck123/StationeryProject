@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminListControls from "../../components/admin/AdminListControls";
+import OrderDetailsContent from "../../components/orders/OrderDetailsContent";
 import OrderStatusChanger from "../../components/orders/OrderStatusChanger";
 import { nextStatuses } from "../../components/orders/orderStatusTransitions";
 import Pagination from "../../components/ui/Pagination";
@@ -47,6 +48,7 @@ const AdminOrderManagement = () => {
     deliveredRevenue: 0,
   });
   const detailRequestId = useRef(0);
+  const detailDialogRef = useRef(null);
   const closeDetailButton = useRef(null);
   const closeStatusButton = useRef(null);
   const statusOptions = [
@@ -117,12 +119,35 @@ const AdminOrderManagement = () => {
 
   useEffect(() => {
     if (!detailOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const previouslyFocusedElement = document.activeElement;
+    document.body.style.overflow = "hidden";
     closeDetailButton.current?.focus();
     const onKeyDown = (event) => {
       if (event.key === "Escape") closeDetail();
+      if (event.key !== "Tab" || !detailDialogRef.current) return;
+      const focusable = [...detailDialogRef.current.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+        .filter((element) => element.getClientRects().length > 0);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (!detailDialogRef.current.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+      if (previouslyFocusedElement?.isConnected) previouslyFocusedElement.focus();
+    };
   }, [detailOpen]);
 
   useEffect(() => {
@@ -281,7 +306,7 @@ const AdminOrderManagement = () => {
             if (event.target === event.currentTarget) closeDetail();
           }}
         >
-          <div className="admin-order-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-order-detail-title">
+          <div ref={detailDialogRef} className="admin-order-dialog admin-order-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-order-detail-title">
             <div className="admin-order-dialog-header">
               <h5 id="admin-order-detail-title">{t("adminOrders.detail.title", { id: detailOrderId })}</h5>
               <button ref={closeDetailButton} type="button" className="btn-close" aria-label={t("adminOrders.detail.closeAria")} onClick={closeDetail} />
@@ -289,20 +314,7 @@ const AdminOrderManagement = () => {
             <div className="admin-order-dialog-body">
               {detailLoading && <p className="mb-0">{t("adminOrders.detail.loading")}</p>}
               {detailError && <div className="alert alert-danger mb-0" role="alert">{detailError}</div>}
-              {selectedOrder && (
-                <>
-                  <p className="mb-1"><strong>{t("adminOrders.detail.customer")}:</strong> {selectedOrder.customerName} ({selectedOrder.customerEmail})</p>
-                  <p className="mb-1"><strong>{t("adminOrders.detail.status")}:</strong> {t(`orders.statuses.${selectedOrder.orderStatus}`)}</p>
-                  <p className="mb-3"><strong>{t("adminOrders.detail.shipTo")}:</strong> {selectedOrder.shippingAddress}, {selectedOrder.phone}</p>
-                  <h6 className="fw-700">{t("adminOrders.detail.items")}</h6>
-                  {(selectedOrder.orderItems || []).map((item) => (
-                    <div className="d-flex justify-content-between border-bottom py-2" key={item.orderItemId}>
-                      <span>{item.productName} × {item.quantity}</span><span>{money(item.subtotal, i18n.language)}</span>
-                    </div>
-                  ))}
-                  <div className="d-flex justify-content-between pt-3 fw-700"><span>{t("adminOrders.detail.total")}</span><span>{money(selectedOrder.totalCost, i18n.language)}</span></div>
-                </>
-              )}
+              {selectedOrder && <OrderDetailsContent order={selectedOrder} />}
             </div>
             <div className="admin-order-dialog-footer">
               <button type="button" className="btn btn-outline-secondary" onClick={closeDetail}>{t("common.close")}</button>
