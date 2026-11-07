@@ -24,19 +24,15 @@ const OrderHistoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [page, setPage] = useState(0);
-  const [sort, setSort] = useState("createdAt:desc");
+  const [sort, setSort] = useState("totalCost:desc");
   const [refreshKey, setRefreshKey] = useState(0);
   const [cancelingId, setCancelingId] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedOrderNumber, setSelectedOrderNumber] = useState(null);
 
   const sortOptions = useMemo(() => [
-    { value: "createdAt:desc", label: t("orders.sort.newest") },
-    { value: "createdAt:asc", label: t("orders.sort.oldest") },
     { value: "totalCost:desc", label: t("orders.sort.totalHighLow") },
     { value: "totalCost:asc", label: t("orders.sort.totalLowHigh") },
-    { value: "orderId:desc", label: t("orders.sort.idDescending") },
-    { value: "orderId:asc", label: t("orders.sort.idAscending") },
   ], [t]);
 
   useEffect(() => {
