@@ -173,6 +173,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public ProductResponseDTO createProduct(ProductRequestDTO request) {
+        validateProductName(request.getName());
+
         // Auto-generate SKU if not provided
         String sku;
         if (request.getSku() == null || request.getSku().isBlank()) {
@@ -216,6 +218,7 @@ public class ProductServiceImpl implements ProductService {
         if (id == null || id <= 0) {
             throw new BadRequestException("Invalid product ID: " + id);
         }
+        validateProductName(request.getName());
 
         Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
@@ -265,7 +268,7 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         if (productRepository.countOrderItemsByProductId(id) > 0) {
-            throw new BadRequestException("Cannot delete product as it is referenced by existing orders. Consider deactivating the product instead.");
+            throw new BadRequestException("Cannot delete product as it is referenced by existing customer orders. Consider deactivating the product instead.");
         }
 
         if (productRepository.countCartItemsByProductId(id) > 0) {
@@ -370,5 +373,16 @@ public class ProductServiceImpl implements ProductService {
         Pageable pageable = PageRequest.of(0, safeLimit);
         return productRepository.findTopBySoldDesc(pageable)
                 .stream().map(this::toEnrichedDto).toList();
+    }
+
+    private void validateProductName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new BadRequestException("Product name cannot be empty");
+        }
+        String trimmed = name.trim();
+        boolean hasLetter = trimmed.codePoints().anyMatch(Character::isLetter);
+        if (!hasLetter) {
+            throw new BadRequestException("Product name must contain letters and cannot consist of numbers only");
+        }
     }
 }

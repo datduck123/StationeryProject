@@ -3,10 +3,12 @@ import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import TitleBanner from "../../components/shared/TitleBanner";
 import OrderTrackingTimeline from "../../components/orders/OrderTrackingTimeline";
+import OrderItemReviewAction from "../../components/orders/OrderItemReviewAction";
 import ProductReviewModal from "../../components/reviews/ProductReviewModal";
 import orderService from "../../services/orderService";
 import { useToast } from "../../providers/ToastContext";
 import { formatOrderDateTime, formatOrderMoney, orderStatusLabel, paymentMethodLabel, paymentStatusLabel, shippingMethodLabel } from "../../utils/orderFormatters";
+import "../../styles/customer-orders.css";
 
 const OrderDetailPage = () => {
   const { id } = useParams();
@@ -69,42 +71,133 @@ const OrderDetailPage = () => {
         <div className="container-2">
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-24">
             <h4 className="font-sec fw-700 medium-black mb-0">{t("orders.detailTitle")} #{id}</h4>
-            <div className="d-flex align-items-center gap-3">
-              {order?.orderStatus === "PENDING" && (
-                <button
-                  type="button"
-                  className="btn btn-outline-danger btn-sm"
-                  disabled={canceling}
-                  onClick={handleCancelOrder}
-                >
-                  {canceling ? t("orders.cancelling") : t("orders.cancelOrder")}
-                </button>
-              )}
-              <Link to="/account/orders" className="text-decoration-underline">{t("orders.backToOrders")}</Link>
-            </div>
+            <Link to="/account/orders" className="btn-order-back">
+              <i className="fa-solid fa-arrow-left"></i>
+              <span>{t("orders.backToOrders")}</span>
+            </Link>
           </div>
           {loading && <p className="light-gray">{t("orders.loadingDetail")}</p>}
           {error && <div className="alert alert-danger" role="alert">{error}</div>}
           {order && (
             <>
-              <div className="checkout-box bg-semi-white p-24 mb-16">
-                <div className="d-flex flex-wrap justify-content-between gap-3 mb-16">
-                  <div>
-                    <span className="light-gray d-block mb-1">{t("orders.status")}</span>
-                    <strong className="medium-black">{orderStatusLabel(order.orderStatus, t)}</strong>
+              {/* 1. THÔNG TIN ĐƠN HÀNG & GIAO HÀNG (DELIVERY & ORDER INFO 3-CARD ROW) */}
+              <div className="row g-3 mb-20">
+                {/* Cột 1: Thông tin người nhận (Đầy đủ Tên, SĐT, Email, Địa chỉ, Ghi chú) */}
+                <div className="col-12 col-lg-4">
+                  <div className="order-info-card">
+                    <div className="order-info-card-header">
+                      <div className="order-info-icon-badge">
+                        <i className="fa-solid fa-location-dot"></i>
+                      </div>
+                      <h6 className="order-info-card-title">{t("orders.delivery")}</h6>
+                    </div>
+                    <div className="order-info-card-body">
+                      <div className="fw-700 medium-black fs-15 mb-2">
+                        {order.customerName || t("orders.guestCustomer")}
+                      </div>
+                      <div className="text-secondary fs-13 mb-1 d-flex align-items-center gap-2">
+                        <i className="fa-solid fa-phone text-muted" style={{ width: "16px" }}></i>
+                        <span className="medium-black fw-500">{order.phone || "—"}</span>
+                      </div>
+                      {order.customerEmail && (
+                        <div className="text-secondary fs-13 mb-2 d-flex align-items-center gap-2">
+                          <i className="fa-solid fa-envelope text-muted" style={{ width: "16px" }}></i>
+                          <span>{order.customerEmail}</span>
+                        </div>
+                      )}
+                      <div className="fs-13 pt-2 mt-auto border-top">
+                        <span className="light-gray d-block fs-11 fw-600 text-uppercase mb-1">
+                          {t("orders.shippingAddress")}:
+                        </span>
+                        <span className="medium-black">{order.shippingAddress || "—"}</span>
+                      </div>
+                      {order.note && (
+                        <div className="fs-12 mt-2 pt-2 border-top text-muted">
+                          <span className="fw-600 text-dark me-1">{t("orders.notes")}:</span>
+                          <span className="fst-italic">{order.note}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <span className="light-gray d-block mb-1">{t("orders.placedAt")}</span>
-                    <strong className="medium-black">
-                      {formatOrderDateTime(order.createdAt, i18n.language)}
-                    </strong>
+                </div>
+
+                {/* Cột 2: Hình thức giao hàng & Mã vận đơn */}
+                <div className="col-12 col-lg-4">
+                  <div className="order-info-card">
+                    <div className="order-info-card-header">
+                      <div className="order-info-icon-badge">
+                        <i className="fa-solid fa-truck-fast"></i>
+                      </div>
+                      <h6 className="order-info-card-title">{t("orders.shippingMethod")}</h6>
+                    </div>
+                    <div className="order-info-card-body">
+                      <div className="fw-700 medium-black fs-15 mb-2">
+                        {shippingMethodLabel(order.shippingMethod, t)}
+                      </div>
+                      <div className="text-secondary fs-13 mb-2">
+                        <span className="light-gray">{t("orders.shippingFee")}: </span>
+                        <strong className="medium-black">
+                          {formatOrderMoney(order.shippingFee || 0, i18n.language)}
+                        </strong>
+                      </div>
+                      <div className="fs-13 pt-2 mt-auto border-top">
+                        <span className="light-gray d-block fs-11 fw-600 text-uppercase mb-1">
+                          {t("commerce.trackingCode")}:
+                        </span>
+                        <code className="text-primary fw-600 fs-12 bg-light px-2 py-1 rounded border d-inline-block">
+                          {order.trackingCode || t("commerce.trackingPending")}
+                        </code>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cột 3: Hình thức thanh toán & Trạng thái thanh toán */}
+                <div className="col-12 col-lg-4">
+                  <div className="order-info-card">
+                    <div className="order-info-card-header">
+                      <div className="order-info-icon-badge">
+                        <i className="fa-solid fa-credit-card"></i>
+                      </div>
+                      <h6 className="order-info-card-title">{t("orders.paymentMethod")}</h6>
+                    </div>
+                    <div className="order-info-card-body">
+                      <div className="fw-700 medium-black fs-15 mb-2">
+                        {paymentMethodLabel(order.paymentMethod, t)}
+                      </div>
+                      <div className="text-secondary fs-13 mb-2 d-flex align-items-center gap-2">
+                        <span className="light-gray">{t("orders.paymentStatus")}:</span>
+                        <span className={`badge ${order.paymentStatus === "PAID" ? "bg-success" : "bg-warning text-dark"} px-2.5 py-1 rounded-pill fs-11 fw-600`}>
+                          {paymentStatusLabel(order.paymentStatus, t)}
+                        </span>
+                      </div>
+                      <div className="fs-13 pt-2 mt-auto border-top">
+                        <span className="light-gray d-block fs-11 fw-600 text-uppercase mb-1">
+                          {t("orders.placedAt")}:
+                        </span>
+                        <span className="medium-black fw-500">
+                          {formatOrderDateTime(order.createdAt, i18n.language)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. TRẠNG THÁI VẬN CHUYỂN & TIẾN ĐỘ (STATUS & TIMELINE) */}
+              <div className="order-status-card mb-20">
+                <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-16">
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="light-gray fs-14 fw-600">{t("orders.status")}:</span>
+                    <span className="badge bg-primary px-3 py-1.5 rounded-pill fs-13 fw-600">
+                      {orderStatusLabel(order.orderStatus, t)}
+                    </span>
                   </div>
                 </div>
                 <OrderTrackingTimeline status={order.orderStatus} />
-                <p className="mt-3 mb-1"><strong>{t("commerce.trackingCode")}:</strong> {order.trackingCode || t("commerce.trackingPending")}</p>
-                <p className="mb-0"><strong>{t("orders.payment")}:</strong> {paymentMethodLabel(order.paymentMethod, t)} · {paymentStatusLabel(order.paymentStatus, t)}</p>
               </div>
 
+              {/* 3. DANH SÁCH SẢN PHẨM & TỔNG TIỀN (ITEMS & TOTAL) */}
               <div className="checkout-box bg-semi-white p-24 mb-16">
                 <h6 className="fw-600 medium-black mb-16">{t("orders.items")}</h6>
                 {(order.orderItems || []).map((item) => {
@@ -117,25 +210,19 @@ const OrderDetailPage = () => {
                           {t("orders.quantityEach", { quantity: item.quantity, price: formatOrderMoney(item.unitPrice, i18n.language) })}
                         </div>
                       </div>
-                      <div className="d-flex align-items-center gap-3">
+                      <div className="d-flex flex-column align-items-end gap-2" style={{ minWidth: "260px" }}>
                         <strong className="medium-black" style={{ fontSize: "15px" }}>{formatOrderMoney(item.subtotal, i18n.language)}</strong>
                         {order.orderStatus === "DELIVERED" && (
-                          <div>
-                            {isReviewed ? (
-                              <span className="badge-order-reviewed">
-                                <i className="fa-solid fa-circle-check"></i>
-                                {t("reviews.alreadyReviewed", "Đã đánh giá")}
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                className="btn-order-review"
-                                onClick={() => setReviewItem(item)}
-                              >
-                                <i className="fa-solid fa-star text-warning"></i>
-                                {t("reviews.writeReview", "Đánh giá")}
-                              </button>
-                            )}
+                          <div className="w-100">
+                            <OrderItemReviewAction
+                              item={item}
+                              orderStatus={order.orderStatus}
+                              reviewedItemIds={reviewedOrderItemIds}
+                              onOpenReviewModal={(it) => setReviewItem(it)}
+                              onItemReviewed={(itemId) => {
+                                setReviewedOrderItemIds((current) => new Set(current).add(itemId));
+                              }}
+                            />
                           </div>
                         )}
                       </div>
@@ -169,14 +256,19 @@ const OrderDetailPage = () => {
                     <span className="fw-600">{t("orders.total")}</span>
                     <strong className="color-primary fs-5">{formatOrderMoney(order.totalCost, i18n.language)}</strong>
                   </div>
+                  {order.orderStatus === "PENDING" && (
+                    <div className="d-flex justify-content-end mt-24">
+                      <button
+                        type="button"
+                        className="btn-order-cancel-large"
+                        disabled={canceling}
+                        onClick={handleCancelOrder}
+                      >
+                        {canceling ? t("orders.cancelling") : t("orders.cancelOrder")}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
-
-              <div className="checkout-box bg-semi-white p-24">
-                <h6 className="fw-600 medium-black mb-16">{t("orders.delivery")}</h6>
-                <p className="mb-1">{order.shippingAddress}</p>
-                <p className="light-gray mb-1">{order.phone}</p>
-                <p className="light-gray mb-0">{shippingMethodLabel(order.shippingMethod, t)}</p>
               </div>
             </>
           )}

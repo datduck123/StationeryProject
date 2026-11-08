@@ -67,7 +67,7 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         if (productRepository.existsByCategoryCategoryId(id)) {
-            throw new BadRequestException("Cannot delete category as it is being used by one or more products");
+            throw new BadRequestException("Cannot delete category as it is linked to one or more products.");
         }
 
         categoryRepository.deleteById(id);
