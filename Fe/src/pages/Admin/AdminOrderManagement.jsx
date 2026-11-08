@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useTranslation } from "react-i18next";
+import i18next from "i18next";
+import { I18nextProvider, useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminListControls from "../../components/admin/AdminListControls";
 import OrderTrackingTimeline from "../../components/orders/OrderTrackingTimeline";
@@ -16,7 +17,16 @@ import {
   paymentStatusLabel,
   shippingMethodLabel,
 } from "../../utils/orderFormatters";
+import enTranslation from "../../locales/en/translation.json";
 import "../../styles/customer-orders.css";
+
+const adminOrderI18n = i18next.createInstance();
+adminOrderI18n.init({
+  lng: "en",
+  fallbackLng: "en",
+  resources: { en: { translation: enTranslation } },
+  initImmediate: false,
+});
 
 const PAGE_SIZE = 10;
 const statusColors = {
@@ -29,7 +39,7 @@ const statusColors = {
 const money = (amount, language) =>
   new Intl.NumberFormat(language === "vi" ? "vi-VN" : "en-US", { style: "currency", currency: "VND" }).format(Number(amount || 0));
 
-const AdminOrderManagement = () => {
+const AdminOrderManagementContent = () => {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { id: routeOrderId } = useParams();
@@ -181,7 +191,7 @@ const AdminOrderManagement = () => {
   };
 
   return (
-    <section className="p-4">
+    <section className="p-4 notranslate" translate="no">
       <div className="mb-4">
         <h4 className="fw-700 medium-black mb-1">{t("adminOrders.title")}</h4>
         <p className="text-muted fs-13 mb-0">{t("adminOrders.subtitle")}</p>
@@ -269,7 +279,8 @@ const AdminOrderManagement = () => {
       </div>
       {detailOpen && createPortal(
         <div
-          className="admin-order-overlay customer-order-modal-overlay"
+          className="admin-order-overlay customer-order-modal-overlay notranslate"
+          translate="no"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closeDetail();
           }}
@@ -317,7 +328,7 @@ const AdminOrderManagement = () => {
         document.body,
       )}
       {statusOrder && createPortal(
-        <div className="admin-order-overlay" onMouseDown={(event) => {
+        <div className="admin-order-overlay notranslate" translate="no" onMouseDown={(event) => {
           if (event.target === event.currentTarget) setStatusOrder(null);
         }}>
           <div className="admin-order-dialog admin-order-status-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-order-status-title">
@@ -336,5 +347,11 @@ const AdminOrderManagement = () => {
     </section>
   );
 };
+
+const AdminOrderManagement = () => (
+  <I18nextProvider i18n={adminOrderI18n}>
+    <AdminOrderManagementContent />
+  </I18nextProvider>
+);
 
 export default AdminOrderManagement;
