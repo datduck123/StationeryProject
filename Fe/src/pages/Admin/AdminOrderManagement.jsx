@@ -36,7 +36,7 @@ const AdminOrderManagement = () => {
   const { showToast } = useToast();
   const [searchInput, setSearchInput] = useState("");
   const [keyword, setKeyword] = useState("");
-  const [status, setStatus] = useState("SHIPPING");
+  const [status, setStatus] = useState("");
   const [page, setPage] = useState(0);
   const [pageData, setPageData] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -57,10 +57,13 @@ const AdminOrderManagement = () => {
   const detailRequestId = useRef(0);
   const closeDetailButton = useRef(null);
   const closeStatusButton = useRef(null);
-  const statusOptions = ["SHIPPING", "DELIVERED"].map((value) => ({
-    value,
-    label: t(`orders.statuses.${value}`),
-  }));
+  const statusOptions = [
+    { value: "", label: t("adminOrders.filters.allStatuses") },
+    ...["SHIPPING", "DELIVERED"].map((value) => ({
+      value,
+      label: t(`orders.statuses.${value}`),
+    })),
+  ];
 
   useEffect(() => {
     const timer = setTimeout(() => {
