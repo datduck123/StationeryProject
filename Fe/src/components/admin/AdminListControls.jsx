@@ -33,16 +33,18 @@ const AdminListControls = ({
           ))}
         </select>
       ))}
-      <select
-        className="admin-select-sm"
-        aria-label={sortLabel}
-        value={sort}
-        onChange={(event) => onSortChange(event.target.value)}
-      >
-        {sortOptions.map((option) => (
-          <option key={option.value} value={option.value}>{option.label}</option>
-        ))}
-      </select>
+      {sortOptions.length > 0 && (
+        <select
+          className="admin-select-sm"
+          aria-label={sortLabel}
+          value={sort}
+          onChange={(event) => onSortChange(event.target.value)}
+        >
+          {sortOptions.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+      )}
     </div>
   </div>
 );
