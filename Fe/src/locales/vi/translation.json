@@ -324,6 +324,7 @@
       "actions": "Thao tác"
     },
     "sort": {
+      "all": "Tất cả",
       "newest": "Mới nhất",
       "oldest": "Cũ nhất",
       "totalHighLow": "Tổng tiền: cao đến thấp",

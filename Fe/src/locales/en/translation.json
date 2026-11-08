@@ -324,6 +324,7 @@
       "actions": "Actions"
     },
     "sort": {
+      "all": "All",
       "newest": "Newest first",
       "oldest": "Oldest first",
       "totalHighLow": "Total: high to low",

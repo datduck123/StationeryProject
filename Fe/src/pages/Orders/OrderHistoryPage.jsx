@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import CustomerOrderDetailModal from "../../components/orders/CustomerOrderDetailModal";
 import TitleBanner from "../../components/shared/TitleBanner";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import Pagination from "../../components/ui/Pagination";
 import { useToast } from "../../providers/ToastContext";
 import orderService from "../../services/orderService";
@@ -24,13 +25,15 @@ const OrderHistoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
   const [page, setPage] = useState(0);
-  const [sort, setSort] = useState("totalCost:desc");
+  const [sort, setSort] = useState("createdAt:desc");
   const [refreshKey, setRefreshKey] = useState(0);
   const [cancelingId, setCancelingId] = useState(null);
+  const [confirmingOrder, setConfirmingOrder] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedOrderNumber, setSelectedOrderNumber] = useState(null);
 
   const sortOptions = useMemo(() => [
+    { value: "createdAt:desc", label: t("orders.sort.all") },
     { value: "totalCost:desc", label: t("orders.sort.totalHighLow") },
     { value: "totalCost:asc", label: t("orders.sort.totalLowHigh") },
   ], [t]);
@@ -59,7 +62,6 @@ const OrderHistoryPage = () => {
   }, []);
 
   const cancelOrder = async (orderId, orderNumber) => {
-    if (!window.confirm(t("orders.confirmCancel", { number: orderNumber }))) return;
     setCancelingId(orderId);
     try {
       await orderService.cancelMyOrder(orderId);
@@ -147,7 +149,7 @@ const OrderHistoryPage = () => {
                               </button>
                             )}
                             {order.orderStatus === "PENDING" && (
-                              <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => cancelOrder(order.orderId, orderNumber)} disabled={cancelingId === order.orderId}>
+                              <button type="button" className="btn btn-outline-danger btn-sm" onClick={() => setConfirmingOrder({ orderId: order.orderId, orderNumber })} disabled={cancelingId !== null}>
                                 {cancelingId === order.orderId ? t("orders.cancelling") : t("orders.cancelOrder")}
                               </button>
                             )}
@@ -171,6 +173,21 @@ const OrderHistoryPage = () => {
         </div>
       </section>
       <CustomerOrderDetailModal order={selectedOrder} orderNumber={selectedOrderNumber} onClose={closeDetails} />
+      <ConfirmDialog
+        isOpen={Boolean(confirmingOrder)}
+        title={t("orders.cancelOrder")}
+        message={t("orders.confirmCancel", { number: confirmingOrder?.orderNumber })}
+        confirmText={t("orders.cancelOrder")}
+        cancelText={t("orders.cancel")}
+        confirmVariant="danger"
+        onConfirm={() => {
+          if (!confirmingOrder || cancelingId !== null) return;
+          const { orderId, orderNumber } = confirmingOrder;
+          setConfirmingOrder(null);
+          void cancelOrder(orderId, orderNumber);
+        }}
+        onCancel={() => setConfirmingOrder(null)}
+      />
     </>
   );
 };
