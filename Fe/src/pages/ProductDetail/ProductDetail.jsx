@@ -74,6 +74,25 @@ export const ProductDetail = () => {
       .finally(() => setLoading(false));
   }, [productId]);
 
+  useEffect(() => {
+    const isReview =
+      searchParams.get("tab") === "review" ||
+      window.location.hash === "#reviews" ||
+      window.location.hash === "#review";
+    if (isReview) {
+      setActiveTab("review");
+      const timer = setTimeout(() => {
+        const el =
+          document.getElementById("product-reviews-section") ||
+          document.querySelector(".product-tab-wrapper");
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [productId, searchParams]);
+
   const formatCurrency = (amount) => {
     if (amount == null) return "";
     return new Intl.NumberFormat("vi-VN", {
@@ -273,11 +292,6 @@ export const ProductDetail = () => {
                     {t("productDetail.remainingStock", "Remaining:")}{" "}
                     <span className="color-primary fw-700">{product.stockQuantity}</span>{" "}
                     {t("productDetail.itemsInStock", "items in stock!")}
-                    {product.stockQuantity > 20 && (
-                      <span className="text-muted ms-2" style={{ fontSize: "13px" }}>
-                        ({t("productDetail.maxPerOrder", "Tối đa 20 sản phẩm/đơn")})
-                      </span>
-                    )}
                   </p>
                 ) : null}
 
@@ -445,7 +459,7 @@ export const ProductDetail = () => {
           </div>
 
           {/* Description / Additional / Review Tabs */}
-          <div className="product-tab-wrapper mb-80">
+          <div className="product-tab-wrapper mb-80" id="product-reviews-section">
             <ul className="nav nav-tabs border-bottom mb-32 justify-content-center">
               <li className="nav-item">
                 <button

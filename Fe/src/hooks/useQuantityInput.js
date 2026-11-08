@@ -2,35 +2,28 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 /**
  * Hook to manage quantity input with strict numeric validation,
- * automatic clamping/snapping to stock limit (maximum 20 per item per order),
+ * automatic clamping/snapping to available stock limit,
  * and keyboard controls.
  *
  * @param {Object} options
  * @param {number|string} options.value Current quantity value
- * @param {number} [options.maxStock=20] Available stock quantity
- * @param {number} [options.maxLimit=20] Maximum allowed purchase limit per order (default 20)
+ * @param {number} [options.maxStock=999999] Available stock quantity
  * @param {number} [options.min=1] Minimum allowed quantity (defaults to 1, or 0 if out of stock)
  * @param {function} [options.onChange] Callback when quantity changes / commits
  * @param {boolean} [options.commitOnBlurOnly=false] If true, onChange only fires on blur or step
  */
 export function useQuantityInput({
   value = 1,
-  maxStock = 20,
-  maxLimit = 20,
+  maxStock = 999999,
+  maxLimit,
   min = 1,
   onChange,
   commitOnBlurOnly = false,
 }) {
-  const parsedLimit = Number(maxLimit);
-  const orderLimit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 20;
-
   const parsedStock = Number(maxStock);
-  const stockLimit = Number.isFinite(parsedStock) ? Math.max(0, parsedStock) : orderLimit;
-
-  // The effective maximum is the minimum between actual stock and max purchase limit (20)
-  // E.g., stock = 10 -> max is 10. stock = 50 -> max is 20.
-  const effectiveMax = Math.min(stockLimit, orderLimit);
+  const effectiveMax = Number.isFinite(parsedStock) ? Math.max(0, parsedStock) : 999999;
   const effectiveMin = effectiveMax <= 0 ? 0 : Math.max(0, Number(min) || 1);
+  const orderLimit = effectiveMax;
 
   const clamp = useCallback(
     (val) => {
@@ -109,7 +102,7 @@ export function useQuantityInput({
 
       let num = parseInt(rawDigits, 10);
 
-      // If user inputs a number greater than effective max (min of stock & 20), snap directly to effective max
+      // If user inputs a number greater than available stock, snap directly to available stock
       if (effectiveMax > 0 && num > effectiveMax) {
         num = effectiveMax;
       }
