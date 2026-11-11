@@ -345,6 +345,19 @@ export const ShopGridSidebar = () => {
     setSearchParams(new URLSearchParams(), { replace: true });
   };
 
+  const handleRemoveKeyword = () => {
+    setCurrentPage(0);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      nextParams.delete("keyword");
+      nextParams.delete("search");
+      return nextParams;
+    }, { replace: true });
+  };
+
+  const activeCategoryObj = selectedCategoryId ? categories.find((c) => Number(c.id) === Number(selectedCategoryId)) : null;
+  const activeBrandObj = selectedBrandId ? brands.find((b) => Number(b.id) === Number(selectedBrandId)) : null;
+
   // ── Sidebar content (shared between desktop & mobile) ────────────────────
   const renderSidebarContent = (prefix = "desktop") => (
     <div className={`shop-sidebar-card sidebar ${prefix === "desktop" ? "shop-sidebar-sticky" : ""}`}>
@@ -745,6 +758,105 @@ export const ShopGridSidebar = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Active Filter Chips Bar */}
+              {hasActiveFilters && (
+                <div className="shop-active-chips-bar">
+                  <span className="text-muted fs-12 fw-600 me-1">
+                    <i className="fa-solid fa-filter me-1 text-primary"></i>
+                    {t("shop.activeFilters", "Active filters:")}
+                  </span>
+
+                  {keyword && (
+                    <div className="shop-active-chip">
+                      <span className="shop-active-chip-label">{t("shop.filterKeyword", "Keyword")}:</span>
+                      <span className="shop-active-chip-value">"{keyword}"</span>
+                      <button
+                        type="button"
+                        className="shop-active-chip-remove"
+                        onClick={handleRemoveKeyword}
+                        aria-label="Remove keyword filter"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+
+                  {activeCategoryObj && (
+                    <div className="shop-active-chip">
+                      <span className="shop-active-chip-label">{t("shop.filterCategory", "Category")}:</span>
+                      <span className="shop-active-chip-value">{activeCategoryObj.name}</span>
+                      <button
+                        type="button"
+                        className="shop-active-chip-remove"
+                        onClick={() => handleCategoryChange(selectedCategoryId)}
+                        aria-label="Remove category filter"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+
+                  {activeBrandObj && (
+                    <div className="shop-active-chip">
+                      <span className="shop-active-chip-label">{t("shop.filterBrand", "Brand")}:</span>
+                      <span className="shop-active-chip-value">{activeBrandObj.name}</span>
+                      <button
+                        type="button"
+                        className="shop-active-chip-remove"
+                        onClick={() => handleBrandChange(selectedBrandId)}
+                        aria-label="Remove brand filter"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+
+                  {(minPrice !== null || maxPrice !== null) && (
+                    <div className="shop-active-chip">
+                      <span className="shop-active-chip-label">{t("shop.filterPrice", "Price")}:</span>
+                      <span className="shop-active-chip-value">
+                        {minPrice !== null ? formatOrderMoney(minPrice, i18n.language) : "0₫"}
+                        {" - "}
+                        {maxPrice !== null ? formatOrderMoney(maxPrice, i18n.language) : "150.000₫"}
+                      </span>
+                      <button
+                        type="button"
+                        className="shop-active-chip-remove"
+                        onClick={handleResetPrice}
+                        aria-label="Remove price filter"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+
+                  {stockFilter && (
+                    <div className="shop-active-chip">
+                      <span className="shop-active-chip-label">{t("shop.filterStock", "Stock")}:</span>
+                      <span className="shop-active-chip-value">
+                        {inStockSelected ? t("common.inStock", "In Stock") : t("common.outOfStock", "Out of Stock")}
+                      </span>
+                      <button
+                        type="button"
+                        className="shop-active-chip-remove"
+                        onClick={() => handleStockChange(stockFilter)}
+                        aria-label="Remove stock filter"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    className="shop-clear-all-chip-btn"
+                    onClick={resetAllFilters}
+                  >
+                    {t("common.clearAll", "Clear all")}
+                  </button>
+                </div>
+              )}
 
               {/* Product Grid */}
               {loading ? (
