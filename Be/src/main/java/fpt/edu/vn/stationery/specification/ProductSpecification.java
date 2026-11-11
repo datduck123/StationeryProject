@@ -33,6 +33,18 @@ public class ProductSpecification {
             // 1. Only public products (status = ACTIVE)
             predicates.add(cb.equal(root.get("status"), ProductStatus.ACTIVE));
 
+            // 1b. Exclude products belonging to INACTIVE categories
+            predicates.add(cb.or(
+                    cb.isNull(root.get("category")),
+                    cb.equal(root.get("category").get("status"), "ACTIVE")
+            ));
+
+            // 1c. Exclude products belonging to INACTIVE brands
+            predicates.add(cb.or(
+                    cb.isNull(root.get("brand")),
+                    cb.equal(root.get("brand").get("status"), "ACTIVE")
+            ));
+
             // 2. Keyword search on product name (case-insensitive)
             if (keyword != null && !keyword.trim().isEmpty()) {
                 String pattern = "%" + keyword.trim().toLowerCase() + "%";

@@ -95,6 +95,22 @@ public class BrandServiceImpl implements BrandService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<BrandResponseDTO> getActiveBrands() {
+        return brandRepository.findByStatus("ACTIVE").stream()
+                .map(brand -> {
+                    BrandResponseDTO dto = brandMapper.toDto(brand);
+                    if (brand.getBrandId() != null) {
+                        dto.setProductCount(productRepository.countByBrandBrandId(brand.getBrandId()));
+                    } else {
+                        dto.setProductCount(0L);
+                    }
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public BrandResponseDTO getBrandById(Long id) {
         Brand brand = brandRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Brand not found with id: " + id));

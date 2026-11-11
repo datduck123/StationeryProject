@@ -91,6 +91,22 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<CategoryResponseDTO> getActiveCategories() {
+        return categoryRepository.findByStatus("ACTIVE").stream()
+                .map(cat -> {
+                    CategoryResponseDTO dto = categoryMapper.toDto(cat);
+                    if (cat.getCategoryId() != null) {
+                        dto.setProductCount(productRepository.countByCategoryCategoryId(cat.getCategoryId()));
+                    } else {
+                        dto.setProductCount(0L);
+                    }
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public CategoryResponseDTO getCategoryById(Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + id));

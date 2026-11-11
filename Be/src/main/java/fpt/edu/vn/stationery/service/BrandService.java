@@ -9,5 +9,6 @@ public interface BrandService {
     BrandResponseDTO updateBrand(Long id, BrandRequestDTO request);
     void deleteBrand(Long id);
     List<BrandResponseDTO> getAllBrands();
+    List<BrandResponseDTO> getActiveBrands();
     BrandResponseDTO getBrandById(Long id);
 }
