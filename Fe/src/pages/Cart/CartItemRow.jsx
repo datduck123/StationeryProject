@@ -36,6 +36,7 @@ export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
   };
 
   return (
+    // CartItemRow -> trong và ngoài
     <div
       className={`cart-item-row-wrapper ${isRemoving ? "cart-item-removing" : ""
         }`}
