@@ -260,7 +260,8 @@
   border-radius: 8px;
   padding: 0 12px;
   height: 38px;
-  width: 500px;
+  min-width: 220px;
+  max-width: 100%;
   transition:
     border-color 0.2s,
     box-shadow 0.2s;
@@ -479,6 +480,82 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+
+.admin-order-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.admin-order-stat-card {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  background: var(--admin-card-bg);
+  box-shadow: 0 2px 7px rgba(28, 37, 52, 0.04);
+}
+
+.admin-order-stat-card p {
+  margin: 0 0 5px;
+  color: var(--admin-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.admin-order-stat-card strong {
+  display: block;
+  color: var(--admin-text-main);
+  font-size: 25px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.admin-order-stat-icon {
+  display: inline-flex;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  font-size: 18px;
+}
+
+.admin-order-stat-total .admin-order-stat-icon { background: #fff0eb; color: #e9613f; }
+.admin-order-stat-delivered .admin-order-stat-icon { background: #e2f3ec; color: #15936a; }
+.admin-order-stat-cancelled .admin-order-stat-icon { background: #f6f7f8; color: #68758d; }
+.admin-order-stat-revenue .admin-order-stat-icon { background: #dfebff; color: #126af0; }
+.admin-order-stat-delivered strong { color: #15936a; }
+.admin-order-stat-cancelled strong { color: #68758d; }
+.admin-order-stat-revenue strong { color: #126af0; }
+
+.admin-order-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  color: var(--admin-text-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 1199.98px) {
+  .admin-order-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 575.98px) {
+  .admin-order-stats { grid-template-columns: 1fr; }
+  .admin-order-pagination { justify-content: center; text-align: center; }
 }
 
 /* Cards & Sections */
@@ -805,44 +882,45 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.admin-stat-card-clickable:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+.admin-order-status-changer {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e9f0;
 }
 
-.admin-stat-card-clickable.active-filter {
-  border-color: var(--admin-primary) !important;
-  box-shadow: 0 0 0 2px rgba(233, 97, 63, 0.25), 0 8px 20px rgba(0, 0, 0, 0.08) !important;
+.admin-order-status-changer .form-select {
+  max-width: 260px;
 }
 
-.user-status-active {
-  background-color: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
+.admin-order-status-dialog {
+  width: min(480px, 100%);
 }
 
-.user-status-inactive {
-  background-color: #fffbeb;
-  color: #b45309;
-  border: 1px solid #fde68a;
+/* Admin Modal Card & Inputs */
+.admin-modal-card {
+  background: #ffffff !important;
 }
 
-.user-status-blocked {
-  background-color: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+.admin-modal-card .form-control,
+.admin-modal-card .form-select {
+  background-color: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
 }
 
-.user-role-admin {
-  background-color: #fff0eb;
-  color: #d24e2c;
-  border: 1px solid #fed7aa;
+.admin-modal-card .form-control:focus,
+.admin-modal-card .form-select:focus {
+  background-color: #ffffff !important;
+  border-color: var(--admin-primary);
+  box-shadow: 0 0 0 3px rgba(233, 97, 63, 0.15) !important;
 }
 
-.user-role-patient,
-.user-role-customer {
-  background-color: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
+.admin-modal-card .form-control.bg-light {
+  background-color: #f8fafc !important;
+}
+
+.admin-modal-card select.form-select.form-control-2 {
+  padding-left: 14px !important;
 }
 

@@ -1,0 +1,60 @@
+package fpt.edu.vn.stationery.service;
+
+import fpt.edu.vn.stationery.dto.request.ProductRequestDTO;
+import fpt.edu.vn.stationery.dto.request.UpdateStockRequestDTO;
+import fpt.edu.vn.stationery.dto.response.PageDTO;
+import fpt.edu.vn.stationery.dto.response.ProductResponseDTO;
+
+import java.math.BigDecimal;
+import java.util.List;
+
+public interface ProductService {
+
+    PageDTO<ProductResponseDTO> getProducts(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String sort);
+
+    PageDTO<ProductResponseDTO> getProducts(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            String stock,
+            String sort);
+
+    PageDTO<ProductResponseDTO> getProductsAdmin(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            String status,
+            String sort);
+
+    ProductResponseDTO getProductById(Long id);
+
+    ProductResponseDTO getProductByIdAdmin(Long id);
+
+    ProductResponseDTO createProduct(ProductRequestDTO request);
+
+    ProductResponseDTO updateProduct(Long id, ProductRequestDTO request);
+
+    void deleteProduct(Long id);
+
+    ProductResponseDTO updateStock(Long id, UpdateStockRequestDTO request);
+
+    /** Returns top products ordered by average review rating (for the Featured section). */
+    List<ProductResponseDTO> getFeaturedProducts(int limit);
+
+    /** Returns top products ordered by sold count descending (for the Best Seller section). */
+    List<ProductResponseDTO> getBestSellerProducts(int limit);
+}

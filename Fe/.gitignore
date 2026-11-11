@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+!.env.example
+!.env.template
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -23,3 +34,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# =========================
+# Java / Maven
+# =========================
+**/target/
+*.class

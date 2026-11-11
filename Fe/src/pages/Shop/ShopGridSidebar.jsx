@@ -1,319 +1,538 @@
 // Migrated from: shop-grid-sidebar.html, lines 203-2241; assets/js/app.js lines 322-352
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / input self-closing, accordion states, mobile filter drawer state, i18n support
-import { useState } from "react";
-import { Link } from "react-router-dom";
+// API integration: replaced mock data with real /api/products, /api/categories/public, /api/brands/public calls
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import TitleBanner from "../../components/shared/TitleBanner";
 import PriceSlider from "../../components/ui/PriceSlider";
 import CustomDropdown from "../../components/ui/CustomDropdown";
 import { useCartContext } from "../../providers/CartContext";
+import { getProducts, getCategories, getBrands, getProductImage } from "../../services/productService";
+import ProductRatingSold from "../../components/shared/ProductRatingSold";
+import { onProductChange } from "../../utils/syncEvents";
+import { formatOrderMoney } from "../../utils/orderFormatters";
+import "./ShopGridSidebar.css";
+
+const PAGE_SIZE = 12;
+
+const SidebarSectionHeader = ({ title, isOpen, onToggle, activeCount = null }) => (
+  <div className="shop-sidebar-header" onClick={onToggle}>
+    <h6 className="shop-sidebar-title">
+      <span>{title}</span>
+      {activeCount !== null && activeCount > 0 && (
+        <span className="shop-active-filter-badge">{activeCount}</span>
+      )}
+    </h6>
+    <span className={`shop-sidebar-toggle-btn ${isOpen ? "is-open" : ""}`} aria-label="Toggle section">
+      <svg
+        width="13"
+        height="13"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`shop-sidebar-chevron ${isOpen ? "is-open" : ""}`}
+      >
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </span>
+  </div>
+);
 
 export const ShopGridSidebar = () => {
-  const { openCart, openQuickView, openCompare } = useCartContext();
-  const { t } = useTranslation();
+  const {
+    openCart,
+    openQuickView,
+    openCompare,
+    addToCart,
+    addCompareProduct,
+    toggleWishlist,
+    isInWishlist,
+  } = useCartContext();
+  const { t, i18n } = useTranslation();
 
+  const sortOptions = [
+    { label: t("shop.defaultSorting", "Default"), value: "" },
+    { label: t("shop.priceLowHigh", "Price: Low to High"), value: "price,asc" },
+    { label: t("shop.priceHighLow", "Price: High to Low"), value: "price,desc" },
+    { label: t("shop.sortNameAsc", "Name: A → Z"), value: "name,asc" },
+    { label: t("shop.sortNameDesc", "Name: Z → A"), value: "name,desc" },
+  ];
+
+  // ── Sidebar accordion state ──────────────────────────────────────────────
   const [openCategories, setOpenCategories] = useState({
     availability: true,
     price: true,
     categories: true,
-    tags: true,
+    brands: true,
   });
-
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
   const toggleCategory = (key) => {
     setOpenCategories((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const products = [
-    {
-      id: 1,
-      title: "Daily Planner Pro",
-      image: "/assets/media/products/product-1.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 2,
-      title: "SmoothFlow Pens",
-      image: "/assets/media/products/product-2.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 3,
-      title: "Premium Bags",
-      image: "/assets/media/products/product-3.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 4,
-      title: "Pencil Case Mockup",
-      image: "/assets/media/products/product-4.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 5,
-      title: "Classic Ballpoint Pens",
-      image: "/assets/media/products/product-5.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 6,
-      title: "Magnetic Paper Clips",
-      image: "/assets/media/products/product-6.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 7,
-      title: "Pen's Box",
-      image: "/assets/media/products/product-7.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 8,
-      title: "Calculator",
-      image: "/assets/media/products/product-8.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 9,
-      title: "Watercolor Paper Pad",
-      image: "/assets/media/products/product-9.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-  ];
+  // ── Filter / Pagination state ────────────────────────────────────────────
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const renderSidebarContent = () => (
-    <div className="sidebar">
-      {/* Search Bar */}
-      <form
-        action="#"
-        method="post"
-        className="search-bar-container mb-24"
-        onSubmit={(e) => e.preventDefault()}
-      >
-        <div className="search-input-block">
-          <input
-            type="text"
-            name="search"
-            placeholder={t("header.searchPlaceholder", "Search Here...")}
-          />
-        </div>
-        <button type="submit" aria-label="Search">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <path
-              d="M9.74062 0C15.1116 0 19.4812 4.36964 19.4812 9.74063C19.4812 12.1734 18.5847 14.4008 17.1047 16.1097L23.7941 22.7997C24.0687 23.0743 24.0686 23.5195 23.794 23.7941C23.5194 24.0687 23.0743 24.0686 22.7997 23.7941L16.1104 17.1041C14.4014 18.5845 12.1738 19.4813 9.74062 19.4813C4.36964 19.4813 0 15.1116 0 9.74063C0 4.36964 4.36964 0 9.74062 0ZM9.74062 18.075C14.3362 18.075 18.075 14.3362 18.075 9.74063C18.075 5.14505 14.3362 1.40625 9.74062 1.40625C5.14505 1.40625 1.40625 5.14505 1.40625 9.74063C1.40625 14.3362 5.14505 18.075 9.74062 18.075Z"
-              fill="white"
-            />
+  // Derived filter state directly from URL searchParams (Single Source of Truth, avoids stale closures & desync)
+  const keyword = searchParams.get("keyword") || searchParams.get("search") || "";
+  const rawBrandId = searchParams.get("brandId") || searchParams.get("brand");
+  const selectedBrandId = rawBrandId ? Number(rawBrandId) : null;
+  const rawCategoryId = searchParams.get("categoryId") || searchParams.get("category");
+  const selectedCategoryId = rawCategoryId ? Number(rawCategoryId) : null;
+  const stockFilter = searchParams.get("stock") || null; // "inStock" | "outStock" | null
+  const inStockSelected = stockFilter === "inStock";
+  const outStockSelected = stockFilter === "outStock";
+  const stockActiveCount = stockFilter ? 1 : 0;
+  const rawMinPrice = searchParams.get("minPrice");
+  const minPrice = rawMinPrice !== null && rawMinPrice !== undefined && rawMinPrice !== "" ? Number(rawMinPrice) : null;
+  const rawMaxPrice = searchParams.get("maxPrice");
+  const maxPrice = rawMaxPrice !== null && rawMaxPrice !== undefined && rawMaxPrice !== "" ? Number(rawMaxPrice) : null;
+
+  const [sortValue, setSortValue] = useState("");
+  const [currentPage, setCurrentPage] = useState(0);
+
+  // ── Data state ───────────────────────────────────────────────────────────
+  const [products, setProducts] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+
+  // ── Loading / Error state ────────────────────────────────────────────────
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [sidebarLoading, setSidebarLoading] = useState(true);
+
+  // ── Fetch sidebar data (categories + brands) ─────────────────────────────
+  const fetchSidebarData = useCallback(async () => {
+    try {
+      setSidebarLoading(true);
+      const [catRes, brandRes] = await Promise.all([
+        getCategories(),
+        getBrands(),
+      ]);
+      const rawCats = catRes.data?.data ?? catRes.data ?? [];
+      const rawBrands = brandRes.data?.data ?? brandRes.data ?? [];
+      setCategories(
+        rawCats.map((c) => ({
+          ...c,
+          id: c.categoryId ?? c.id,
+        }))
+      );
+      setBrands(
+        rawBrands.map((b) => ({
+          ...b,
+          id: b.brandId ?? b.id,
+        }))
+      );
+    } catch (err) {
+      console.warn("Could not load categories/brands:", err);
+    } finally {
+      setSidebarLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSidebarData();
+  }, [fetchSidebarData]);
+
+  // ── Fetch products whenever filters / page change ────────────────────────
+  const fetchReqIdRef = useRef(0);
+
+  const fetchProducts = useCallback(async () => {
+    const reqId = ++fetchReqIdRef.current;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await getProducts({
+        page: currentPage,
+        size: PAGE_SIZE,
+        keyword: keyword || undefined,
+        categoryId: selectedCategoryId || undefined,
+        brandId: selectedBrandId || undefined,
+        minPrice: minPrice !== null ? minPrice : undefined,
+        maxPrice: maxPrice !== null ? maxPrice : undefined,
+        stock: stockFilter || undefined,
+        sort: sortValue || undefined,
+      });
+
+      if (reqId !== fetchReqIdRef.current) return;
+
+      const data = res.data;
+      // Spring Page response shape: { content, totalPages, totalElements, ... }
+      if (data && Array.isArray(data.content)) {
+        const newTotalPages = data.totalPages ?? 1;
+        setTotalPages(newTotalPages);
+        setTotalElements(data.totalElements ?? data.content.length);
+
+        // Nếu trang hiện tại rỗng do sản phẩm vừa bị chuyển sang INACTIVE/xoá, tự động nhảy về trang trước
+        if (data.content.length === 0 && currentPage > 0 && currentPage >= newTotalPages) {
+          setCurrentPage(Math.max(0, newTotalPages - 1));
+          return;
+        }
+
+        setProducts(data.content);
+      } else if (Array.isArray(data)) {
+        setProducts(data);
+        setTotalPages(1);
+        setTotalElements(data.length);
+      } else {
+        setProducts([]);
+      }
+    } catch (err) {
+      if (reqId !== fetchReqIdRef.current) return;
+      console.error("Failed to fetch products:", err);
+      setError(t("commerce.productLoadError", "Could not load products."));
+      setProducts([]);
+    } finally {
+      if (reqId === fetchReqIdRef.current) {
+        setLoading(false);
+      }
+    }
+  }, [currentPage, keyword, selectedCategoryId, selectedBrandId, minPrice, maxPrice, stockFilter, sortValue, t]);
+
+  // ── Auto-adjust page if current page exceeds total pages ─────────────────
+  useEffect(() => {
+    if (currentPage >= totalPages && totalPages > 0) {
+      setCurrentPage(Math.max(0, totalPages - 1));
+    }
+  }, [totalPages, currentPage]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // ── Real-time synchronization with Admin changes (cross-tab & in-tab) ─────
+  useEffect(() => {
+    const unsubscribe = onProductChange(() => {
+      fetchProducts();
+      fetchSidebarData();
+    });
+    return unsubscribe;
+  }, [fetchProducts, fetchSidebarData]);
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+
+  const handleCategoryChange = (id) => {
+    setCurrentPage(0);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      const current = nextParams.get("categoryId") || nextParams.get("category");
+      if (current && Number(current) === Number(id)) {
+        nextParams.delete("categoryId");
+        nextParams.delete("category");
+      } else {
+        nextParams.set("categoryId", String(id));
+        nextParams.delete("category");
+      }
+      return nextParams;
+    }, { replace: true });
+  };
+
+  const handleBrandChange = (id) => {
+    setCurrentPage(0);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      const current = nextParams.get("brandId") || nextParams.get("brand");
+      if (current && Number(current) === Number(id)) {
+        nextParams.delete("brandId");
+        nextParams.delete("brand");
+      } else {
+        nextParams.set("brandId", String(id));
+        nextParams.delete("brand");
+      }
+      return nextParams;
+    }, { replace: true });
+  };
+
+  const handleStockChange = (type) => {
+    setCurrentPage(0);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      const current = nextParams.get("stock");
+      if (current === type) {
+        nextParams.delete("stock");
+      } else {
+        nextParams.set("stock", type);
+      }
+      return nextParams;
+    }, { replace: true });
+  };
+
+  const handleApplyPrice = (min, max) => {
+    setCurrentPage(0);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      if (min !== null && min !== undefined && min > 0) {
+        nextParams.set("minPrice", String(min));
+      } else {
+        nextParams.delete("minPrice");
+      }
+      if (max !== null && max !== undefined && max < 150000) {
+        nextParams.set("maxPrice", String(max));
+      } else {
+        nextParams.delete("maxPrice");
+      }
+      return nextParams;
+    }, { replace: true });
+  };
+
+  const handleResetPrice = () => {
+    setCurrentPage(0);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      nextParams.delete("minPrice");
+      nextParams.delete("maxPrice");
+      return nextParams;
+    }, { replace: true });
+  };
+
+  const handleSortSelect = (label) => {
+    const found = sortOptions.find((o) => o.label === label);
+    setSortValue(found ? found.value : "");
+    setCurrentPage(0);
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 0 && page < totalPages) {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const hasActiveFilters = Boolean(
+    stockActiveCount > 0 ||
+    minPrice !== null ||
+    maxPrice !== null ||
+    selectedCategoryId !== null ||
+    selectedBrandId !== null ||
+    keyword
+  );
+
+  const activeFilterCount = (
+    (stockActiveCount > 0 ? 1 : 0) +
+    (minPrice !== null || maxPrice !== null ? 1 : 0) +
+    (selectedCategoryId !== null ? 1 : 0) +
+    (selectedBrandId !== null ? 1 : 0) +
+    (keyword ? 1 : 0)
+  );
+
+  const resetAllFilters = () => {
+    setCurrentPage(0);
+    setSearchParams(new URLSearchParams(), { replace: true });
+  };
+
+  // ── Sidebar content (shared between desktop & mobile) ────────────────────
+  const renderSidebarContent = (prefix = "desktop") => (
+    <div className={`shop-sidebar-card sidebar ${prefix === "desktop" ? "shop-sidebar-sticky" : ""}`}>
+      {/* Header bar with Active Filter Summary and Reset */}
+      <div className="d-flex align-items-center justify-content-between mb-16 pb-12" style={{ borderBottom: "1px solid #f1f5f9" }}>
+        <div className="d-flex align-items-center gap-8">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e57c32" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
           </svg>
-        </button>
-      </form>
-
-      {/* Availability Filter */}
-      <div
-        className="category-block box-2 mb-32 wow fadeInUp animated"
-        data-wow-delay="200ms"
-      >
-        <div className="title" onClick={() => toggleCategory("availability")}>
-          <h6 className="fw-600 font-sec medium-black">
-            {t("shop.availability", "Availablity")}
-          </h6>
-          <span>
-            <i
-              className={`fa-light ${openCategories.availability ? "fa-chevron-up" : "fa-chevron-down"}`}
-            ></i>
+          <span style={{ fontWeight: 700, fontSize: "15px", color: "#0f172a", letterSpacing: "-0.2px" }}>
+            {t("shop.filterTitle", "Filters")}
           </span>
         </div>
+        <div className="d-flex align-items-center gap-2">
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="shop-reset-filters-btn"
+              onClick={resetAllFilters}
+              title={t("common.reset", "Reset")}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+              <span>{t("common.clearAll", "Clear all")}</span>
+            </button>
+          )}
+          {prefix === "desktop" && (
+            <button
+              type="button"
+              className="shop-sidebar-close-btn"
+              onClick={() => setIsSidebarVisible(false)}
+              title={t("shop.hideFilters", "Ẩn bộ lọc")}
+              aria-label="Hide filter sidebar"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Availability Filter */}
+      <div className="category-block mb-12">
+        <SidebarSectionHeader
+          title={t("shop.availability", "Availability")}
+          isOpen={openCategories.availability}
+          onToggle={() => toggleCategory("availability")}
+          activeCount={stockActiveCount > 0 ? stockActiveCount : null}
+        />
         {openCategories.availability && (
-          <div className="content-block mt-24">
-            <div className="d-flex align-items-center justify-content-between mb-12">
-              <div className="cus-checkBox">
-                <input type="checkbox" id="inStock" className="inp-cbx" />
-                <label htmlFor="inStock" className="cbx">
+          <div className="content-block mt-12">
+            <div
+              className={`shop-filter-option ${inStockSelected ? "is-selected" : ""}`}
+              onClick={() => handleStockChange("inStock")}
+            >
+              <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
+                <input
+                  type="checkbox"
+                  className="inp-cbx"
+                  checked={inStockSelected}
+                  readOnly
+                  tabIndex={-1}
+                />
+                <label className="cbx shop-filter-label" style={{ pointerEvents: "none", marginBottom: 0 }}>
                   {t("common.inStock", "In Stock")}
                 </label>
               </div>
-              <p>(05)</p>
             </div>
-            <div className="d-flex align-items-center justify-content-between mb-12">
-              <div className="cus-checkBox">
-                <input type="checkbox" id="outStock" className="inp-cbx" />
-                <label htmlFor="outStock" className="cbx">
-                  {t("common.outOfStock", "Out Stock")}
-                </label>
-              </div>
-              <p>(08)</p>
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="hr-line line-2 mb-24"></div>
-
-      {/* Price Filter */}
-      <div
-        className="category-block box-5 wow fadeInUp animated mb-32 animated"
-        data-wow-delay="200ms"
-      >
-        <div className="title mb-24" onClick={() => toggleCategory("price")}>
-          <h6 className="fw-600 font-sec medium-black">
-            {t("shop.filterByPrice", "Filter By Price")}
-          </h6>
-          <span>
-            <i
-              className={`fa-light ${openCategories.price ? "fa-chevron-up" : "fa-chevron-down"}`}
-            ></i>
-          </span>
-        </div>
-        {openCategories.price && (
-          <div className="content-block">
-            <PriceSlider />
-          </div>
-        )}
-      </div>
-      <div className="hr-line line-2 mb-24"></div>
-
-      {/* Blog Categories Filter */}
-      <div
-        className="category-block box-1 mb-32 wow fadeInUp animated"
-        data-wow-delay="300ms"
-      >
-        <div className="title" onClick={() => toggleCategory("categories")}>
-          <h6 className="fw-600 font-sec medium-black">
-            {t("shop.productCategories", "Blog Categories")}
-          </h6>
-          <span>
-            <i
-              className={`fa-light ${openCategories.categories ? "fa-chevron-up" : "fa-chevron-down"}`}
-            ></i>
-          </span>
-        </div>
-        {openCategories.categories && (
-          <div className="content-block mt-24">
-            <div className="d-flex align-items-center justify-content-between mb-12">
-              <div className="cus-checkBox">
-                <input type="checkbox" id="sketchbooks" className="inp-cbx" />
-                <label htmlFor="sketchbooks" className="cbx">
-                  Sketchbooks
-                </label>
-              </div>
-              <p>(05)</p>
-            </div>
-            <div className="d-flex align-items-center justify-content-between mb-12">
-              <div className="cus-checkBox">
-                <input type="checkbox" id="hardcover" className="inp-cbx" />
-                <label htmlFor="hardcover" className="cbx">
-                  Hardcover Notebooks
-                </label>
-              </div>
-              <p>(08)</p>
-            </div>
-            <div className="d-flex align-items-center justify-content-between mb-12">
-              <div className="cus-checkBox">
-                <input type="checkbox" id="markers" className="inp-cbx" />
-                <label htmlFor="markers" className="cbx">
-                  Markers
-                </label>
-              </div>
-              <p>(12)</p>
-            </div>
-            <div className="d-flex align-items-center justify-content-between mb-12">
-              <div className="cus-checkBox">
-                <input type="checkbox" id="brownies" className="inp-cbx" />
-                <label htmlFor="brownies" className="cbx">
-                  Choco-Luxe Brownies
-                </label>
-              </div>
-              <p>(12)</p>
-            </div>
-            <div className="d-flex align-items-center justify-content-between mb-12">
-              <div className="cus-checkBox">
-                <input type="checkbox" id="smallAnimals" className="inp-cbx" />
-                <label htmlFor="smallAnimals" className="cbx">
-                  Small Animals
-                </label>
-              </div>
-              <p>(12)</p>
-            </div>
-            <div className="d-flex align-items-center justify-content-between">
-              <div className="cus-checkBox">
+            <div
+              className={`shop-filter-option ${outStockSelected ? "is-selected" : ""}`}
+              onClick={() => handleStockChange("outStock")}
+            >
+              <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
                 <input
                   type="checkbox"
-                  id="caramelCookies"
                   className="inp-cbx"
+                  checked={outStockSelected}
+                  readOnly
+                  tabIndex={-1}
                 />
-                <label htmlFor="caramelCookies" className="cbx">
-                  Caramel Swirl Cookies
+                <label className="cbx shop-filter-label" style={{ pointerEvents: "none", marginBottom: 0 }}>
+                  {t("common.outOfStock", "Out of Stock")}
                 </label>
               </div>
-              <p>(04)</p>
             </div>
           </div>
         )}
       </div>
-      <div className="hr-line line-2 mb-24"></div>
+      <div className="shop-sidebar-divider"></div>
 
-      {/* Tags Filter */}
-      <div
-        className="category-block box-4 mb-24 wow fadeInUp animated"
-        data-wow-delay="400ms"
-      >
-        <div className="title mb-24" onClick={() => toggleCategory("tags")}>
-          <h6 className="fw-600 font-sec medium-black">
-            {t("shop.popularTags", "Tags")}
-          </h6>
-          <span>
-            <i
-              className={`fa-light ${openCategories.tags ? "fa-chevron-up" : "fa-chevron-down"}`}
-            ></i>
-          </span>
-        </div>
-        {openCategories.tags && (
-          <div className="content-block mt-24">
-            <div className="tags-wrapper">
-              <Link to="/shop-grid-sidebar.html" className="tag">
-                <p>Pencils</p>
-              </Link>
-              <Link to="/shop-grid-sidebar.html" className="tag">
-                <p>Notebooks</p>
-              </Link>
-              <Link to="/shop-grid-sidebar.html" className="tag">
-                <p>Pens & Markers</p>
-              </Link>
-              <Link to="/shop-grid-sidebar.html" className="tag">
-                <p>Art Supplies</p>
-              </Link>
-              <Link to="/shop-grid-sidebar.html" className="tag">
-                <p>Organizers</p>
-              </Link>
-              <Link to="/shop-grid-sidebar.html" className="tag">
-                <p>Craft Supplies</p>
-              </Link>
-              <Link to="/shop-grid-sidebar.html" className="tag">
-                <p>Planners & Journals</p>
-              </Link>
-            </div>
+      {/* Price Filter */}
+      <div className="category-block mb-12">
+        <SidebarSectionHeader
+          title={t("shop.filterByPrice", "Filter By Price")}
+          isOpen={openCategories.price}
+          onToggle={() => toggleCategory("price")}
+          activeCount={minPrice !== null || maxPrice !== null ? 1 : null}
+        />
+        {openCategories.price && (
+          <div className="content-block mt-16">
+            <PriceSlider
+              initialMin={minPrice !== null ? minPrice : 0}
+              initialMax={maxPrice !== null ? maxPrice : 150000}
+              maxLimit={150000}
+              step={5000}
+              isFiltered={minPrice !== null || maxPrice !== null}
+              onApplyPrice={handleApplyPrice}
+              onResetPrice={handleResetPrice}
+            />
+          </div>
+        )}
+      </div>
+      <div className="shop-sidebar-divider"></div>
+
+      {/* Category Filter */}
+      <div className="category-block mb-12">
+        <SidebarSectionHeader
+          title={t("shop.productCategories", "Product Categories")}
+          isOpen={openCategories.categories}
+          onToggle={() => toggleCategory("categories")}
+          activeCount={selectedCategoryId ? 1 : null}
+        />
+        {openCategories.categories && (
+          <div className="content-block mt-12 shop-filter-scroll-list">
+            {sidebarLoading ? (
+              <p className="dark-gray py-8" style={{ fontSize: "13px" }}>{t("common.loading", "Loading...")}</p>
+            ) : categories.length === 0 ? (
+              <p className="dark-gray py-8" style={{ fontSize: "13px" }}>{t("shop.noCategories", "No categories available")}</p>
+            ) : (
+              categories.map((cat) => {
+                const isSelected = selectedCategoryId !== null && Number(selectedCategoryId) === Number(cat.id);
+                return (
+                  <div
+                    key={cat.id}
+                    className={`shop-filter-option ${isSelected ? "is-selected" : ""}`}
+                    onClick={() => handleCategoryChange(cat.id)}
+                  >
+                    <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
+                      <input
+                        type="checkbox"
+                        className="inp-cbx"
+                        checked={isSelected}
+                        readOnly
+                        tabIndex={-1}
+                      />
+                      <label className="cbx shop-filter-label" style={{ pointerEvents: "none", marginBottom: 0 }}>
+                        {cat.name}
+                      </label>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+      <div className="shop-sidebar-divider"></div>
+
+      {/* Brand Filter */}
+      <div className="category-block mb-12">
+        <SidebarSectionHeader
+          title={t("shop.brands", "Brands")}
+          isOpen={openCategories.brands}
+          onToggle={() => toggleCategory("brands")}
+          activeCount={selectedBrandId ? 1 : null}
+        />
+        {openCategories.brands && (
+          <div className="content-block mt-12 shop-filter-scroll-list">
+            {sidebarLoading ? (
+              <p className="dark-gray py-8" style={{ fontSize: "13px" }}>{t("common.loading", "Loading...")}</p>
+            ) : brands.length === 0 ? (
+              <p className="dark-gray py-8" style={{ fontSize: "13px" }}>{t("shop.noBrands", "No brands available")}</p>
+            ) : (
+              brands.map((brand) => {
+                const isSelected = selectedBrandId !== null && Number(selectedBrandId) === Number(brand.id);
+                return (
+                  <div
+                    key={brand.id}
+                    className={`shop-filter-option ${isSelected ? "is-selected" : ""}`}
+                    onClick={() => handleBrandChange(brand.id)}
+                  >
+                    <div className="cus-checkBox" style={{ pointerEvents: "none" }}>
+                      <input
+                        type="checkbox"
+                        className="inp-cbx"
+                        checked={isSelected}
+                        readOnly
+                        tabIndex={-1}
+                      />
+                      <label className="cbx shop-filter-label" style={{ pointerEvents: "none", marginBottom: 0 }}>
+                        {brand.name}
+                      </label>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
       </div>
 
       {/* Sidebar Promotional Image */}
       <div
-        className="sidebar-promotional-image w-100 object-fit-cover br-12 wow fadeInUp animated"
-        data-wow-delay="500ms"
+        className="sidebar-promotional-image w-100 object-fit-cover br-12 mt-16 overflow-hidden"
       >
         <img
           src="/assets/media/images/sidebar-image.png"
@@ -324,24 +543,169 @@ export const ShopGridSidebar = () => {
     </div>
   );
 
+  // ── Pagination renderer ──────────────────────────────────────────────────
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+
+    const maxVisible = 5;
+    let start = Math.max(0, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages - 1, start + maxVisible - 1);
+    if (end - start < maxVisible - 1) {
+      start = Math.max(0, end - maxVisible + 1);
+    }
+    const pages = [];
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    const btnBase = {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: "40px",
+      height: "40px",
+      borderRadius: "50%",
+      border: "1.5px solid #e5e7eb",
+      backgroundColor: "#fff",
+      color: "#374151",
+      fontSize: "14px",
+      fontWeight: "600",
+      cursor: "pointer",
+      transition: "all 0.2s ease",
+      textDecoration: "none",
+    };
+
+    const btnActive = {
+      ...btnBase,
+      backgroundColor: "#e9613f",
+      border: "1.5px solid #e9613f",
+      color: "#fff",
+      boxShadow: "0 4px 12px rgba(233,97,63,0.35)",
+    };
+
+    const btnNav = {
+      ...btnBase,
+      width: "40px",
+      fontSize: "16px",
+      color: "#6b7280",
+    };
+
+    const btnNavDisabled = {
+      ...btnNav,
+      opacity: 0.35,
+      cursor: "not-allowed",
+    };
+
+    return (
+      <div style={{ textAlign: "center", paddingBottom: "16px", marginTop: "16px" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          {/* Prev */}
+          <button
+            type="button"
+            style={currentPage === 0 ? btnNavDisabled : btnNav}
+            disabled={currentPage === 0}
+            onClick={() => handlePageChange(currentPage - 1)}
+            onMouseEnter={(e) => { if (currentPage !== 0) e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#6b7280"; }}
+            title={t("common.previousPage", "Previous page")}
+          >
+            &#8592;
+          </button>
+
+          {/* First page + ellipsis */}
+          {start > 0 && (
+            <>
+              <button type="button" style={btnBase} onClick={() => handlePageChange(0)}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#374151"; }}
+              >1</button>
+              {start > 1 && <span style={{ color: "#9ca3af", fontSize: "14px" }}>…</span>}
+            </>
+          )}
+
+          {/* Numbered pages */}
+          {pages.map((p) => (
+            <button
+              key={p}
+              type="button"
+              style={p === currentPage ? btnActive : btnBase}
+              onClick={() => handlePageChange(p)}
+              onMouseEnter={(e) => { if (p !== currentPage) { e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; } }}
+              onMouseLeave={(e) => { if (p !== currentPage) { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#374151"; } }}
+            >
+              {p + 1}
+            </button>
+          ))}
+
+          {/* Ellipsis + last page */}
+          {end < totalPages - 1 && (
+            <>
+              {end < totalPages - 2 && <span style={{ color: "#9ca3af", fontSize: "14px" }}>…</span>}
+              <button type="button" style={btnBase} onClick={() => handlePageChange(totalPages - 1)}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#374151"; }}
+              >{totalPages}</button>
+            </>
+          )}
+
+          {/* Next */}
+          <button
+            type="button"
+            style={currentPage >= totalPages - 1 ? btnNavDisabled : btnNav}
+            disabled={currentPage >= totalPages - 1}
+            onClick={() => handlePageChange(currentPage + 1)}
+            onMouseEnter={(e) => { if (currentPage < totalPages - 1) { e.currentTarget.style.borderColor = "#e9613f"; e.currentTarget.style.color = "#e9613f"; } }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.color = "#6b7280"; }}
+            title={t("common.nextPage", "Next page")}
+          >
+            &#8594;
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
       <TitleBanner title={t("shop.title")} />
 
       <section className="shop-section py-80">
         <div className="container-2">
-          <div className="row">
+          <div className="row g-4">
             {/* Desktop Sidebar */}
-            <div className="col-lg-3 d-lg-block d-none">
-              {renderSidebarContent()}
-            </div>
+            {isSidebarVisible && (
+              <div className="col-xxl-3 col-xl-3 col-lg-4 d-lg-block d-none">
+                {renderSidebarContent("desktop")}
+              </div>
+            )}
 
             {/* Products Main Column */}
-            <div className="col-lg-9">
+            <div className={isSidebarVisible ? "col-xxl-9 col-xl-9 col-lg-8" : "col-12"}>
               <div className="row row-gap-3 align-items-center justify-content-between mb-24">
-                <div className="col-xl-4 col-lg-5 col-md-7 col-6">
-                  <p className="d-md-block d-none">
-                    {t("shop.showingResults", "Showing 01 - 09 of 30 Results")}
+                <div className="col-xl-6 col-lg-6 col-md-7 col-12 d-flex align-items-center gap-3">
+                  {/* Desktop Toggle Filter Button */}
+                  <button
+                    type="button"
+                    className={`shop-toggle-filter-btn d-lg-inline-flex d-none ${isSidebarVisible ? "is-active" : ""}`}
+                    onClick={() => setIsSidebarVisible((prev) => !prev)}
+                    title={isSidebarVisible ? t("shop.hideFilters", "Ẩn bộ lọc") : t("shop.showFilters", "Hiện bộ lọc")}
+                  >
+                    <i className="fa-solid fa-sliders"></i>
+                    <span>{isSidebarVisible ? t("shop.hideFilters", "Ẩn bộ lọc") : t("shop.showFilters", "Hiện bộ lọc")}</span>
+                    {hasActiveFilters && (
+                      <span className="badge bg-warning text-dark rounded-pill ms-1 fs-11">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+
+                  <p className="d-md-block d-none mb-0">
+                    {loading
+                      ? t("common.loading", "Loading...")
+                      : t("shop.showingProductCount", {
+                          count: products.length,
+                          total: totalElements,
+                          defaultValue: `Showing ${products.length} / ${totalElements} products`,
+                        })}
                   </p>
                   <button
                     type="button"
@@ -351,159 +715,286 @@ export const ShopGridSidebar = () => {
                     <span>{t("shop.filter")}</span>
                   </button>
                 </div>
-                <div className="col-xl-4 col-lg-4 col-md-5 col-6">
+                <div className="col-xl-4 col-lg-4 col-md-5 col-12">
                   <div className="d-flex align-items-center justify-content-end gap-8">
-                    <p className="dark-gray">{t("shop.sortBy", "Short by")}:</p>
+                    <p className="dark-gray">{t("shop.sortBy", "Sort By")}:</p>
                     <div className="drop-container">
-                      <CustomDropdown />
+                      <CustomDropdown
+                        options={sortOptions.map((o) => o.label)}
+                        defaultValue={(sortOptions.find((o) => o.value === sortValue) || sortOptions[0]).label}
+                        onSelect={handleSortSelect}
+                      />
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Product Grid */}
-              <div className="row row-gap-4 mb-48">
-                {products.map((prod) => (
+              {loading ? (
+                <div className="text-center py-80">
                   <div
-                    key={prod.id}
-                    className="col-lg-4 col-md-6 col-sm-6 wow fadeInUp animated"
-                    data-wow-delay="400ms"
+                    className="spinner-border"
+                    role="status"
+                    style={{ color: "var(--color-primary, #e57c32)", width: "3rem", height: "3rem" }}
                   >
-                    <div className="latest-product-card">
-                      <div className="image-box mb-16">
-                        {prod.badge && (
-                          <span className="sale-label subtitle fw-400 white">
-                            {prod.badge === "Sale"
-                              ? t("common.sale")
-                              : prod.badge}
-                          </span>
-                        )}
-                        <Link to="/product-detail.html" className="image">
-                          <img
-                            src={prod.image}
-                            className="product-image"
-                            alt={prod.title}
-                          />
-                        </Link>
-                        <div className="side-icons">
-                          <ul className="list-unstyled">
-                            <li>
-                              <a href="wishlist.html">
-                                <i className="fa-light fa-heart"></i>
-                              </a>
-                            </li>
-                            <li>
-                              <a
-                                href="#quickview"
-                                className="btn"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openQuickView(prod);
-                                }}
-                              >
-                                <i className="fa-regular fa-eye"></i>
-                              </a>
-                            </li>
-                            <li>
-                              <a
-                                href="#compare"
-                                className="zui-wrapper-button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openCompare();
-                                }}
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="16"
-                                  height="17"
-                                  viewBox="0 0 16 17"
-                                  fill="none"
-                                >
-                                  <path
-                                    d="M12.979 16.5293C12.8173 16.5293 12.6557 16.4669 12.5333 16.3425C12.2913 16.0964 12.2947 15.7007 12.5408 15.4586L14.6415 13.393C14.7584 13.2759 14.8228 13.1207 14.8228 12.9558C14.8228 12.7913 14.7588 12.6366 14.6426 12.5197L12.5432 10.4773C11.9709 9.87765 12.8002 9.02596 13.4148 9.5813L15.5176 11.627C15.5194 11.6288 15.5213 11.6305 15.523 11.6323C15.8775 11.9858 16.0728 12.4558 16.0727 12.9558C16.0727 13.4559 15.8775 13.9259 15.523 14.2793C15.522 14.2803 15.521 14.2813 15.5199 14.2823L13.4172 16.35C13.2955 16.4696 13.1372 16.5293 12.979 16.5293ZM12.979 13.5293H3.82275C1.755 13.5293 0.0727539 11.8471 0.0727539 9.7793V8.18555C0.103473 7.35718 1.29232 7.3578 1.32275 8.18555V9.7793C1.32275 11.1578 2.44425 12.2793 3.82275 12.2793H12.979C13.8074 12.31 13.8068 13.4989 12.979 13.5293ZM15.4478 9.49805C15.1026 9.49805 14.8228 9.21824 14.8228 8.87305V7.2793C14.8228 5.9008 13.7013 4.7793 12.3228 4.7793H3.1665C2.33813 4.74858 2.33875 3.55974 3.1665 3.5293H12.3228C14.3905 3.5293 16.0728 5.21155 16.0728 7.2793V8.87305C16.0728 9.21824 15.7929 9.49805 15.4478 9.49805ZM3.16644 7.6543C3.00938 7.6543 2.85216 7.59549 2.73069 7.47727L0.627879 5.43162C0.626035 5.42983 0.624223 5.42805 0.622441 5.42624C0.267973 5.07283 0.0727539 4.60283 0.0727539 4.1028C0.0727539 3.60277 0.267973 3.13274 0.622441 2.77937C0.623473 2.77833 0.624473 2.77733 0.625504 2.77633L2.72832 0.708647C2.97444 0.466647 3.37016 0.46996 3.61216 0.716085C3.85416 0.96221 3.85085 1.35793 3.60472 1.59993L1.50397 3.66562C1.26438 3.89593 1.26388 4.30799 1.50285 4.5389L3.60232 6.5813C3.84972 6.82199 3.85516 7.21768 3.61447 7.46512C3.492 7.59102 3.32925 7.6543 3.16644 7.6543Z"
-                                    fill="#363636"
-                                  ></path>
-                                </svg>
-                              </a>
-                            </li>
-                          </ul>
-                        </div>
-                        <Link
-                          to="/cart.html"
-                          className="cus-btn"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            openCart();
-                          }}
-                        >
-                          <span className="btn-text">
-                            {t("common.addCart")}
-                          </span>
-                          <span>{t("common.goToCart")}</span>
-                        </Link>
-                      </div>
-                      <div className="product-desc">
-                        <div>
-                          <Link
-                            to="/product-detail.html"
-                            className="product-title h6 fw-700 mb-8"
-                          >
-                            {prod.title}
-                          </Link>
-                          <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
-                            <span className="color-primary">★★★★★</span>
-                            <p className="fw-500">(02)</p>
-                          </div>
-                          <h5 className="medium-black fw-700">{prod.price}</h5>
-                        </div>
-                      </div>
-                    </div>
+                    <span className="visually-hidden">{t("common.loading", "Loading...")}</span>
                   </div>
-                ))}
-              </div>
+                  <p className="mt-16 dark-gray">{t("shop.loadingProducts", "Loading products...")}</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-80">
+                  <p style={{ color: "red" }}>{error}</p>
+                  <button
+                    type="button"
+                    onClick={fetchProducts}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "8px 20px",
+                      backgroundColor: "#e57c32",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "24px",
+                      fontWeight: "600",
+                      fontSize: "13px",
+                      cursor: "pointer",
+                      marginTop: "16px",
+                    }}
+                  >
+                    <span>{t("shop.retryButton", "Try again")}</span>
+                  </button>
+                </div>
+              ) : products.length === 0 ? (
+                <div
+                  className="text-center py-60 px-24 my-32"
+                  style={{
+                    backgroundColor: "#fafafa",
+                    borderRadius: "16px",
+                    border: "1px dashed #d1d5db",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "60px",
+                      height: "60px",
+                      borderRadius: "50%",
+                      backgroundColor: "rgba(229, 124, 50, 0.12)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <svg
+                      width="28"
+                      height="28"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#e57c32"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                      <line x1="8" y1="11" x2="14" y2="11"></line>
+                    </svg>
+                  </div>
+                  <h5 className="fw-700 medium-black mb-8">{t("shop.noProductsFound", "No matching products found")}</h5>
+                  <p className="dark-gray mb-24" style={{ maxWidth: "420px", margin: "0 auto 20px", fontSize: "14px" }}>
+                    {t("shop.noProductsDesc", "Sorry, no products match your search keyword or price range.")}
+                  </p>
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={resetAllFilters}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "10px 24px",
+                        backgroundColor: "#e57c32",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "30px",
+                        fontWeight: "600",
+                        fontSize: "14px",
+                        cursor: "pointer",
+                        boxShadow: "0 4px 12px rgba(229, 124, 50, 0.25)",
+                        transition: "opacity 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.9")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                        <path d="M3 3v5h5"></path>
+                      </svg>
+                      <span>{t("shop.clearAllFilters", "Clear all filters")}</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="row row-gap-4 mb-48">
+                  {products.map((prod) => {
+                    const prodId = prod.id || prod.productId;
+                    const isWishlisted = isInWishlist(prodId);
+                    const inStock = (prod.stockQuantity ?? prod.stock_quantity ?? 0) > 0;
+                    return (
+                      <div
+                        key={prodId}
+                        className={`${isSidebarVisible ? "col-xxl-3 col-xl-4 col-md-6 col-sm-6" : "col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6"} wow fadeInUp animated`}
+                        data-wow-delay="400ms"
+                      >
+                        <div className={`latest-product-card ${!inStock ? "is-out-of-stock" : ""}`}>
+                          <div className="image-box mb-16" style={{ position: "relative" }}>
+                            <Link to={`/product/${prodId}`} className="image">
+                              <img
+                                src={getProductImage(prod)}
+                                className="product-image"
+                                alt={prod.name}
+                                style={!inStock ? { opacity: 0.82 } : {}}
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = "/assets/media/products/product-7.png";
+                                }}
+                              />
+                            </Link>
+                            {!inStock && (
+                              <span
+                                style={{
+                                  position: "absolute",
+                                  top: "10px",
+                                  left: "10px",
+                                  background: "#dc2626",
+                                  color: "#fff",
+                                  fontSize: "11px",
+                                  fontWeight: 700,
+                                  padding: "4px 9px",
+                                  borderRadius: "6px",
+                                  zIndex: 3,
+                                  boxShadow: "0 2px 8px rgba(220, 38, 38, 0.4)",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.5px",
+                                }}
+                              >
+                                {t("common.outOfStock", "Hết hàng")}
+                              </span>
+                            )}
+                            <div className="side-icons">
+                              <ul className="list-unstyled">
+                                {/* Wishlist */}
+                                <li>
+                                  <a
+                                    href="#wishlist"
+                                    title={isWishlisted ? t("wishlist.remove", "Remove from wishlist") : t("wishlist.add", "Add to wishlist")}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      toggleWishlist(prod);
+                                    }}
+                                    style={{ color: isWishlisted ? "#e57c32" : undefined }}
+                                  >
+                                    <i className={isWishlisted ? "fa-solid fa-heart" : "fa-regular fa-heart"} style={{ color: isWishlisted ? "#e57c32" : undefined }}></i>
+                                  </a>
+                                </li>
+                                {/* Quick View */}
+                                <li>
+                                  <a
+                                    href="#quickview"
+                                    title={t("modals.quickView", "Xem nhanh")}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      openQuickView(prod);
+                                    }}
+                                  >
+                                    <i className="fa-regular fa-eye"></i>
+                                  </a>
+                                </li>
+                              </ul>
+                            </div>
+                            {inStock ? (
+                              <Link
+                                to="/cart.html"
+                                className="cus-btn"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  addToCart(prodId, 1, true);
+                                }}
+                              >
+                                <span className="btn-text">
+                                  {t("common.addCart")}
+                                </span>
+                                <span>{t("common.goToCart")}</span>
+                              </Link>
+                            ) : (
+                              <button
+                                type="button"
+                                className="cus-btn"
+                                disabled
+                                style={{
+                                  backgroundColor: "#94a3b8",
+                                  borderColor: "#94a3b8",
+                                  cursor: "not-allowed",
+                                  opacity: 0.85,
+                                  pointerEvents: "none",
+                                }}
+                              >
+                                <span className="btn-text">
+                                  {t("common.outOfStock", "Hết hàng")}
+                                </span>
+                                <span>{t("common.outOfStock", "Hết hàng")}</span>
+                              </button>
+                            )}
+                          </div>
+                          <div className="product-desc">
+                            <div>
+                              <Link
+                                to={`/product/${prodId}`}
+                                className="product-title h6 fw-700 mb-8"
+                              >
+                                {prod.name}
+                              </Link>
+                              {prod.category && (
+                                <p
+                                  className="dark-gray mb-4"
+                                  style={{ fontSize: "12px" }}
+                                >
+                                  {prod.category.name}
+                                </p>
+                              )}
+                              <ProductRatingSold product={prod} variant="card" className="mb-8" />
+                              <div className="d-flex align-items-center justify-content-between">
+                                <h5 className="medium-black fw-700 mb-0">
+                                  {formatOrderMoney(prod.price, i18n.language)}
+                                </h5>
+                                {!inStock && (
+                                  <span
+                                    style={{
+                                      fontSize: "12px",
+                                      fontWeight: 700,
+                                      color: "#dc2626",
+                                      backgroundColor: "#fee2e2",
+                                      padding: "2px 8px",
+                                      borderRadius: "6px",
+                                    }}
+                                  >
+                                    {t("common.outOfStock", "Hết hàng")}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
-              {/* Pagination */}
-              <div className="pagination-wrapper mb-32">
-                <ul className="pagination justify-content-center">
-                  <li className="page-item active">
-                    <a
-                      className="page-link"
-                      href="#page1"
-                      onClick={(e) => e.preventDefault()}
-                    >
-                      1
-                    </a>
-                  </li>
-                  <li className="page-item">
-                    <a
-                      className="page-link"
-                      href="#page2"
-                      onClick={(e) => e.preventDefault()}
-                    >
-                      2
-                    </a>
-                  </li>
-                  <li className="page-item">
-                    <a
-                      className="page-link"
-                      href="#page3"
-                      onClick={(e) => e.preventDefault()}
-                    >
-                      3
-                    </a>
-                  </li>
-                  <li className="page-item">
-                    <a
-                      className="page-link"
-                      href="#next"
-                      onClick={(e) => e.preventDefault()}
-                    >
-                      Next
-                    </a>
-                  </li>
-                </ul>
-              </div>
+              {/* Dynamic Pagination */}
+              {!loading && !error && renderPagination()}
             </div>
           </div>
         </div>
@@ -533,7 +1024,7 @@ export const ShopGridSidebar = () => {
             onClick={() => setIsMobileFilterOpen(false)}
           ></button>
         </div>
-        {renderSidebarContent()}
+        {renderSidebarContent("mobile")}
       </div>
       {isMobileFilterOpen && (
         <div

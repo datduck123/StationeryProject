@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const API_BASE_URL = "http://localhost:8080/api";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 export const TOKEN_STORAGE_KEY = "stationery_jwt_token";
 export const USER_STORAGE_KEY = "stationery_clinic_auth_user";
 
@@ -29,16 +29,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const { response } = error;
-    if (response && response.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(USER_STORAGE_KEY);
-      // Only redirect if not already on login or public page
-      if (
-        !window.location.pathname.includes("/login") &&
-        !window.location.pathname.includes("/register") &&
-        !window.location.pathname.includes("/forgot-password")
-      ) {
+    if (response && (response.status === 401 || response.status === 403)) {
+      const isAuthPage =
+        window.location.pathname.includes("/login") ||
+        window.location.pathname.includes("/register") ||
+        window.location.pathname.includes("/forgot-password");
+
+      if (response.status === 401 && !isAuthPage) {
+        // Token is invalid or expired
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        localStorage.removeItem(USER_STORAGE_KEY);
         window.location.href = "/login?sessionExpired=true";
       }
     }
@@ -46,4 +46,4 @@ api.interceptors.response.use(
   },
 );
 
-export default api;
+export default api

@@ -11,11 +11,30 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
 
+    @Query("SELECT o.orderStatus, COUNT(o) FROM Order o GROUP BY o.orderStatus")
+    List<Object[]> countOrdersByStatus();
+
+    List<Order> findByCreatedAtGreaterThanEqualOrderByCreatedAtAsc(LocalDateTime startDate);
+
+    long countByOrderStatus(String orderStatus);
+
+    @Query("SELECT COALESCE(SUM(o.totalCost), 0) FROM Order o WHERE o.orderStatus = 'DELIVERED'")
+    BigDecimal sumDeliveredRevenue();
+
     Page<Order> findByUser_Email(String email, Pageable pageable);
+
+    @Query("SELECT o FROM Order o WHERE o.user.email = :email " +
+            "AND (:status IS NULL OR o.orderStatus = :status)")
+    Page<Order> findCustomerOrders(@Param("email") String email,
+                                   @Param("status") String status,
+                                   Pageable pageable);
 
     Page<Order> findByOrderStatus(String orderStatus, Pageable pageable);
 

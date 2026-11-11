@@ -17,9 +17,25 @@ node_modules/
 **/node_modules/
 
 # Production builds
+**/target-dev/
+**/.dev-jwt-secret
 dist/
 **/dist/
 dist-ssr/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*
+!.env.example
+!.env.template
+application-local.properties
+application-local.yml
+application-local.yaml
 
 # Logs
 logs/
@@ -33,4 +49,9 @@ pnpm-debug.log*
 .vscode/*
 !.vscode/extensions.json
 .idea/
-*.iml
+
+# =========================
+# Java / Maven
+# =========================
+**/target/
+*.class

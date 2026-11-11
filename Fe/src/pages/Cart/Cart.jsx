@@ -1,354 +1,273 @@
-// Migrated from: cart.html, lines 200-630
-// HTML->JSX conversion: class -> className, for -> htmlFor, img / input self-closing, quantity handlers, Link integration, i18n support
-import { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import TitleBanner from "../../components/shared/TitleBanner";
+import CartItemRow from "./CartItemRow";
+import { useCartContext } from "../../providers/CartContext";
+import useQuantityInput from "../../hooks/useQuantityInput";
+
+const CartMobileCard = ({ item, updateQuantity, removeItem, t }) => {
+  const qty = item.finalQuantity || item.requestedQuantity || 1;
+  const maxStock = item.currentStock ?? 999;
+  const price = Number(item.unitPrice || 0);
+
+  const {
+    inputProps,
+    handleIncrement,
+    handleDecrement,
+    isAtMin,
+    isAtMax,
+  } = useQuantityInput({
+    value: qty,
+    maxStock,
+    min: 1,
+    onChange: (nextQty) => updateQuantity(item.cartItemId, nextQty),
+    commitOnBlurOnly: true,
+  });
+
+  return (
+    <div className="col-md-6">
+      <div className="card-item bg-semi-white br-20 p-24">
+        <div className="d-flex align-items-center justify-content-between mb-16">
+          <h6 className="m-0 text-truncate" style={{ maxWidth: "80%" }}>
+            {item.productName}
+          </h6>
+          <button
+            type="button"
+            className="btn btn-link text-danger p-0 border-0"
+            onClick={() => removeItem(item.cartItemId)}
+          >
+            <i className="fa-solid fa-xmark fs-5"></i>
+          </button>
+        </div>
+        <div className="img-block mb-16 text-center bg-white p-2 br-12" style={{ height: "140px" }}>
+          <img
+            src={item.imageUrl || "/assets/media/products/product-1.png"}
+            alt={item.productName}
+            className="h-100 object-fit-contain"
+            onError={(e) => {
+              e.target.src = "/assets/media/products/product-1.png";
+            }}
+          />
+        </div>
+        <ul className="list-unstyled p-0 m-0 d-flex flex-column gap-12">
+          <li className="d-flex justify-content-between align-items-center">
+            <span className="font-primary text-muted">{t("cart.price")}</span>
+            <h6 className="font-primary m-0">{price.toLocaleString("vi-VN")} đ</h6>
+          </li>
+          <li className="d-flex justify-content-between align-items-center">
+            <span className="font-primary text-muted">{t("cart.quantity")}</span>
+            <div className="quantity quantity-wrap">
+              <div className="input-area quantity-wrap d-flex align-items-center">
+                <button
+                  className="decrement"
+                  type="button"
+                  disabled={isAtMin}
+                  onClick={handleDecrement}
+                >
+                  -
+                </button>
+                <input
+                  name="quantity"
+                  className="number text-center"
+                  style={{ width: "45px" }}
+                  {...inputProps}
+                />
+                <button
+                  className="increment"
+                  type="button"
+                  disabled={isAtMax}
+                  onClick={handleIncrement}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </li>
+          <li className="d-flex justify-content-between align-items-center">
+            <span className="font-primary text-muted">{t("cart.subtotal")}</span>
+            <h6 className="color-primary m-0">
+              {(price * qty).toLocaleString("vi-VN")} đ
+            </h6>
+          </li>
+        </ul>
+      </div>
+    </div>
+  );
+};
 
 export const Cart = () => {
   const { t } = useTranslation();
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      title: "Hardcover Notebook",
-      price: 85.0,
-      quantity: 1,
-      image: "/assets/media/products/nav-image-1.png",
-      boxId: "box1",
-    },
-    {
-      id: 2,
-      title: "Classic Ballpoint Pens",
-      price: 15.0,
-      quantity: 1,
-      image: "/assets/media/products/nav-image-2.png",
-      boxId: "box2",
-    },
-  ]);
-
-  const handleDecrement = (id) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, quantity: Math.max(1, item.quantity - 1) }
-          : item,
-      ),
-    );
-  };
-
-  const handleIncrement = (id) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, quantity: item.quantity + 1 } : item,
-      ),
-    );
-  };
-
-  const handleRemove = (id, e) => {
-    if (e) e.preventDefault();
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
-  const delivery = items.length > 0 ? 5.0 : 0;
-  const discount = items.length > 0 ? 5.0 : 0;
-  const total = Math.max(0, subtotal + delivery - discount);
+  const {
+    items,
+    cartSubtotal,
+    cartShippingFee,
+    cartDiscount,
+    cartTotal,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    isLoading,
+    cart,
+  } = useCartContext();
 
   return (
     <>
-      <TitleBanner title={t("cart.title")} />
+      <TitleBanner title={t("cart.title") || "Shopping Cart"} />
       <section className="cart py-40">
         <div className="container-2">
-          <div className="row row-gap-4">
-            <div className="col-xl-8">
-              <div className="d-lg-block d-none">
-                <table className="cart-table mb-16">
-                  <thead>
-                    <tr>
-                      <th>{t("cart.products")}</th>
-                      <th>{t("cart.price")}</th>
-                      <th>{t("cart.quantity")}</th>
-                      <th>{t("cart.subtotal")}</th>
-                    </tr>
-                  </thead>
-                </table>
-                {items.map((item) => (
-                  <table key={item.id} className="cart-table">
-                    <tbody>
-                      <tr className="table-row">
-                        <td className="pd">
-                          <div className="product-detail-box">
-                            <div className="cus-checkBox">
-                              <input type="checkbox" id={item.boxId} />
-                              <label
-                                htmlFor={item.boxId}
-                                className="light-gray"
-                              ></label>
-                            </div>
-                            <a
-                              href="#remove"
-                              className="h5 dark-black"
-                              onClick={(e) => handleRemove(item.id, e)}
-                            >
-                              <i className="fal fa-times"></i>
-                            </a>
-                            <div className="img-block">
-                              <Link to="/product-detail.html">
-                                <img src={item.image} alt="" />
-                              </Link>
-                            </div>
-                            <div className="d-block text-start">
-                              <h6>
-                                <Link
-                                  to="/product-detail.html"
-                                  className="fw-600 medium-black"
-                                >
-                                  {item.title}
-                                </Link>
-                              </h6>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <p className="fw-500">${item.price.toFixed(2)}</p>
-                        </td>
-                        <td>
-                          <div className="quantity quantity-wrap">
-                            <div className="input-area quantity-wrap">
-                              <button
-                                className="decrement"
-                                type="button"
-                                onClick={() => handleDecrement(item.id)}
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 16 16"
-                                  fill="none"
-                                >
-                                  <path
-                                    d="M15.375 7.375H0.625C0.279813 7.375 0 7.65481 0 8C0 8.34519 0.279813 8.625 0.625 8.625H15.375C15.7202 8.625 16 8.34519 16 8C16 7.65481 15.7202 7.375 15.375 7.375Z"
-                                    fill="#1E1F20"
-                                  />
-                                </svg>
-                              </button>
-                              <input
-                                type="text"
-                                name="quantity"
-                                value={item.quantity}
-                                readOnly
-                                maxLength={2}
-                                size={1}
-                                className="number"
-                              />
-                              <button
-                                className="increment"
-                                type="button"
-                                onClick={() => handleIncrement(item.id)}
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 16 16"
-                                  fill="none"
-                                >
-                                  <path
-                                    d="M15.375 7.375H8.625V0.625C8.625 0.279813 8.34519 0 8 0C7.65481 0 7.375 0.279813 7.375 0.625V7.375H0.625C0.279813 7.375 0 7.65481 0 8C0 8.34519 0.279813 8.625 0.625 8.625H7.375V15.375C7.375 15.7202 7.65481 16 8 16C8.34519 16 8.625 15.7202 8.625 15.375V8.625H15.375C15.7202 8.625 16 8.34519 16 8C16 7.65481 15.7202 7.375 15.375 7.375Z"
-                                    fill="#1E1F20"
-                                  />
-                                </svg>
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <h6 className="color-primary fw-600">
-                            ${(item.price * item.quantity).toFixed(2)}
-                          </h6>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                ))}
+          {/* Notifications / Stock Alert Banner */}
+          {cart?.notifications && cart.notifications.length > 0 && (
+            <div className="alert alert-warning mb-24 d-flex flex-column gap-2" role="alert">
+              <div className="d-flex align-items-center gap-2 fw-600">
+                <i className="fa-solid fa-triangle-exclamation text-warning fs-5"></i>
+                <span>{t("cart.stockUpdateAlert", "Stock quantity update:")}</span>
               </div>
+              <ul className="mb-0 ps-4">
+                {cart.notifications.map((msg, idx) => (
+                  <li key={idx}>{msg}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
-              {/* Mobile cart items */}
-              <div className="d-lg-none d-block">
-                <div className="row row-gap-3">
+          {items.length === 0 ? (
+            <div className="text-center py-60 bg-white br-20 border shadow-sm">
+              <div className="mb-24">
+                <i className="fa-solid fa-cart-shopping text-muted" style={{ fontSize: "64px" }}></i>
+              </div>
+              <h4 className="fw-700 medium-black mb-12">{t("cart.emptyCart", "Your cart is empty")}</h4>
+              <p className="text-muted mb-0">
+                {t("cart.emptyCartDetail", "You have no items in your cart. Start exploring and add some great stationery products!")}
+              </p>
+            </div>
+          ) : (
+            <div className="row row-gap-4">
+              {/* Left Column: Cart Items */}
+              <div className="col-xl-8">
+                {/* Desktop View Table */}
+                <div className="d-lg-block d-none">
+                  <table className="cart-table mb-16">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "45%" }}>{t("cart.products")}</th>
+                        <th style={{ width: "15%" }}>{t("cart.price")}</th>
+                        <th style={{ width: "20%" }}>{t("cart.quantity")}</th>
+                        <th style={{ width: "20%" }}>{t("cart.subtotal")}</th>
+                      </tr>
+                    </thead>
+                  </table>
+
                   {items.map((item) => (
-                    <div key={item.id} className="col-md-6">
-                      <div className="card-item bg-semi-white br-20 p-24">
-                        <div className="d-flex align-items-center justify-content-between mb-16">
-                          <div className="cus-checkBox">
-                            <input
-                              type="checkbox"
-                              id={`mobile_${item.boxId}`}
-                            />
-                            <label
-                              htmlFor={`mobile_${item.boxId}`}
-                              className="light-gray"
-                            ></label>
-                          </div>
-                          <a
-                            href="#remove"
-                            className="h5 dark-black"
-                            onClick={(e) => handleRemove(item.id, e)}
-                          >
-                            <i className="fal fa-times"></i>
-                          </a>
-                        </div>
-                        <div className="img-block mb-16">
-                          <Link to="/product-detail.html">
-                            <img src={item.image} alt="" />
-                          </Link>
-                        </div>
-                        <h6 className="mb-16">
-                          <Link
-                            to="/product-detail.html"
-                            className="fw-600 medium-black"
-                          >
-                            {item.title}
-                          </Link>
-                        </h6>
-                        <ul className="list-unstyled p-0 m-0 d-flex flex-column gap-12">
-                          <li className="d-flex justify-content-between align-items-center">
-                            <span className="font-primary">
-                              {t("cart.price")}
-                            </span>
-                            <h6 className="font-primary">
-                              ${item.price.toFixed(2)}
-                            </h6>
-                          </li>
-                          <li className="d-flex justify-content-between align-items-center">
-                            <span className="font-primary">
-                              {t("cart.quantity")}
-                            </span>
-                            <div className="quantity quantity-wrap">
-                              <div className="input-area quantity-wrap">
-                                <button
-                                  className="decrement"
-                                  type="button"
-                                  onClick={() => handleDecrement(item.id)}
-                                >
-                                  -
-                                </button>
-                                <input
-                                  type="text"
-                                  name="quantity"
-                                  value={item.quantity}
-                                  readOnly
-                                  maxLength={2}
-                                  size={1}
-                                  className="number"
-                                />
-                                <button
-                                  className="increment"
-                                  type="button"
-                                  onClick={() => handleIncrement(item.id)}
-                                >
-                                  +
-                                </button>
-                              </div>
-                            </div>
-                          </li>
-                          <li className="d-flex justify-content-between align-items-center">
-                            <span>{t("cart.subtotal")}</span>
-                            <h6 className="color-primary">
-                              ${(item.price * item.quantity).toFixed(2)}
-                            </h6>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
+                    <CartItemRow
+                      key={item.cartItemId || item.productId}
+                      item={item}
+                      onUpdateQuantity={updateQuantity}
+                      onRemove={removeItem}
+                    />
                   ))}
                 </div>
-              </div>
 
-              <div className="table-bottom-row bg-white">
-                <Link to="/shop-grid-sidebar.html" className="cus-btn">
-                  <span className="text-btn">{t("common.goToShop")}</span>
-                  <span>{t("common.goToShop")}</span>
-                </Link>
-                <form
-                  action="#"
-                  method="post"
-                  className="contact-form d-flex align-items-center gap-16"
-                  onSubmit={(e) => e.preventDefault()}
-                >
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder={t("cart.couponCode")}
-                    name="code"
-                    id="cpCode"
-                  />
-                  <button type="submit" className="cus-btn border-0">
-                    <span className="text-btn">{t("cart.applyCoupon")}</span>
-                    <span>{t("cart.applyCoupon")}</span>
-                  </button>
-                </form>
-              </div>
-            </div>
-
-            <div className="col-xl-4">
-              <div className="checkout-box bg-semi-white">
-                <div className="checkout-title mb-16">
-                  <h6 className="fw-500 font-primary medium-black">
-                    {t("cart.cartTotals")}
-                  </h6>
+                {/* Mobile View Cards */}
+                <div className="d-lg-none d-block">
+                  <div className="row row-gap-3">
+                    {items.map((item) => (
+                      <CartMobileCard
+                        key={item.cartItemId || item.productId}
+                        item={item}
+                        updateQuantity={updateQuantity}
+                        removeItem={removeItem}
+                        t={t}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="bottom-box">
-                  <div className="title-price mb-16">
-                    <h6 className="font-sec fw-600 medium-black">
-                      {t("cart.subtotal")}
-                    </h6>
-                    <p className="light-gray">${subtotal.toFixed(2)}</p>
+
+                {/* Table Bottom Actions */}
+                <div className="table-bottom-row bg-white mt-24 d-flex justify-content-between align-items-center flex-wrap gap-12">
+                  <div className="d-flex gap-12 align-items-center">
+                    <Link to="/shop" className="cus-btn">
+                      <span className="text-btn">{t("common.goToShop", "Continue Shopping")}</span>
+                      <span>{t("common.goToShop", "Continue Shopping")}</span>
+                    </Link>
+                    <button
+                      type="button"
+                      className="btn btn-outline-danger btn-sm px-3 py-2"
+                      onClick={clearCart}
+                      disabled={isLoading}
+                    >
+                      <i className="fa-regular fa-trash-can me-2"></i>
+                      {t("cart.clearCart", "Clear entire cart")}
+                    </button>
                   </div>
-                  <div className="hr-line mb-16"></div>
-                  <div className="title-price mb-16">
-                    <h6 className="font-sec fw-600 medium-black">
-                      {t("cart.delivery")}
-                    </h6>
-                    <p className="light-gray">${delivery.toFixed(2)}</p>
-                  </div>
-                  <div className="hr-line mb-16"></div>
-                  <div className="title-price mb-32">
-                    <h6 className="font-sec fw-600 medium-black">
-                      {t("cart.discount")}
-                    </h6>
-                    <p className="light-gray">-${discount.toFixed(2)}</p>
-                  </div>
-                  <div className="hr-line mb-24"></div>
-                  <div className="title-price mb-32">
-                    <h5 className="font-sec fw-700 medium-black">
-                      {t("common.total")}
-                    </h5>
-                    <h5 className="font-sec fw-700 color-primary">
-                      ${total.toFixed(2)}
-                    </h5>
-                  </div>
-                  <Link
-                    to="/checkout.html"
-                    className="cus-btn w-100 text-center"
-                  >
-                    <span className="text-btn">
-                      {t("cart.proceedToCheckout")}
-                    </span>
-                    <span>{t("cart.proceedToCheckout")}</span>
-                  </Link>
                 </div>
               </div>
+
+              {/* Right Column: Cart Totals */}
+              <div className="col-xl-4">
+                <div className="checkout-box bg-semi-white p-24 br-20 border">
+                  <div className="checkout-title mb-20 border-bottom pb-12">
+                    <h5 className="fw-600 font-primary medium-black m-0">
+                      {t("cart.cartTotals", "Cart Totals")}
+                    </h5>
+                  </div>
+                  <div className="bottom-box">
+                    <div className="d-flex justify-content-between align-items-center mb-16">
+                      <span className="font-sec fw-500 medium-black">
+                        {t("cart.subtotal", "Subtotal")}
+                      </span>
+                      <span className="fw-600 medium-black">
+                        {cartSubtotal.toLocaleString("vi-VN")} đ
+                      </span>
+                    </div>
+
+                    <div className="d-flex justify-content-between align-items-center mb-16">
+                      <span className="font-sec fw-500 medium-black">
+                        {t("cart.delivery", "Shipping Fee")}
+                      </span>
+                      <span className="fw-600 text-success">
+                        {cartShippingFee === 0
+                          ? t("cart.freeShipping", "Free")
+                          : `${cartShippingFee.toLocaleString("vi-VN")} đ`}
+                      </span>
+                    </div>
+
+                    {cartDiscount > 0 && (
+                      <div className="d-flex justify-content-between align-items-center mb-16">
+                        <span className="font-sec fw-500 medium-black">
+                          {t("cart.discount", "Discount")}
+                        </span>
+                        <span className="fw-600 text-danger">
+                          -{cartDiscount.toLocaleString("vi-VN")} đ
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="hr-line my-20 border-top"></div>
+
+                    <div className="d-flex justify-content-between align-items-center mb-24">
+                      <h5 className="font-sec fw-700 medium-black m-0">
+                        {t("common.total", "Total")}
+                      </h5>
+                      <h4 className="font-sec fw-700 color-primary m-0">
+                        {cartTotal.toLocaleString("vi-VN")} đ
+                      </h4>
+                    </div>
+
+                    <Link to="/checkout" className="cus-btn w-100 text-center py-3">
+                      <span className="text-btn">
+                        {t("cart.proceedToCheckout", "Proceed to Checkout")}
+                      </span>
+                      <span>{t("cart.proceedToCheckout", "Proceed to Checkout")}</span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </section>
     </>
   );
 };
-
 export default Cart;

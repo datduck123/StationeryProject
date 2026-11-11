@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/** Preserve the two table names in the SQL Server Order migration. */
+/** Preserve exact table names in SQL Server (Orders, OrderItems, CartItems, Notifications). */
 @Component
 public class OrderTableNamingStrategy extends CamelCaseToUnderscoresNamingStrategy
         implements HibernatePropertiesCustomizer {
@@ -16,11 +16,17 @@ public class OrderTableNamingStrategy extends CamelCaseToUnderscoresNamingStrate
     @Override
     public Identifier toPhysicalTableName(Identifier name, JdbcEnvironment jdbcEnvironment) {
         if (name != null) {
+            for (String table : new String[]{"CartItems", "Reviews", "Payments", "Vouchers"}) {
+                if (table.equalsIgnoreCase(name.getText())) return Identifier.toIdentifier(table, true);
+            }
             if ("OrderItems".equalsIgnoreCase(name.getText())) {
                 return Identifier.toIdentifier("OrderItems", true);
             }
             if ("Orders".equalsIgnoreCase(name.getText())) {
                 return Identifier.toIdentifier("Orders", true);
+            }
+            if ("CartItems".equalsIgnoreCase(name.getText())) {
+                return Identifier.toIdentifier("CartItems", true);
             }
             if ("Notifications".equalsIgnoreCase(name.getText())) {
                 return Identifier.toIdentifier("Notifications", true);

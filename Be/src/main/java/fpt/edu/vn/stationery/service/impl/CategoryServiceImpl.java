@@ -32,6 +32,11 @@ public class CategoryServiceImpl implements CategoryService {
             throw new DuplicateResourceException("Category name already exists");
         }
         Category category = categoryMapper.toEntity(request);
+        if (request.getStatus() != null && !request.getStatus().isBlank()) {
+            category.setStatus(request.getStatus().trim().toUpperCase());
+        } else {
+            category.setStatus("ACTIVE");
+        }
         Category savedCategory = categoryRepository.save(category);
         return categoryMapper.toDto(savedCategory);
     }
@@ -47,6 +52,9 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         categoryMapper.updateEntity(category, request);
+        if (request.getStatus() != null && !request.getStatus().isBlank()) {
+            category.setStatus(request.getStatus().trim().toUpperCase());
+        }
         Category updatedCategory = categoryRepository.save(category);
         return categoryMapper.toDto(updatedCategory);
     }
@@ -59,7 +67,7 @@ public class CategoryServiceImpl implements CategoryService {
         }
 
         if (productRepository.existsByCategoryCategoryId(id)) {
-            throw new BadRequestException("Cannot delete category as it is being used by one or more products");
+            throw new BadRequestException("Cannot delete category as it is linked to one or more products.");
         }
 
         categoryRepository.deleteById(id);
@@ -69,7 +77,15 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional(readOnly = true)
     public List<CategoryResponseDTO> getAllCategories() {
         return categoryRepository.findAll().stream()
-                .map(categoryMapper::toDto)
+                .map(cat -> {
+                    CategoryResponseDTO dto = categoryMapper.toDto(cat);
+                    if (cat.getCategoryId() != null) {
+                        dto.setProductCount(productRepository.countByCategoryCategoryId(cat.getCategoryId()));
+                    } else {
+                        dto.setProductCount(0L);
+                    }
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -78,6 +94,8 @@ public class CategoryServiceImpl implements CategoryService {
     public CategoryResponseDTO getCategoryById(Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + id));
-        return categoryMapper.toDto(category);
+        CategoryResponseDTO dto = categoryMapper.toDto(category);
+        dto.setProductCount(productRepository.countByCategoryCategoryId(id));
+        return dto;
     }
 }

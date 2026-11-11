@@ -25,6 +25,10 @@ export const CustomDropdown = ({
   };
 
   useEffect(() => {
+    setSelected(defaultValue);
+  }, [defaultValue]);
+
+  useEffect(() => {
     const handleOutsideClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsOpen(false);

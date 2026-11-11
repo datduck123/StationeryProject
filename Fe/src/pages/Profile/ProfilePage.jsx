@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import TitleBanner from "../../components/shared/TitleBanner";
 import { useAuth } from "../../providers/AuthContext";
 import { useToast } from "../../providers/ToastContext";
@@ -9,6 +10,7 @@ import {
 } from "../../utils/validation";
 
 export const ProfilePage = () => {
+  const { t } = useTranslation();
   const { user, setUser } = useAuth();
   const { showToast } = useToast();
 
@@ -42,9 +44,7 @@ export const ProfilePage = () => {
       setEditAddress(data.address || "");
     } catch (err) {
       showToast(
-        err?.response?.data?.message ||
-          err.message ||
-          "Failed to load user profile.",
+        t("notifications.profileLoadFailed"),
         "error",
       );
     } finally {
@@ -87,12 +87,10 @@ export const ProfilePage = () => {
       }
 
       setIsEditModalOpen(false);
-      showToast("Profile updated successfully!", "success");
+      showToast(t("notifications.profileUpdated"), "success");
     } catch (err) {
       showToast(
-        err?.response?.data?.message ||
-          err.message ||
-          "Failed to update profile.",
+        t("notifications.profileUpdateFailed"),
         "error",
       );
     } finally {
@@ -123,12 +121,10 @@ export const ProfilePage = () => {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      showToast("Password changed successfully!", "success");
+      showToast(t("notifications.passwordChanged"), "success");
     } catch (err) {
       showToast(
-        err?.response?.data?.message ||
-          err.message ||
-          "Failed to change password. Please check your current password.",
+        t("notifications.passwordChangeFailed"),
         "error",
       );
     } finally {

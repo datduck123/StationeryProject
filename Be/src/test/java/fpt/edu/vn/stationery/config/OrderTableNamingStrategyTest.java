@@ -12,8 +12,18 @@ import java.util.HashMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class OrderTableNamingStrategyTest {
+
+    @ParameterizedTest
+    @ValueSource(strings = {"CartItems", "Reviews", "Payments", "Vouchers"})
+    void preservesIntegratedTableNames(String table) {
+        Identifier physical = new OrderTableNamingStrategy().toPhysicalTableName(Identifier.toIdentifier(table), null);
+        assertEquals(table, physical.getText());
+        assertTrue(physical.isQuoted());
+    }
 
     @Test
     void mapsOrderTablesToTheirExactSqlServerNames() {
