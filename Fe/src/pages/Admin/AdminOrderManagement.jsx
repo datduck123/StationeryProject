@@ -3,11 +3,20 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminListControls from "../../components/admin/AdminListControls";
+import OrderTrackingTimeline from "../../components/orders/OrderTrackingTimeline";
 import OrderStatusChanger from "../../components/orders/OrderStatusChanger";
 import { nextStatuses } from "../../components/orders/orderStatusTransitions";
 import Pagination from "../../components/ui/Pagination";
 import { useToast } from "../../providers/ToastContext";
 import orderService from "../../services/orderService";
+import {
+  formatOrderDateTime,
+  orderStatusLabel,
+  paymentMethodLabel,
+  paymentStatusLabel,
+  shippingMethodLabel,
+} from "../../utils/orderFormatters";
+import "../../styles/customer-orders.css";
 
 const PAGE_SIZE = 10;
 const statusColors = {
@@ -257,37 +266,49 @@ const AdminOrderManagement = () => {
       </div>
       {detailOpen && createPortal(
         <div
-          className="admin-order-overlay"
+          className="admin-order-overlay customer-order-modal-overlay"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closeDetail();
           }}
         >
-          <div className="admin-order-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-order-detail-title">
-            <div className="admin-order-dialog-header">
-              <h5 id="admin-order-detail-title">{t("adminOrders.detail.title", { id: detailOrderId })}</h5>
-              <button ref={closeDetailButton} type="button" className="btn-close" aria-label={t("adminOrders.detail.closeAria")} onClick={closeDetail} />
+          <div className="admin-order-dialog customer-order-modal" role="dialog" aria-modal="true" aria-labelledby="admin-order-detail-title">
+            <div className="admin-order-dialog-header customer-order-modal-header">
+              <div>
+                <h4 id="admin-order-detail-title">{t("orders.detailTitle")}</h4>
+                <p>{t("adminOrders.detail.title", { id: detailOrderId })}</p>
+              </div>
+              <button ref={closeDetailButton} type="button" className="customer-order-modal-close" aria-label={t("adminOrders.detail.closeAria")} onClick={closeDetail}>×</button>
             </div>
-            <div className="admin-order-dialog-body">
+            <div className="admin-order-dialog-body customer-order-modal-body">
               {detailLoading && <p className="mb-0">{t("adminOrders.detail.loading")}</p>}
               {detailError && <div className="alert alert-danger mb-0" role="alert">{detailError}</div>}
               {selectedOrder && (
                 <>
-                  <p className="mb-1"><strong>{t("adminOrders.detail.customer")}:</strong> {selectedOrder.customerName} ({selectedOrder.customerEmail})</p>
-                  <p className="mb-1"><strong>{t("adminOrders.detail.status")}:</strong> {t(`orders.statuses.${selectedOrder.orderStatus}`)}</p>
-                  <p className="mb-3"><strong>{t("adminOrders.detail.shipTo")}:</strong> {selectedOrder.shippingAddress}, {selectedOrder.phone}</p>
-                  <h6 className="fw-700">{t("adminOrders.detail.items")}</h6>
-                  {(selectedOrder.orderItems || []).map((item) => (
-                    <div className="d-flex justify-content-between border-bottom py-2" key={item.orderItemId}>
-                      <span>{item.productName} × {item.quantity}</span><span>{money(item.subtotal, i18n.language)}</span>
-                    </div>
-                  ))}
-                  <div className="d-flex justify-content-between pt-3 fw-700"><span>{t("adminOrders.detail.total")}</span><span>{money(selectedOrder.totalCost, i18n.language)}</span></div>
+                  <div className="customer-order-modal-grid">
+                    <div className="customer-order-modal-field"><span>{t("commerce.trackingCode")}</span><strong>{selectedOrder.trackingCode || t("commerce.trackingPending")}</strong></div>
+                    <div className="customer-order-modal-field"><span>{t("orders.placedAt")}</span><strong>{formatOrderDateTime(selectedOrder.createdAt, i18n.language)}</strong></div>
+                    <div className="customer-order-modal-field"><span>{t("orders.status")}</span><strong>{orderStatusLabel(selectedOrder.orderStatus, t)}</strong></div>
+                    <div className="customer-order-modal-field"><span>{t("orders.payment")}</span><strong>{paymentMethodLabel(selectedOrder.paymentMethod, t)}</strong><small>{paymentStatusLabel(selectedOrder.paymentStatus, t)}</small></div>
+                    <div className="customer-order-modal-field"><span>{t("orders.shipping")}</span><strong>{shippingMethodLabel(selectedOrder.shippingMethod, t)}</strong><small>{selectedOrder.phone || "—"}</small></div>
+                    <div className="customer-order-modal-field"><span>{t("orders.voucher")}</span><strong>{selectedOrder.voucherCode || (selectedOrder.voucherId ? `#${selectedOrder.voucherId}` : "—")}</strong><small>{t("orders.discountValue", { amount: money(selectedOrder.discountAmount, i18n.language) })}</small></div>
+                    <div className="customer-order-modal-field"><span>{t("adminOrders.detail.customer")}</span><strong>{selectedOrder.customerName || "—"}</strong><small>{selectedOrder.customerEmail || "—"}</small></div>
+                    <div className="customer-order-modal-field"><span>{t("adminOrders.detail.shipTo")}</span><strong>{selectedOrder.shippingAddress || "—"}</strong></div>
+                  </div>
+
+                  <div className="my-3"><OrderTrackingTimeline status={selectedOrder.orderStatus} /></div>
+                  <h5 className="customer-order-modal-items-title">{t("orders.products")}</h5>
+                  <div className="customer-order-modal-items">
+                    {selectedOrder.orderItems?.length ? selectedOrder.orderItems.map((item) => (
+                      <div className="customer-order-modal-item" key={item.orderItemId}>
+                        <div><strong>{item.productName}</strong><small>{t("orders.quantityPrice", { quantity: item.quantity, price: money(item.unitPrice, i18n.language) })}</small></div>
+                        <strong>{money(item.subtotal, i18n.language)}</strong>
+                      </div>
+                    )) : <p className="light-gray mb-0">{t("orders.noProducts")}</p>}
+                  </div>
                 </>
               )}
             </div>
-            <div className="admin-order-dialog-footer">
-              <button type="button" className="btn btn-outline-secondary" onClick={closeDetail}>{t("common.close")}</button>
-            </div>
+            {selectedOrder && <div className="admin-order-dialog-footer customer-order-modal-footer"><span>{t("orders.total")}</span><strong>{money(selectedOrder.totalCost, i18n.language)}</strong></div>}
           </div>
         </div>,
         document.body,
