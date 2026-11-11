@@ -115,7 +115,7 @@ const OrderHistoryPage = () => {
     setReviewItem(null);
   }, [reviewItem]);
 
-  // Client-side filtering by Status Tab and Search query
+  // Client-side filtering by Status, sort options, Tab and Search query
   const filteredOrders = useMemo(() => {
     const list = pageData?.content || [];
     return list.filter((order) => {
@@ -177,9 +177,8 @@ const OrderHistoryPage = () => {
                   <button
                     key={tab.key}
                     type="button"
-                    className={`btn btn-sm px-3 py-2 fw-600 rounded-pill border-0 ${
-                      isActive ? "btn-primary text-white shadow-sm" : "btn-light text-muted"
-                    }`}
+                    className={`btn btn-sm px-3 py-2 fw-600 rounded-pill border-0 ${isActive ? "btn-primary text-white shadow-sm" : "btn-light text-muted"
+                      }`}
                     style={{
                       transition: "all 0.2s ease",
                       backgroundColor: isActive ? "#e9613f" : undefined,
