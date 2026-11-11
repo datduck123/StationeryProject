@@ -595,5 +595,26 @@
   margin-bottom: 20px;
 }
 
+/* ==========================================================================
+   Order Card Item Hover Effects (Order History)
+   ========================================================================== */
+.shopee-order-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 12px rgba(20, 28, 43, 0.05);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease;
+  will-change: transform, box-shadow, border-color;
+}
+
+.shopee-order-card:hover {
+  transform: translateY(-4px);
+  border-color: #e9613f !important;
+  box-shadow: 0 10px 24px rgba(233, 97, 63, 0.16), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+
 
 
