@@ -67,8 +67,10 @@ public class VoucherServiceImpl implements VoucherService {
             throw new DuplicateResourceException("Voucher code '" + code + "' already exists");
         }
 
-        if (request.getUsageLimit() != null && voucher.getUsedCount() != null && request.getUsageLimit() < voucher.getUsedCount()) {
-            throw new BadRequestException("Usage limit (" + request.getUsageLimit() + ") cannot be less than current used count (" + voucher.getUsedCount() + ")");
+        if (request.getUsageLimit() != null && voucher.getUsedCount() != null
+                && request.getUsageLimit() < voucher.getUsedCount()) {
+            throw new BadRequestException("Usage limit (" + request.getUsageLimit()
+                    + ") cannot be less than current used count (" + voucher.getUsedCount() + ")");
         }
 
         validateVoucherRules(request);
@@ -173,12 +175,15 @@ public class VoucherServiceImpl implements VoucherService {
             throw new BadRequestException("This voucher has expired on " + voucher.getEndDate());
         }
 
-        if (voucher.getUsageLimit() != null && voucher.getUsedCount() != null && voucher.getUsedCount() >= voucher.getUsageLimit()) {
+        if (voucher.getUsageLimit() != null && voucher.getUsedCount() != null
+                && voucher.getUsedCount() >= voucher.getUsageLimit()) {
             throw new BadRequestException("This voucher has reached its maximum usage limit");
         }
 
-        if (orderAmount != null && voucher.getMinOrderAmount() != null && orderAmount.compareTo(voucher.getMinOrderAmount()) < 0) {
-            throw new BadRequestException("Order value must be at least $" + voucher.getMinOrderAmount() + " to use this voucher");
+        if (orderAmount != null && voucher.getMinOrderAmount() != null
+                && orderAmount.compareTo(voucher.getMinOrderAmount()) < 0) {
+            throw new BadRequestException(
+                    "Order value must be at least $" + voucher.getMinOrderAmount() + " to use this voucher");
         }
 
         return voucherMapper.toDto(voucher);
