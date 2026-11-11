@@ -123,6 +123,8 @@
     "popularTags": "Popular Tags",
     "sortBy": "Sort By",
     "defaultSorting": "Default",
+    "sortBestSeller": "Best Sellers",
+    "sortNewest": "Newest Arrivals",
     "priceLowHigh": "Price: Low to High",
     "priceHighLow": "Price: High to Low",
     "sortNameAsc": "Name: A → Z",

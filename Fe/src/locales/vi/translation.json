@@ -123,6 +123,8 @@
     "popularTags": "Thẻ Phổ Biến",
     "sortBy": "Sắp xếp theo",
     "defaultSorting": "Mặc định",
+    "sortBestSeller": "Bán chạy nhất",
+    "sortNewest": "Mới nhất",
     "priceLowHigh": "Giá: Thấp → Cao",
     "priceHighLow": "Giá: Cao → Thấp",
     "sortNameAsc": "Tên A → Z",

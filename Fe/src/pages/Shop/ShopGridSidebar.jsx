@@ -56,6 +56,8 @@ export const ShopGridSidebar = () => {
 
   const sortOptions = [
     { label: t("shop.defaultSorting", "Default"), value: "" },
+    { label: t("shop.sortBestSeller", "Best Sellers"), value: "sold,desc" },
+    { label: t("shop.sortNewest", "Newest Arrivals"), value: "createdAt,desc" },
     { label: t("shop.priceLowHigh", "Price: Low to High"), value: "price,asc" },
     { label: t("shop.priceHighLow", "Price: High to Low"), value: "price,desc" },
     { label: t("shop.sortNameAsc", "Name: A → Z"), value: "name,asc" },
@@ -93,9 +95,14 @@ export const ShopGridSidebar = () => {
   const minPrice = rawMinPrice !== null && rawMinPrice !== undefined && rawMinPrice !== "" ? Number(rawMinPrice) : null;
   const rawMaxPrice = searchParams.get("maxPrice");
   const maxPrice = rawMaxPrice !== null && rawMaxPrice !== undefined && rawMaxPrice !== "" ? Number(rawMaxPrice) : null;
+  const sortParam = searchParams.get("sort") || "";
 
-  const [sortValue, setSortValue] = useState("");
+  const [sortValue, setSortValue] = useState(sortParam);
   const [currentPage, setCurrentPage] = useState(0);
+
+  useEffect(() => {
+    setSortValue(sortParam);
+  }, [sortParam]);
 
   // ── Data state ───────────────────────────────────────────────────────────
   const [products, setProducts] = useState([]);
@@ -295,8 +302,18 @@ export const ShopGridSidebar = () => {
 
   const handleSortSelect = (label) => {
     const found = sortOptions.find((o) => o.label === label);
-    setSortValue(found ? found.value : "");
+    const nextVal = found ? found.value : "";
+    setSortValue(nextVal);
     setCurrentPage(0);
+    setSearchParams((prevParams) => {
+      const nextParams = new URLSearchParams(prevParams);
+      if (nextVal) {
+        nextParams.set("sort", nextVal);
+      } else {
+        nextParams.delete("sort");
+      }
+      return nextParams;
+    }, { replace: true });
   };
 
   const handlePageChange = (page) => {
