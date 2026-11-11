@@ -753,11 +753,33 @@ export const AdminProductManagement = () => {
               }}
             >
               <option value="createdAt,desc">Newest First</option>
+              <option value="sold,desc">Best Selling (Top Sold)</option>
               <option value="price,asc">Price: Low to High</option>
               <option value="price,desc">Price: High to Low</option>
               <option value="stockQuantity,asc">Stock: Low to High</option>
               <option value="stockQuantity,desc">Stock: High to Low</option>
+              <option value="name,asc">Name: A → Z</option>
             </select>
+
+            {(searchQuery || selectedCategory || selectedBrand || statusFilter !== "ALL" || sortBy !== "createdAt,desc") && (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 rounded-pill px-3"
+                style={{ fontSize: "12px", height: "34px" }}
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategory("");
+                  setSelectedBrand("");
+                  setStatusFilter("ALL");
+                  setSortBy("createdAt,desc");
+                  setPage(0);
+                }}
+                title="Reset all filters"
+              >
+                <i className="fa-solid fa-arrow-rotate-left fs-11"></i>
+                Reset
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1846,7 +1868,15 @@ export const AdminProductManagement = () => {
                   required
                   style={{ borderRadius: "10px", borderColor: "#cbd5e1" }}
                 />
-                <div className="d-flex justify-content-center gap-2 mt-3">
+                <div className="d-flex flex-wrap justify-content-center gap-2 mt-3">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => setStockToUpdate(0)}
+                    title="Set to out of stock"
+                  >
+                    Set 0 (Hết hàng)
+                  </button>
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-secondary"
@@ -1882,6 +1912,23 @@ export const AdminProductManagement = () => {
                   >
                     +50
                   </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => setStockToUpdate((s) => Number(s) + 100)}
+                  >
+                    +100
+                  </button>
+                </div>
+                <div className="text-center mt-3 fs-12">
+                  <span className="text-muted">Trạng thái dự kiến: </span>
+                  {Number(stockToUpdate) === 0 ? (
+                    <span className="badge bg-danger text-white">Hết hàng</span>
+                  ) : Number(stockToUpdate) <= 5 ? (
+                    <span className="badge bg-warning text-dark">Sắp hết hàng (Low Stock)</span>
+                  ) : (
+                    <span className="badge bg-success text-white">Còn hàng</span>
+                  )}
                 </div>
               </div>
 
