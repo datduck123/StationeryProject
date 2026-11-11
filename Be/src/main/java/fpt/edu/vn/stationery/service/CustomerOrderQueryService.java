@@ -100,7 +100,7 @@ public class CustomerOrderQueryService {
             List<OrderItemResponseDTO> items = itemsByOrder.getOrDefault(order.getOrderId(), List.of());
             items.forEach(item -> item.setReviewed(reviewedItems.contains(item.getOrderItemId())));
             response.setOrderItems(items);
-            response.setItemCount(items.size());
+            response.setItemCount(items.stream().mapToInt(OrderItemResponseDTO::getQuantity).sum());
             PaymentAndVoucher extras = extrasByOrder.get(order.getOrderId());
             if (extras != null) {
                 response.setVoucherCode(extras.voucherCode());

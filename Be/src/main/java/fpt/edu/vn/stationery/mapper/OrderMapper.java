@@ -32,7 +32,8 @@ public class OrderMapper {
                 .shippingFee(order.getShippingFee())
                 .totalCost(order.getTotalCost())
                 .createdAt(order.getCreatedAt())
-                .itemCount(order.getOrderItems() == null ? 0 : order.getOrderItems().size())
+                .itemCount(order.getOrderItems() == null ? 0 : order.getOrderItems().stream()
+                        .mapToInt(OrderItem::getQuantity).sum())
                 .build();
     }
 
