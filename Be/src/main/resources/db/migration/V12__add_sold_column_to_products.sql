@@ -9,6 +9,7 @@ IF NOT EXISTS (
 BEGIN
     ALTER TABLE Products ADD sold INT NOT NULL CONSTRAINT DF_Products_Sold DEFAULT 0;
 END;
+GO
 
 -- Backfill sold count from any existing DELIVERED orders in the database
 UPDATE p
@@ -21,6 +22,7 @@ LEFT JOIN (
     WHERE o.order_status = 'DELIVERED'
     GROUP BY oi.product_id
 ) s ON p.product_id = s.product_id;
+GO
 
 -- Index to optimize querying best seller products (ordered by sold DESC)
 IF NOT EXISTS (
@@ -30,3 +32,4 @@ IF NOT EXISTS (
 BEGIN
     CREATE NONCLUSTERED INDEX IX_Products_Sold ON Products(sold DESC, status);
 END;
+GO

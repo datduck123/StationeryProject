@@ -45,6 +45,7 @@ public class GlobalExceptionHandler {
         body.put("status", 409);
         body.put("message", ex.getMessage());
         body.put("cart", ex.getCartResponse());
+        body.put("data", Map.of("validatedCart", ex.getCartResponse()));
         body.put("timestamp", LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }

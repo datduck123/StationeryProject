@@ -24,7 +24,7 @@ public class CreateOrderRequestDTO {
     @Builder.Default
     private String shippingMethod = "STANDARD";
 
-    @Pattern(regexp = "^(COD|ONLINE)$", message = "Payment method must be COD or ONLINE")
+    @Pattern(regexp = "^(COD|ONLINE|VNPAY)$", message = "Payment method must be COD, ONLINE, or VNPAY")
     @Builder.Default
     private String paymentMethod = "COD";
 

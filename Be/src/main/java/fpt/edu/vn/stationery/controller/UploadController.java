@@ -25,6 +25,8 @@ import java.util.UUID;
 @Tag(name = "Upload", description = "File upload APIs")
 public class UploadController {
 
+    private static final java.util.Set<String> ALLOWED_EXTENSIONS = java.util.Set.of(".jpg", ".jpeg", ".png", ".webp", ".gif");
+
     @Value("${app.upload.dir:uploads}")
     private String uploadDir;
 
@@ -38,6 +40,16 @@ public class UploadController {
             throw new BadRequestException("Please select a file to upload");
         }
 
+        String originalFilename = file.getOriginalFilename();
+        String extension = ".png";
+        if (originalFilename != null && originalFilename.lastIndexOf(".") > -1) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+        }
+
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            throw new BadRequestException("Only image files (.jpg, .jpeg, .png, .webp, .gif) are allowed");
+        }
+
         String contentType = file.getContentType();
         if (contentType == null || (!contentType.startsWith("image/") && !contentType.equals("application/octet-stream"))) {
             throw new BadRequestException("Only image files (JPG, PNG, WEBP, GIF) are allowed");
@@ -47,12 +59,6 @@ public class UploadController {
             Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
-            }
-
-            String originalFilename = file.getOriginalFilename();
-            String extension = ".png";
-            if (originalFilename != null && originalFilename.lastIndexOf(".") > -1) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
             }
 
             String fileName = UUID.randomUUID().toString() + extension;

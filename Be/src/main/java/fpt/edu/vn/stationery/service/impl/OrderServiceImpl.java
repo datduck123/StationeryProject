@@ -121,7 +121,10 @@ public class OrderServiceImpl implements OrderService {
             discount = voucher.calculateDiscount(subtotal);
         }
         String shippingMethod = request.getShippingMethod() == null ? "STANDARD" : request.getShippingMethod();
-        String paymentMethod = request.getPaymentMethod() == null ? "COD" : request.getPaymentMethod();
+        String paymentMethod = request.getPaymentMethod() == null ? "COD" : request.getPaymentMethod().trim().toUpperCase();
+        if ("VNPAY".equals(paymentMethod)) {
+            paymentMethod = "ONLINE";
+        }
         BigDecimal shippingFee = CartCalculationServiceImpl.computeShippingFee(shippingMethod, subtotal, totalWeight);
         Order order = Order.builder().user(user).voucherId(voucher == null ? null : voucher.getVoucherId())
                 .subtotal(subtotal).discountAmount(discount).shippingMethod(shippingMethod)
@@ -159,8 +162,8 @@ public class OrderServiceImpl implements OrderService {
         if (request.getShippingMethod() != null && !Set.of("STANDARD", "EXPRESS").contains(request.getShippingMethod())) {
             throw new BadRequestException("Shipping method must be STANDARD or EXPRESS");
         }
-        if (request.getPaymentMethod() != null && !Set.of("COD", "ONLINE").contains(request.getPaymentMethod())) {
-            throw new BadRequestException("Payment method must be COD or ONLINE");
+        if (request.getPaymentMethod() != null && !Set.of("COD", "ONLINE", "VNPAY").contains(request.getPaymentMethod().trim().toUpperCase())) {
+            throw new BadRequestException("Payment method must be COD, ONLINE, or VNPAY");
         }
         if (request.getNote() != null && request.getNote().length() > 500) throw new BadRequestException("Order note is too long");
         if (request.getVoucherCode() != null && request.getVoucherCode().length() > 50) throw new BadRequestException("Voucher code is too long");
