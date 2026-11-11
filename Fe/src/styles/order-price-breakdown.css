@@ -1,0 +1,33 @@
+.order-price-breakdown {
+  width: 100%;
+}
+
+.order-price-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 5px 0;
+  color: #4b5565;
+}
+
+.order-price-breakdown-row strong {
+  color: #252c39;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.order-price-breakdown-discount strong {
+  color: #198754;
+}
+
+.order-price-breakdown-total {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e8ebf0;
+  font-weight: 700;
+}
+
+.order-price-breakdown-total strong {
+  color: #e7693c;
+  font-size: 18px;
+}
