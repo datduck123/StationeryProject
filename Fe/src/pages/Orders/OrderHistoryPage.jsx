@@ -126,7 +126,7 @@ const OrderHistoryPage = () => {
                             {order.orderItems?.length ? order.orderItems.map((item) => (
                               <div className="customer-orders-product" key={item.orderItemId}>
                                 <strong>{item.productName}</strong>
-                                <small>{t("orders.quantityPrice", { quantity: item.quantity, price: formatOrderMoney(item.unitPrice, i18n.language) })}</small>
+                                <small>{t("orders.quantityPrice", { quantity: item.quantity, price: formatOrderMoney(item.unitPrice, i18n.language) })} · {formatOrderMoney(item.subtotal, i18n.language)}</small>
                               </div>
                             )) : <span className="light-gray">{t("orders.noProducts")}</span>}
                           </td>
