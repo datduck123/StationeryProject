@@ -161,7 +161,6 @@ public class UserServiceImpl implements UserService {
         userRepository.save(user);
 
         otpService.deleteOtp(email, AppConstants.TYPE_FORGOT_PASSWORD);
-        log.info(">>> Password reset successfully for: {}", email);
     }
 
     @Override
@@ -183,7 +182,6 @@ public class UserServiceImpl implements UserService {
         user.setUpdatedAt(LocalDateTime.now());
 
         userRepository.save(user);
-        log.info(">>> Profile updated for user: {}", email);
         return userMapper.toProfileResponseDTO(user);
     }
 
@@ -204,7 +202,6 @@ public class UserServiceImpl implements UserService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
-        log.info(">>> Password changed for user: {}", email);
     }
 
     @Override
