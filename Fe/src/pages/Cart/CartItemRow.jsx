@@ -29,7 +29,7 @@ export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
     if (e?.stopPropagation) e.stopPropagation();
     if (isRemoving) return;
     setIsRemoving(true);
-    // Chờ 500ms cho hiệu ứng bounceOutLeft văng sang trái hoàn tất trước khi gọi API xóa
+    // Chờ 500ms cho hiệu ứng bounceOutLeft
     setTimeout(() => {
       onRemove(item.cartItemId);
     }, 500);
@@ -37,9 +37,8 @@ export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
 
   return (
     <div
-      className={`cart-item-row-wrapper ${
-        isRemoving ? "cart-item-removing" : ""
-      }`}
+      className={`cart-item-row-wrapper ${isRemoving ? "cart-item-removing" : ""
+        }`}
     >
       <table className="cart-table mb-16">
         <tbody>
@@ -55,86 +54,86 @@ export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
                 >
                   <i className="fa-solid fa-xmark fs-5"></i>
                 </button>
-              <div
-                className="img-block br-8 overflow-hidden bg-semi-white"
-                style={{ width: "70px", height: "70px", flexShrink: 0 }}
-              >
-                <img
-                  src={item.imageUrl || "/assets/media/products/product-1.png"}
-                  alt={item.productName}
-                  className="w-100 h-100 object-fit-contain"
-                  onError={(e) => {
-                    e.target.src = "/assets/media/products/product-1.png";
-                  }}
-                />
+                <div
+                  className="img-block br-8 overflow-hidden bg-semi-white"
+                  style={{ width: "70px", height: "70px", flexShrink: 0 }}
+                >
+                  <img
+                    src={item.imageUrl || "/assets/media/products/product-1.png"}
+                    alt={item.productName}
+                    className="w-100 h-100 object-fit-contain"
+                    onError={(e) => {
+                      e.target.src = "/assets/media/products/product-1.png";
+                    }}
+                  />
+                </div>
+                <div className="d-block text-start">
+                  <h6 className="mb-4p">
+                    <Link
+                      to={`/product-detail?id=${item.productId}`}
+                      className="fw-600 medium-black text-decoration-none"
+                    >
+                      {item.productName}
+                    </Link>
+                  </h6>
+                  {item.sku && (
+                    <small className="text-muted d-block">SKU: {item.sku}</small>
+                  )}
+                  {item.message && (
+                    <small className="text-warning d-block">
+                      <i className="fa-solid fa-triangle-exclamation me-1"></i>
+                      {item.message}
+                    </small>
+                  )}
+                </div>
               </div>
-              <div className="d-block text-start">
-                <h6 className="mb-4p">
-                  <Link
-                    to={`/product-detail?id=${item.productId}`}
-                    className="fw-600 medium-black text-decoration-none"
+            </td>
+            <td style={{ width: "15%" }}>
+              <p className="fw-500 mb-0">{unitPrice.toLocaleString("vi-VN")} đ</p>
+            </td>
+            <td style={{ width: "20%" }}>
+              <div className="quantity quantity-wrap d-inline-flex align-items-center">
+                <div className="input-area quantity-wrap d-flex align-items-center">
+                  <button
+                    className="decrement"
+                    type="button"
+                    disabled={isAtMin}
+                    onClick={handleDecrement}
                   >
-                    {item.productName}
-                  </Link>
-                </h6>
-                {item.sku && (
-                  <small className="text-muted d-block">SKU: {item.sku}</small>
-                )}
-                {item.message && (
-                  <small className="text-warning d-block">
-                    <i className="fa-solid fa-triangle-exclamation me-1"></i>
-                    {item.message}
-                  </small>
-                )}
+                    -
+                  </button>
+                  <input
+                    name="quantity"
+                    className="number text-center"
+                    style={{ width: "45px" }}
+                    {...inputProps}
+                  />
+                  <button
+                    className="increment"
+                    type="button"
+                    disabled={isAtMax}
+                    onClick={handleIncrement}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-            </div>
-          </td>
-          <td style={{ width: "15%" }}>
-            <p className="fw-500 mb-0">{unitPrice.toLocaleString("vi-VN")} đ</p>
-          </td>
-          <td style={{ width: "20%" }}>
-            <div className="quantity quantity-wrap d-inline-flex align-items-center">
-              <div className="input-area quantity-wrap d-flex align-items-center">
-                <button
-                  className="decrement"
-                  type="button"
-                  disabled={isAtMin}
-                  onClick={handleDecrement}
-                >
-                  -
-                </button>
-                <input
-                  name="quantity"
-                  className="number text-center"
-                  style={{ width: "45px" }}
-                  {...inputProps}
-                />
-                <button
-                  className="increment"
-                  type="button"
-                  disabled={isAtMax}
-                  onClick={handleIncrement}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-            {maxStock <= 5 && maxStock > 0 && (
-              <small className="text-danger d-block mt-1">
-                {t("cart.onlyLeft", { count: maxStock, defaultValue: `Only ${maxStock} left` })}
-              </small>
-            )}
-          </td>
-          <td style={{ width: "20%" }}>
-            <h6 className="color-primary fw-600 mb-0">
-              {subtotal.toLocaleString("vi-VN")} đ
-            </h6>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-);
+              {maxStock <= 5 && maxStock > 0 && (
+                <small className="text-danger d-block mt-1">
+                  {t("cart.onlyLeft", { count: maxStock, defaultValue: `Only ${maxStock} left` })}
+                </small>
+              )}
+            </td>
+            <td style={{ width: "20%" }}>
+              <h6 className="color-primary fw-600 mb-0">
+                {subtotal.toLocaleString("vi-VN")} đ
+              </h6>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
 };
 
 export default CartItemRow;
