@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import OrderTrackingTimeline from "./OrderTrackingTimeline";
+import OrderItemReviewAction from "./OrderItemReviewAction";
 import ProductReviewModal from "../reviews/ProductReviewModal";
 import {
   formatOrderDateTime,
@@ -64,16 +65,25 @@ const CustomerOrderDetailModal = ({ order, orderNumber, onClose }) => {
 
         <div className="customer-order-modal-body">
           <div className="customer-order-modal-grid">
+            <div className="customer-order-modal-field"><span>{t("orders.recipient")}</span><strong>{order.customerName || "—"}</strong></div>
+            <div className="customer-order-modal-field"><span>{t("orders.phone")}</span><strong>{order.phone || "—"}</strong></div>
+            {order.customerEmail && (
+              <div className="customer-order-modal-field"><span>Email</span><strong>{order.customerEmail}</strong></div>
+            )}
+            <div className="customer-order-modal-field"><span>{t("orders.shippingAddress")}</span><strong>{order.shippingAddress || "—"}</strong></div>
             <div className="customer-order-modal-field"><span>{t("commerce.trackingCode")}</span><strong>{order.trackingCode || t("commerce.trackingPending")}</strong></div>
             <div className="customer-order-modal-field"><span>{t("orders.placedAt")}</span><strong>{formatOrderDateTime(order.createdAt, i18n.language)}</strong></div>
             <div className="customer-order-modal-field"><span>{t("orders.status")}</span><strong>{orderStatusLabel(order.orderStatus, t)}</strong></div>
             <div className="customer-order-modal-field"><span>{t("orders.payment")}</span><strong>{paymentMethodLabel(order.paymentMethod, t)}</strong><small>{paymentStatusLabel(order.paymentStatus, t)}</small></div>
-            <div className="customer-order-modal-field"><span>{t("orders.shipping")}</span><strong>{shippingMethodLabel(order.shippingMethod, t)}</strong><small>{order.phone || "—"}</small></div>
+            <div className="customer-order-modal-field"><span>{t("orders.shippingMethod")}</span><strong>{shippingMethodLabel(order.shippingMethod, t)}</strong></div>
             <div className="customer-order-modal-field"><span>{t("orders.voucher")}</span><strong>{order.voucherCode || (order.voucherId ? `#${order.voucherId}` : "—")}</strong><small>{t("orders.discountValue", { amount: formatOrderMoney(order.discountAmount, i18n.language) })}</small></div>
           </div>
 
           <div className="my-3"><OrderTrackingTimeline status={order.orderStatus} /></div>
-          <Link to={`/account/orders/${order.orderId}`} onClick={onClose} className="btn btn-outline-primary btn-sm mb-3">{t("orders.detailTitle")} →</Link>
+          <Link to={`/account/orders/${order.orderId}`} onClick={onClose} className="btn-order-modal-detail">
+            <span>{t("orders.detailTitle")}</span>
+            <i className="fa-solid fa-arrow-right"></i>
+          </Link>
 
           <h5 className="customer-order-modal-items-title">{t("orders.products")}</h5>
           <div className="customer-order-modal-items">
@@ -85,25 +95,19 @@ const CustomerOrderDetailModal = ({ order, orderNumber, onClose }) => {
                     <strong>{item.productName}</strong>
                     <small>{t("orders.quantityPrice", { quantity: item.quantity, price: formatOrderMoney(item.unitPrice, i18n.language) })}</small>
                   </div>
-                  <div className="d-flex align-items-center gap-3">
+                  <div className="d-flex flex-column align-items-end gap-2" style={{ maxWidth: "55%" }}>
                     <strong>{formatOrderMoney(item.subtotal, i18n.language)}</strong>
                     {order.orderStatus === "DELIVERED" && (
-                      <div>
-                        {isReviewed ? (
-                          <span className="badge-order-reviewed">
-                            <i className="fa-solid fa-circle-check"></i>
-                            {t("reviews.alreadyReviewed", "Đã đánh giá")}
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn-order-review"
-                            onClick={() => setReviewItem(item)}
-                          >
-                            <i className="fa-solid fa-star text-warning"></i>
-                            {t("reviews.writeReview", "Đánh giá")}
-                          </button>
-                        )}
+                      <div className="w-100" style={{ minWidth: "220px" }}>
+                        <OrderItemReviewAction
+                          item={item}
+                          orderStatus={order.orderStatus}
+                          reviewedItemIds={reviewedOrderItemIds}
+                          onOpenReviewModal={(it) => setReviewItem(it)}
+                          onItemReviewed={(itemId) => {
+                            setReviewedOrderItemIds((current) => new Set(current).add(itemId));
+                          }}
+                        />
                       </div>
                     )}
                   </div>

@@ -85,7 +85,6 @@ public class UserServiceImpl implements UserService {
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
-        log.info(">>> Password changed for user: {}", cleanEmail);
     }
 
     @Override

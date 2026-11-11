@@ -25,8 +25,6 @@ import java.util.Optional;
 @Slf4j
 public class CartServiceImpl implements CartService {
 
-    public static final int MAX_ITEM_QUANTITY_PER_ORDER = 20;
-
     private final CartItemRepository cartItemRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
@@ -63,29 +61,20 @@ public class CartServiceImpl implements CartService {
         if (availableStock <= 0) {
             throw new BadRequestException("Sản phẩm đã hết hàng trong kho");
         }
-        int maxAllowed = Math.min(availableStock, MAX_ITEM_QUANTITY_PER_ORDER);
 
         Optional<CartItem> existingItemOpt = cartItemRepository.findByUser_UserIdAndProduct_ProductId(userId, product.getProductId());
 
         if (existingItemOpt.isPresent()) {
             CartItem existingItem = existingItemOpt.get();
             int newQuantity = existingItem.getQuantity() + quantityToAdd;
-            if (newQuantity > maxAllowed) {
-                if (maxAllowed < MAX_ITEM_QUANTITY_PER_ORDER) {
-                    throw new BadRequestException("Tổng số lượng (" + newQuantity + ") vượt quá tồn kho hiện có (" + availableStock + ")");
-                } else {
-                    throw new BadRequestException("Số lượng đặt mua tối đa cho mỗi sản phẩm trong 1 đơn là " + MAX_ITEM_QUANTITY_PER_ORDER);
-                }
+            if (newQuantity > availableStock) {
+                throw new BadRequestException("Tổng số lượng (" + newQuantity + ") vượt quá tồn kho hiện có (" + availableStock + ")");
             }
             existingItem.setQuantity(newQuantity);
             cartItemRepository.save(existingItem);
         } else {
-            if (quantityToAdd > maxAllowed) {
-                if (maxAllowed < MAX_ITEM_QUANTITY_PER_ORDER) {
-                    throw new BadRequestException("Số lượng yêu cầu (" + quantityToAdd + ") vượt quá tồn kho hiện có (" + availableStock + ")");
-                } else {
-                    throw new BadRequestException("Số lượng đặt mua tối đa cho mỗi sản phẩm trong 1 đơn là " + MAX_ITEM_QUANTITY_PER_ORDER);
-                }
+            if (quantityToAdd > availableStock) {
+                throw new BadRequestException("Số lượng yêu cầu (" + quantityToAdd + ") vượt quá tồn kho hiện có (" + availableStock + ")");
             }
             CartItem newItem = CartItem.builder()
                     .user(user)
@@ -122,13 +111,8 @@ public class CartServiceImpl implements CartService {
         }
 
         int availableStock = product.getStockQuantity() != null ? product.getStockQuantity() : 0;
-        int maxAllowed = Math.min(availableStock, MAX_ITEM_QUANTITY_PER_ORDER);
-        if (quantity > maxAllowed) {
-            if (maxAllowed < MAX_ITEM_QUANTITY_PER_ORDER) {
-                throw new BadRequestException("Số lượng yêu cầu (" + quantity + ") vượt quá tồn kho hiện có (" + availableStock + ")");
-            } else {
-                throw new BadRequestException("Số lượng đặt mua tối đa cho mỗi sản phẩm trong 1 đơn là " + MAX_ITEM_QUANTITY_PER_ORDER);
-            }
+        if (quantity > availableStock) {
+            throw new BadRequestException("Số lượng yêu cầu (" + quantity + ") vượt quá tồn kho hiện có (" + availableStock + ")");
         }
 
         cartItem.setQuantity(quantity);

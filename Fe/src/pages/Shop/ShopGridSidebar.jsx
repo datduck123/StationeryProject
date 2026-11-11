@@ -68,9 +68,9 @@ export const ShopGridSidebar = () => {
     price: true,
     categories: true,
     brands: true,
-    tags: true,
   });
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
   const toggleCategory = (key) => {
     setOpenCategories((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -265,22 +265,6 @@ export const ShopGridSidebar = () => {
     }, { replace: true });
   };
 
-  const handleTagClick = (tag) => {
-    setCurrentPage(0);
-    setSearchParams((prevParams) => {
-      const nextParams = new URLSearchParams(prevParams);
-      const current = nextParams.get("keyword") || nextParams.get("search") || "";
-      if (current.toLowerCase() === tag.toLowerCase()) {
-        nextParams.delete("keyword");
-        nextParams.delete("search");
-      } else {
-        nextParams.set("keyword", tag);
-        nextParams.delete("search");
-      }
-      return nextParams;
-    }, { replace: true });
-  };
-
   const handleApplyPrice = (min, max) => {
     setCurrentPage(0);
     setSearchParams((prevParams) => {
@@ -331,6 +315,14 @@ export const ShopGridSidebar = () => {
     keyword
   );
 
+  const activeFilterCount = (
+    (stockActiveCount > 0 ? 1 : 0) +
+    (minPrice !== null || maxPrice !== null ? 1 : 0) +
+    (selectedCategoryId !== null ? 1 : 0) +
+    (selectedBrandId !== null ? 1 : 0) +
+    (keyword ? 1 : 0)
+  );
+
   const resetAllFilters = () => {
     setCurrentPage(0);
     setSearchParams(new URLSearchParams(), { replace: true });
@@ -349,20 +341,33 @@ export const ShopGridSidebar = () => {
             {t("shop.filterTitle", "Filters")}
           </span>
         </div>
-        {hasActiveFilters && (
-          <button
-            type="button"
-            className="shop-reset-filters-btn"
-            onClick={resetAllFilters}
-            title={t("common.reset", "Reset")}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-            <span>{t("common.clearAll", "Clear all")}</span>
-          </button>
-        )}
+        <div className="d-flex align-items-center gap-2">
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="shop-reset-filters-btn"
+              onClick={resetAllFilters}
+              title={t("common.reset", "Reset")}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+              <span>{t("common.clearAll", "Clear all")}</span>
+            </button>
+          )}
+          {prefix === "desktop" && (
+            <button
+              type="button"
+              className="shop-sidebar-close-btn"
+              onClick={() => setIsSidebarVisible(false)}
+              title={t("shop.hideFilters", "Ẩn bộ lọc")}
+              aria-label="Hide filter sidebar"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Availability Filter */}
@@ -524,48 +529,6 @@ export const ShopGridSidebar = () => {
           </div>
         )}
       </div>
-      <div className="shop-sidebar-divider"></div>
-
-      {/* Tags Filter */}
-      <div className="category-block mb-12">
-        <SidebarSectionHeader
-          title={t("shop.popularTags", "Tags")}
-          isOpen={openCategories.tags}
-          onToggle={() => toggleCategory("tags")}
-          activeCount={keyword ? 1 : null}
-        />
-        {openCategories.tags && (
-          <div className="content-block mt-12">
-            <div className="tags-wrapper d-flex flex-wrap gap-8">
-              {["Pen", "Notebook", "Paper", "Highlighter", "Puncher", "Deli", "Thien Long"].map((tag) => {
-                const isTagActive = keyword.toLowerCase() === tag.toLowerCase();
-                return (
-                  <button
-                    key={tag}
-                    type="button"
-                    className={`tag ${isTagActive ? "active" : ""}`}
-                    onClick={() => handleTagClick(tag)}
-                    style={{
-                      padding: "6px 14px",
-                      borderRadius: "20px",
-                      border: isTagActive ? "1px solid var(--color-primary, #e57c32)" : "1px solid #e2e8f0",
-                      backgroundColor: isTagActive ? "var(--color-primary, #e57c32)" : "#f8fafc",
-                      color: isTagActive ? "#ffffff" : "#475569",
-                      fontSize: "12px",
-                      fontWeight: "600",
-                      cursor: "pointer",
-                      transition: "all 0.2s ease",
-                      boxShadow: isTagActive ? "0 2px 8px rgba(229, 124, 50, 0.25)" : "none",
-                    }}
-                  >
-                    {tag}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Sidebar Promotional Image */}
       <div
@@ -707,17 +670,35 @@ export const ShopGridSidebar = () => {
 
       <section className="shop-section py-80">
         <div className="container-2">
-          <div className="row">
+          <div className="row g-4">
             {/* Desktop Sidebar */}
-            <div className="col-xxl-2 col-xl-3 col-lg-4 d-lg-block d-none">
-              {renderSidebarContent("desktop")}
-            </div>
+            {isSidebarVisible && (
+              <div className="col-xxl-3 col-xl-3 col-lg-4 d-lg-block d-none">
+                {renderSidebarContent("desktop")}
+              </div>
+            )}
 
             {/* Products Main Column */}
-            <div className="col-xxl-10 col-xl-9 col-lg-8">
+            <div className={isSidebarVisible ? "col-xxl-9 col-xl-9 col-lg-8" : "col-12"}>
               <div className="row row-gap-3 align-items-center justify-content-between mb-24">
-                <div className="col-xl-4 col-lg-5 col-md-7 col-6">
-                  <p className="d-md-block d-none">
+                <div className="col-xl-6 col-lg-6 col-md-7 col-12 d-flex align-items-center gap-3">
+                  {/* Desktop Toggle Filter Button */}
+                  <button
+                    type="button"
+                    className={`shop-toggle-filter-btn d-lg-inline-flex d-none ${isSidebarVisible ? "is-active" : ""}`}
+                    onClick={() => setIsSidebarVisible((prev) => !prev)}
+                    title={isSidebarVisible ? t("shop.hideFilters", "Ẩn bộ lọc") : t("shop.showFilters", "Hiện bộ lọc")}
+                  >
+                    <i className="fa-solid fa-sliders"></i>
+                    <span>{isSidebarVisible ? t("shop.hideFilters", "Ẩn bộ lọc") : t("shop.showFilters", "Hiện bộ lọc")}</span>
+                    {hasActiveFilters && (
+                      <span className="badge bg-warning text-dark rounded-pill ms-1 fs-11">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+
+                  <p className="d-md-block d-none mb-0">
                     {loading
                       ? t("common.loading", "Loading...")
                       : t("shop.showingProductCount", {
@@ -734,7 +715,7 @@ export const ShopGridSidebar = () => {
                     <span>{t("shop.filter")}</span>
                   </button>
                 </div>
-                <div className="col-xl-4 col-lg-4 col-md-5 col-6">
+                <div className="col-xl-4 col-lg-4 col-md-5 col-12">
                   <div className="d-flex align-items-center justify-content-end gap-8">
                     <p className="dark-gray">{t("shop.sortBy", "Sort By")}:</p>
                     <div className="drop-container">
@@ -863,7 +844,7 @@ export const ShopGridSidebar = () => {
                     return (
                       <div
                         key={prodId}
-                        className="col-xxl-3 col-xl-4 col-md-6 col-sm-6 wow fadeInUp animated"
+                        className={`${isSidebarVisible ? "col-xxl-3 col-xl-4 col-md-6 col-sm-6" : "col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6"} wow fadeInUp animated`}
                         data-wow-delay="400ms"
                       >
                         <div className={`latest-product-card ${!inStock ? "is-out-of-stock" : ""}`}>

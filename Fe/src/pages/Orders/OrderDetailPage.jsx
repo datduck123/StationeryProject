@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import TitleBanner from "../../components/shared/TitleBanner";
 import OrderTrackingTimeline from "../../components/orders/OrderTrackingTimeline";
+import OrderItemReviewAction from "../../components/orders/OrderItemReviewAction";
 import ProductReviewModal from "../../components/reviews/ProductReviewModal";
 import orderService from "../../services/orderService";
 import { useToast } from "../../providers/ToastContext";
@@ -246,6 +247,18 @@ const OrderDetailPage = () => {
                       </div>
                     </div>
                   </div>
+                  {order.orderStatus === "PENDING" && (
+                    <div className="d-flex justify-content-end mt-24">
+                      <button
+                        type="button"
+                        className="btn-order-cancel-large"
+                        disabled={canceling}
+                        onClick={handleCancelOrder}
+                      >
+                        {canceling ? t("orders.cancelling") : t("orders.cancelOrder")}
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Right Column: Order Summary (Checkout-style Sidebar Card) */}
