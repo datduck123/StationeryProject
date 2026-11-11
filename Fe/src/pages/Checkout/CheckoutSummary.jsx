@@ -126,7 +126,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
   return (
     <div className="checkout-sidebar">
       {/* Voucher Dropdown Widget */}
-      <div className="coupon-widget mb-24" ref={dropdownRef}>
+      <div className="coupon-widget mb-24 position-relative" ref={dropdownRef}>
         <h6 className="fw-600 mb-12">{t("checkout.voucherTitle", "Discount Code (Voucher)")}</h6>
 
         {/* Dropdown Toggle Header */}
@@ -175,8 +175,18 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
         {/* Dropdown Menu Options */}
         {isDropdownOpen && (
           <div
-            className="voucher-dropdown-menu mt-2 p-3 br-10 bg-white border shadow-sm"
-            style={{ maxHeight: "320px", overflowY: "auto", position: "relative", zIndex: 10 }}
+            className="voucher-dropdown-menu mt-2 p-3 br-10 bg-white border shadow"
+            style={{
+              maxHeight: "320px",
+              overflowY: "auto",
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              width: "100%",
+              zIndex: 1050,
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.15)"
+            }}
           >
             <div className="text-muted mb-2 fw-500" style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
               Danh sách mã voucher khả dụng:
@@ -352,7 +362,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
         {/* Payment Methods */}
         <div className="payment-accordion mb-24">
           <h6 className="fw-600 mb-16">{t("checkout.paymentMethod", "Payment Method")}</h6>
-          <div className="cus-radio mb-12">
+          <div className="cus-radio">
             <input
               type="radio"
               id="payment-cod"
@@ -363,19 +373,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
             />
             <label htmlFor="payment-cod">{t("checkout.cashOnDelivery", "Cash on delivery (COD)")}</label>
           </div>
-          <div className="cus-radio">
-            <input
-              type="radio"
-              id="payment-vnpay"
-              name="paymentMethod"
-              value="ONLINE"
-              checked={formData.paymentMethod === "ONLINE" || formData.paymentMethod === "VNPAY"}
-              onChange={handleChange}
-            />
-            <label htmlFor="payment-vnpay">{t("checkout.vnpay", "Thanh toán trực tuyến (ONLINE)")}</label>
-          </div>
         </div>
-
         <button
           className="cus-btn w-100"
           type="submit"

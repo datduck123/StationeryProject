@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import TitleBanner from "../../components/shared/TitleBanner";
@@ -7,6 +7,7 @@ import { useCartContext } from "../../providers/CartContext";
 import useQuantityInput from "../../hooks/useQuantityInput";
 
 const CartMobileCard = ({ item, updateQuantity, removeItem, t }) => {
+  const [isRemoving, setIsRemoving] = useState(false);
   const qty = item.finalQuantity || item.requestedQuantity || 1;
   const maxStock = item.currentStock ?? 999;
   const price = Number(item.unitPrice || 0);
@@ -25,8 +26,22 @@ const CartMobileCard = ({ item, updateQuantity, removeItem, t }) => {
     commitOnBlurOnly: true,
   });
 
+  const handleRemove = (e) => {
+    if (e?.stopPropagation) e.stopPropagation();
+    if (isRemoving) return;
+    setIsRemoving(true);
+    // Chờ 500ms cho hiệu ứng bounceOutLeft hoàn tất trước khi gọi API xóa
+    setTimeout(() => {
+      removeItem(item.cartItemId);
+    }, 500);
+  };
+
   return (
-    <div className="col-md-6">
+    <div
+      className={`col-md-6 ${
+        isRemoving ? "cart-item-removing" : ""
+      }`}
+    >
       <div className="card-item bg-semi-white br-20 p-24">
         <div className="d-flex align-items-center justify-content-between mb-16">
           <h6 className="m-0 text-truncate" style={{ maxWidth: "80%" }}>
@@ -35,7 +50,8 @@ const CartMobileCard = ({ item, updateQuantity, removeItem, t }) => {
           <button
             type="button"
             className="btn btn-link text-danger p-0 border-0"
-            onClick={() => removeItem(item.cartItemId)}
+            onClick={handleRemove}
+            disabled={isRemoving}
           >
             <i className="fa-solid fa-xmark fs-5"></i>
           </button>

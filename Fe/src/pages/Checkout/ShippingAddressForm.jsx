@@ -31,7 +31,11 @@ export const ShippingAddressForm = ({ formData, setFormData, errors }) => {
         {/* Full Name */}
         <div className="col-md-12">
           <div className="input-block mb-16">
+            <label htmlFor="checkout-fullName" className="form-label fw-600 mb-8 dark-black">
+              {t("checkout.fullName", "Full Name")} <span className="text-danger">*</span>
+            </label>
             <input
+              id="checkout-fullName"
               type="text"
               name="fullName"
               className={`form-control form-control-2 ${errors.fullName ? "is-invalid" : ""}`}
@@ -46,7 +50,11 @@ export const ShippingAddressForm = ({ formData, setFormData, errors }) => {
         {/* Email & Phone */}
         <div className="col-md-6">
           <div className="input-block mb-16">
+            <label htmlFor="checkout-email" className="form-label fw-600 mb-8 dark-black">
+              {t("checkout.emailOptional", "Email (Optional)")}
+            </label>
             <input
+              id="checkout-email"
               type="email"
               name="email"
               className="form-control form-control-2"
@@ -58,7 +66,11 @@ export const ShippingAddressForm = ({ formData, setFormData, errors }) => {
         </div>
         <div className="col-md-6">
           <div className="input-block mb-16">
+            <label htmlFor="checkout-phoneNumber" className="form-label fw-600 mb-8 dark-black">
+              {t("checkout.phoneNumber", "Phone Number")} <span className="text-danger">*</span>
+            </label>
             <input
+              id="checkout-phoneNumber"
               type="tel"
               name="phoneNumber"
               className={`form-control form-control-2 ${errors.phoneNumber ? "is-invalid" : ""}`}
@@ -73,7 +85,11 @@ export const ShippingAddressForm = ({ formData, setFormData, errors }) => {
         {/* Shipping Address */}
         <div className="col-md-12">
           <div className="input-block mb-16">
+            <label htmlFor="checkout-shippingAddress" className="form-label fw-600 mb-8 dark-black">
+              {t("checkout.shippingAddress", "Delivery Address")} <span className="text-danger">*</span>
+            </label>
             <input
+              id="checkout-shippingAddress"
               type="text"
               name="shippingAddress"
               className={`form-control form-control-2 ${errors.shippingAddress ? "is-invalid" : ""}`}
@@ -88,7 +104,11 @@ export const ShippingAddressForm = ({ formData, setFormData, errors }) => {
         {/* Order Notes */}
         <div className="col-md-12">
           <div className="input-block">
+            <label htmlFor="checkout-orderNotes" className="form-label fw-600 mb-8 dark-black">
+              {t("checkout.orderNotes", "Order Notes (Optional)")}
+            </label>
             <textarea
+              id="checkout-orderNotes"
               name="orderNotes"
               className="form-control form-control-2"
               placeholder={t("checkout.orderNotesPlaceholder", "Order notes (e.g. deliver during office hours)")}
