@@ -528,11 +528,26 @@ export const AdminProductManagement = () => {
         </button>
       </div>
 
-      {/* Top Banner Stats (Professional Cards with Icons - matching Category Management) */}
+      {/* Top Banner Stats (Professional Cards with Icons - Click to Filter) */}
       <div className="row g-3 mb-4">
         {/* Total Products */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "ALL" ? "border-primary" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "ALL" ? "#e9613f" : "#e2e8f0",
+              boxShadow: statusFilter === "ALL" ? "0 0 0 1px #e9613f" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("ALL");
+              setPage(0);
+            }}
+            title="Click to show all products"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
                 Total Products
@@ -555,7 +570,22 @@ export const AdminProductManagement = () => {
 
         {/* Active Products */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "ACTIVE" ? "border-success" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "ACTIVE" ? "#10b981" : "#e2e8f0",
+              boxShadow: statusFilter === "ACTIVE" ? "0 0 0 1px #10b981" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("ACTIVE");
+              setPage(0);
+            }}
+            title="Click to filter Active products"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
                 Active Products
@@ -573,7 +603,10 @@ export const AdminProductManagement = () => {
 
         {/* Out of stock */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between"
+            style={{ borderColor: "#e2e8f0" }}
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
                 Out of Stock
@@ -596,7 +629,22 @@ export const AdminProductManagement = () => {
 
         {/* Inactive Products */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "INACTIVE" ? "border-danger" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "INACTIVE" ? "#ef4444" : "#e2e8f0",
+              boxShadow: statusFilter === "INACTIVE" ? "0 0 0 1px #ef4444" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("INACTIVE");
+              setPage(0);
+            }}
+            title="Click to filter Inactive products"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
                 Inactive / Hidden
@@ -833,18 +881,29 @@ export const AdminProductManagement = () => {
                       <td className="text-center">
                         <button
                           type="button"
-                          className={`badge border-0 cursor-pointer ${stockNum === 0
+                          className={`badge border-0 cursor-pointer ${
+                            stockNum === 0
                               ? "bg-danger text-white"
-                              : stockNum < 10
+                              : stockNum <= 5
                                 ? "bg-warning text-dark"
                                 : "bg-light text-dark border"
-                            }`}
+                          }`}
                           style={{ fontSize: "12px", padding: "6px 10px", cursor: "pointer" }}
                           onClick={() => openStockModal(p)}
                           title="Click to quick update stock"
                         >
                           {stockNum} pcs <i className="fa-solid fa-pencil ms-1 fs-10"></i>
                         </button>
+                        {stockNum === 0 && (
+                          <span className="badge bg-danger text-white ms-1" style={{ fontSize: "10px" }}>
+                            Hết hàng
+                          </span>
+                        )}
+                        {stockNum > 0 && stockNum <= 5 && (
+                          <span className="badge bg-warning text-dark ms-1" style={{ fontSize: "10px" }}>
+                            Sắp hết
+                          </span>
+                        )}
                       </td>
 
                       {/* Status */}

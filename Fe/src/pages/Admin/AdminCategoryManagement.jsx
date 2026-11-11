@@ -403,11 +403,26 @@ export const AdminCategoryManagement = () => {
         </button>
       </div>
 
-      {/* Top Banner Stats (Professional Cards with Icons) */}
+      {/* Top Banner Stats (Professional Cards with Icons - Click to Filter) */}
       <div className="row g-3 mb-4">
         {/* Total Categories */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "ALL" ? "border-primary" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "ALL" ? "#e9613f" : "#e2e8f0",
+              boxShadow: statusFilter === "ALL" ? "0 0 0 1px #e9613f" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("ALL");
+              setPage(0);
+            }}
+            title="Click to show all categories"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
                 Total Categories
@@ -430,7 +445,22 @@ export const AdminCategoryManagement = () => {
 
         {/* Active Categories */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "ACTIVE" ? "border-success" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "ACTIVE" ? "#10b981" : "#e2e8f0",
+              boxShadow: statusFilter === "ACTIVE" ? "0 0 0 1px #10b981" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("ACTIVE");
+              setPage(0);
+            }}
+            title="Click to filter Active categories"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
                 Active Categories
@@ -448,7 +478,22 @@ export const AdminCategoryManagement = () => {
 
         {/* Inactive Categories */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "INACTIVE" ? "border-danger" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "INACTIVE" ? "#ef4444" : "#e2e8f0",
+              boxShadow: statusFilter === "INACTIVE" ? "0 0 0 1px #ef4444" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("INACTIVE");
+              setPage(0);
+            }}
+            title="Click to filter Inactive categories"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
                 Inactive / Hidden

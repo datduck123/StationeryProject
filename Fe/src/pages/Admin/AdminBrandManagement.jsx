@@ -489,10 +489,25 @@ export const AdminBrandManagement = () => {
         </button>
       </div>
 
-      {/* Top Banner Stats */}
+      {/* Top Banner Stats (Click to Filter) */}
       <div className="row g-3 mb-4">
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "ALL" ? "border-primary" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "ALL" ? "#e9613f" : "#e2e8f0",
+              boxShadow: statusFilter === "ALL" ? "0 0 0 1px #e9613f" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("ALL");
+              setPage(0);
+            }}
+            title="Click to show all brands"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
                 Total Brands
@@ -514,7 +529,22 @@ export const AdminBrandManagement = () => {
         </div>
 
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "ACTIVE" ? "border-success" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "ACTIVE" ? "#10b981" : "#e2e8f0",
+              boxShadow: statusFilter === "ACTIVE" ? "0 0 0 1px #10b981" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("ACTIVE");
+              setPage(0);
+            }}
+            title="Click to filter Active brands"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
                 Active Brands
@@ -531,18 +561,38 @@ export const AdminBrandManagement = () => {
         </div>
 
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "INACTIVE" ? "border-danger" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "INACTIVE" ? "#ef4444" : "#e2e8f0",
+              boxShadow: statusFilter === "INACTIVE" ? "0 0 0 1px #ef4444" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("INACTIVE");
+              setPage(0);
+            }}
+            title="Click to filter Inactive brands"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Origin Countries
+                Inactive Brands
               </span>
-              <h3 className="mb-0 fw-700 mt-1 text-info">{countries.length}</h3>
+              <h3 className="mb-0 fw-700 mt-1" style={{ color: "#ef4444" }}>{brands.length - activeCount}</h3>
             </div>
             <div
-              className="d-flex align-items-center justify-content-center rounded-3 bg-info-subtle text-info"
-              style={{ width: "48px", height: "48px" }}
+              className="d-flex align-items-center justify-content-center rounded-3"
+              style={{
+                width: "48px",
+                height: "48px",
+                backgroundColor: "rgba(239, 68, 68, 0.12)",
+                color: "#ef4444",
+              }}
             >
-              <i className="fa-solid fa-earth-americas fs-20"></i>
+              <i className="fa-solid fa-eye-slash fs-20"></i>
             </div>
           </div>
         </div>
