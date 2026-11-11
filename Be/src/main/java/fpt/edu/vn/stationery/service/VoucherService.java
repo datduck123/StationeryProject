@@ -30,5 +30,13 @@ public interface VoucherService {
 
     VoucherResponseDTO validateVoucher(String code, BigDecimal orderAmount);
 
+    /**
+     * Validates a voucher against the order subtotal and calculates the discount
+     * amount.
+     * 
+     * @param voucherId The ID of the voucher to apply.
+     * @param subtotal  The subtotal of the cart.
+     * @return The discount amount in BigDecimal.
+     */
     BigDecimal calculateDiscount(Long voucherId, BigDecimal subtotal);
 }
