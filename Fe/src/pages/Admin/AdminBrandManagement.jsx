@@ -232,22 +232,22 @@ export const AdminBrandManagement = () => {
     setIsEditModalOpen(true);
   };
 
-  // Validate form (áp dụng chuẩn logic Category Management)
+  // Validate form
   const validateForm = (isEdit = false) => {
     const errors = {};
     const nameVal = formName.trim();
     const countryVal = formCountry.trim();
 
     if (!nameVal) {
-      errors.name = "Tên thương hiệu không được để trống.";
+      errors.name = "Brand name cannot be empty.";
     } else if (nameVal.length < 5) {
-      errors.name = "Tên thương hiệu phải có ít nhất 5 ký tự.";
+      errors.name = "Brand name must be at least 5 characters.";
     } else if (nameVal.length > 50) {
-      errors.name = "Tên thương hiệu không được vượt quá 50 ký tự.";
+      errors.name = "Brand name cannot exceed 50 characters.";
     } else if (/[^a-zA-Z\sÀ-ỹà-ỹĐđ]/.test(nameVal)) {
-      errors.name = "Tên thương hiệu chỉ được chứa chữ cái và khoảng trắng (không có số hoặc ký tự đặc biệt).";
+      errors.name = "Brand name can only contain letters and spaces (no numbers or special characters).";
     } else {
-      // Validate trùng tên thương hiệu (không phân biệt hoa/thường)
+      // Validate unique brand name (case-insensitive)
       const currentId =
         isEdit && brandToEdit ? brandToEdit.brandId || brandToEdit.id : null;
       const isDuplicate = brands.some((b) => {
@@ -256,14 +256,14 @@ export const AdminBrandManagement = () => {
         return (b.name || "").trim().toLowerCase() === nameVal.toLowerCase();
       });
       if (isDuplicate) {
-        errors.name = "Tên thương hiệu đã tồn tại trong hệ thống. Vui lòng chọn tên khác.";
+        errors.name = "Brand name already exists. Please choose a different name.";
       }
     }
 
     if (!countryVal) {
-      errors.country = "Vui lòng nhập quốc gia xuất xứ.";
+      errors.country = "Please enter country of origin.";
     } else if (/[^a-zA-Z\sÀ-ỹà-ỹĐđ]/.test(countryVal)) {
-      errors.country = "Tên quốc gia chỉ được chứa chữ cái và khoảng trắng.";
+      errors.country = "Country name can only contain letters and spaces.";
     }
 
     if (
@@ -271,20 +271,18 @@ export const AdminBrandManagement = () => {
       (parseInt(formYear, 10) < 1600 ||
         parseInt(formYear, 10) > new Date().getFullYear())
     ) {
-      errors.year = `Năm thành lập phải từ 1600 đến ${new Date().getFullYear()}.`;
+      errors.year = `Established year must be between 1600 and ${new Date().getFullYear()}.`;
     }
 
     const errorKeys = Object.keys(errors);
     if (errorKeys.length === 1) {
-      // Chỉ có 1 lỗi duy nhất: Không hiển thị trong modal, chỉ hiển thị pop up bên góc trên phải trong 8s
       setFormErrors({});
       showToast(errors[errorKeys[0]], "error", 8000);
       return false;
     } else if (errorKeys.length > 1) {
-      // Nhiều lỗi: Hiển thị lỗi bên trong modal và báo pop up trong 8s
       setFormErrors(errors);
       showToast(
-        "Vui lòng kiểm tra lại các trường thông tin không hợp lệ trong biểu mẫu.",
+        "Please review the invalid fields in the form.",
         "error",
         8000
       );
@@ -315,7 +313,7 @@ export const AdminBrandManagement = () => {
         name: newBrandData.name,
         description: newBrandData.description,
       });
-      showToast(`Thương hiệu "${newBrandData.name}" đã được thêm thành công!`, "success");
+      showToast(`Brand "${newBrandData.name}" created successfully!`, "success");
       setIsAddModalOpen(false);
       fetchBrands();
       notifyProductChange();
@@ -329,7 +327,7 @@ export const AdminBrandManagement = () => {
       };
       setBrands((prev) => [fallbackItem, ...prev]);
       setIsAddModalOpen(false);
-      showToast(`Thương hiệu "${newBrandData.name}" đã được thêm thành công!`, "success");
+      showToast(`Brand "${newBrandData.name}" created successfully!`, "success");
       notifyProductChange();
     } finally {
       setActionLoading(false);
@@ -363,7 +361,7 @@ export const AdminBrandManagement = () => {
         )
       );
       setIsEditModalOpen(false);
-      showToast(`Cập nhật thương hiệu "${updateData.name}" thành công!`, "success");
+      showToast(`Brand "${updateData.name}" updated successfully!`, "success");
       fetchBrands();
       notifyProductChange();
     } catch (err) {
@@ -374,7 +372,7 @@ export const AdminBrandManagement = () => {
         )
       );
       setIsEditModalOpen(false);
-      showToast(`Cập nhật thương hiệu "${updateData.name}" thành công!`, "success");
+      showToast(`Brand "${updateData.name}" updated successfully!`, "success");
       notifyProductChange();
     } finally {
       setActionLoading(false);
@@ -400,24 +398,13 @@ export const AdminBrandManagement = () => {
         (b.brandId || b.id) === brandId ? { ...b, status: nextStatus } : b
       )
     );
-    showToast(`Trạng thái thương hiệu "${brand.name}" đã chuyển sang ${nextStatus}.`, "success");
+    showToast(`Brand "${brand.name}" status changed to ${nextStatus}.`, "success");
     notifyProductChange();
   };
 
-  // Confirm delete (chặn xoá nếu thương hiệu đang ACTIVE)
+  // Confirm delete
   const handleDeleteConfirm = async () => {
     if (!brandToDelete) return;
-
-    // Chặn xoá nếu brand đang ACTIVE (giống Category Management)
-    if (brandToDelete.status === "ACTIVE") {
-      setIsDeleteConfirmOpen(false);
-      showToast(
-        `Không thể xoá thương hiệu "${brandToDelete.name}" vì đang ở trạng thái ACTIVE. Hãy chuyển sang INACTIVE trước khi xoá.`,
-        "error",
-        8000
-      );
-      return;
-    }
 
     setActionLoading(true);
     const brandId = brandToDelete.brandId || brandToDelete.id;
@@ -425,17 +412,19 @@ export const AdminBrandManagement = () => {
     try {
       await adminDeleteBrand(brandId);
       setIsDeleteConfirmOpen(false);
-      showToast(`Đã xoá thương hiệu "${brandToDelete.name}".`, "success");
+      showToast(`Brand "${brandToDelete.name}" deleted successfully.`, "success");
       setBrandToDelete(null);
       fetchBrands();
       notifyProductChange();
     } catch (err) {
-      console.warn("API delete brand failed:", err);
-      setBrands((prev) => prev.filter((b) => (b.brandId || b.id) !== brandId));
+      console.error("API delete brand failed:", err);
       setIsDeleteConfirmOpen(false);
-      showToast(`Đã xoá thương hiệu "${brandToDelete.name}".`, "success");
       setBrandToDelete(null);
-      notifyProductChange();
+      showToast(
+        err.response?.data?.message ||
+        "Cannot delete brand as it is linked to other products.",
+        "error"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -498,7 +487,7 @@ export const AdminBrandManagement = () => {
         <div>
           <h4 className="fw-700 medium-black mb-1">Stationery Brand Partners</h4>
           <p className="text-muted fs-13 mb-0">
-            Quản lý thương hiệu đối tác, xuất xứ và danh mục cung cấp văn phòng phẩm.
+            Manage partner brands, origins, and stationery catalog suppliers.
           </p>
         </div>
 
@@ -517,7 +506,7 @@ export const AdminBrandManagement = () => {
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Tổng thương hiệu
+                Total Brands
               </span>
               <h3 className="mb-0 fw-700 mt-1">{brands.length}</h3>
             </div>
@@ -539,7 +528,7 @@ export const AdminBrandManagement = () => {
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Đang hợp tác
+                Active Brands
               </span>
               <h3 className="mb-0 fw-700 mt-1 text-success">{activeCount}</h3>
             </div>
@@ -556,7 +545,7 @@ export const AdminBrandManagement = () => {
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Quốc gia xuất xứ
+                Origin Countries
               </span>
               <h3 className="mb-0 fw-700 mt-1 text-info">{countries.length}</h3>
             </div>
@@ -573,7 +562,7 @@ export const AdminBrandManagement = () => {
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Sản phẩm cung cấp
+                Supplied Products
               </span>
               <h3 className="mb-0 fw-700 mt-1 text-primary">{totalSuppliedItems}</h3>
             </div>
@@ -818,14 +807,6 @@ export const AdminBrandManagement = () => {
                           type="button"
                           className="admin-action-icon-btn text-danger"
                           onClick={() => {
-                            if (b.status === "ACTIVE") {
-                              showToast(
-                                `Không thể xoá thương hiệu "${b.name}" vì đang ở trạng thái ACTIVE. Hãy chuyển sang INACTIVE trước khi xoá.`,
-                                "error",
-                                8000
-                              );
-                              return;
-                            }
                             setBrandToDelete(b);
                             setIsDeleteConfirmOpen(true);
                           }}
@@ -980,7 +961,7 @@ export const AdminBrandManagement = () => {
                       marginTop: "2px",
                     }}
                   >
-                    Thêm thương hiệu đối tác văn phòng phẩm mới
+                    Add a new partner stationery brand
                   </p>
                 </div>
               </div>
@@ -1278,7 +1259,7 @@ export const AdminBrandManagement = () => {
                       marginTop: "2px",
                     }}
                   >
-                    Cập nhật thông tin thương hiệu đối tác
+                    Update brand partner details and information
                   </p>
                 </div>
               </div>
@@ -1613,22 +1594,22 @@ export const AdminBrandManagement = () => {
                 <div className="col-6">
                   <div className="p-3 rounded-3 border bg-light-subtle">
                     <span className="text-muted fs-11 text-uppercase fw-600 d-block">
-                      Quốc gia
+                      Origin Country
                     </span>
                     <span className="fw-600 text-dark fs-13 mt-1 d-block">
                       <i className="fa-solid fa-location-dot text-danger me-1"></i>{" "}
-                      {brandDetail.country || "Chưa cập nhật"}
+                      {brandDetail.country || "Not specified"}
                     </span>
                   </div>
                 </div>
                 <div className="col-6">
                   <div className="p-3 rounded-3 border bg-light-subtle">
                     <span className="text-muted fs-11 text-uppercase fw-600 d-block">
-                      Sản phẩm cung cấp
+                      Supplied Products
                     </span>
                     <span className="fw-600 text-primary fs-13 mt-1 d-block">
                       <i className="fa-solid fa-boxes-stacked me-1"></i>{" "}
-                      {brandDetail.productCount || 0} sản phẩm
+                      {brandDetail.productCount || 0} products
                     </span>
                   </div>
                 </div>
@@ -1653,13 +1634,13 @@ export const AdminBrandManagement = () => {
                 <div className="col-12">
                   <div className="p-3 rounded-3 border bg-light-subtle">
                     <span className="text-muted fs-11 text-uppercase fw-600 d-block">
-                      Mô tả
+                      Description
                     </span>
                     <p
                       className="mb-0 text-muted fs-13 mt-1"
                       style={{ whiteSpace: "pre-line" }}
                     >
-                      {brandDetail.description || "Chưa có mô tả chi tiết."}
+                      {brandDetail.description || "No detailed description available."}
                     </p>
                   </div>
                 </div>
@@ -1682,7 +1663,7 @@ export const AdminBrandManagement = () => {
                 className="btn btn-secondary px-4 py-2 fs-13 fw-semibold"
                 onClick={() => setIsDetailModalOpen(false)}
               >
-                Đóng
+                Close
               </button>
               <button
                 type="button"
@@ -1692,7 +1673,7 @@ export const AdminBrandManagement = () => {
                   openEditModal(brandDetail);
                 }}
               >
-                <i className="fa-regular fa-pen-to-square me-1"></i> Chỉnh sửa
+                <i className="fa-regular fa-pen-to-square me-1"></i> Edit Brand
               </button>
             </div>
           </div>

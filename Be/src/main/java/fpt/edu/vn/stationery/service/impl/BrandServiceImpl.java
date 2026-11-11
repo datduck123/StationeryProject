@@ -59,7 +59,7 @@ public class BrandServiceImpl implements BrandService {
         }
 
         if (productRepository.existsByBrandBrandId(id)) {
-            throw new BadRequestException("Cannot delete brand as it is being used by one or more products");
+            throw new BadRequestException("Cannot delete brand as it is linked to one or more products.");
         }
 
         brandRepository.deleteById(id);
