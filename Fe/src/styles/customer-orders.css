@@ -225,6 +225,10 @@
   border-bottom: 0;
 }
 
+.customer-order-modal-footer.order-price-breakdown-container {
+  display: block;
+}
+
 .customer-order-modal-close {
   display: inline-flex;
   width: 38px;

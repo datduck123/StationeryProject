@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import OrderTrackingTimeline from "./OrderTrackingTimeline";
+import OrderPriceBreakdown from "./OrderPriceBreakdown";
 import ProductReviewModal from "../reviews/ProductReviewModal";
 import {
   formatOrderDateTime,
@@ -113,9 +114,8 @@ const CustomerOrderDetailModal = ({ order, orderNumber, onClose }) => {
           </div>
         </div>
 
-        <div className="customer-order-modal-footer">
-          <span>{t("orders.total")}</span>
-          <strong>{formatOrderMoney(order.totalCost, i18n.language)}</strong>
+        <div className="customer-order-modal-footer order-price-breakdown-container">
+          <OrderPriceBreakdown order={order} />
         </div>
       </div>
         </div>,

@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import TitleBanner from "../../components/shared/TitleBanner";
 import OrderTrackingTimeline from "../../components/orders/OrderTrackingTimeline";
+import OrderPriceBreakdown from "../../components/orders/OrderPriceBreakdown";
 import ProductReviewModal from "../../components/reviews/ProductReviewModal";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import orderService from "../../services/orderService";
@@ -147,34 +148,7 @@ const OrderDetailPage = () => {
                     </div>
                   );
                 })}
-                <div className="pt-16 border-top mt-16">
-                  <div className="d-flex justify-content-between py-1">
-                    <span className="light-gray">{t("orders.subtotal")}</span>
-                    <span className="medium-black">
-                      {formatOrderMoney(order.subtotal != null ? order.subtotal : order.totalCost, i18n.language)}
-                    </span>
-                  </div>
-                  <div className="d-flex justify-content-between py-1">
-                    <span className="light-gray">{t("orders.shippingFee")}</span>
-                    <span className="medium-black">
-                      {formatOrderMoney(order.shippingFee || 0, i18n.language)}
-                    </span>
-                  </div>
-                  {Number(order.discountAmount || 0) > 0 && (
-                    <div className="d-flex justify-content-between py-1">
-                      <span className="light-gray">
-                        {t("orders.discount")} {order.voucherId ? `(#${order.voucherId})` : ""}
-                      </span>
-                      <span className="text-success">
-                        -{formatOrderMoney(order.discountAmount, i18n.language)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="d-flex justify-content-between pt-12 border-top mt-8">
-                    <span className="fw-600">{t("orders.total")}</span>
-                    <strong className="color-primary fs-5">{formatOrderMoney(order.totalCost, i18n.language)}</strong>
-                  </div>
-                </div>
+                <div className="pt-16 border-top mt-16"><OrderPriceBreakdown order={order} /></div>
               </div>
 
               <div className="checkout-box bg-semi-white p-24">
