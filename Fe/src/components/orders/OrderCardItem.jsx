@@ -30,14 +30,7 @@ export const OrderCardItem = ({
   const isPending = order.orderStatus === "PENDING";
 
   return (
-    <article
-      className="shopee-order-card mb-4 bg-white rounded-3 border"
-      style={{
-        boxShadow: "0 2px 12px rgba(20, 28, 43, 0.05)",
-        overflow: "hidden",
-        transition: "box-shadow 0.2s ease",
-      }}
-    >
+    <article className="shopee-order-card mb-4 bg-white rounded-3">
       {/* 1. Header: Shop Name & Order Status */}
       <div
         className="p-3 px-4 d-flex align-items-center justify-content-between border-bottom flex-wrap gap-2"

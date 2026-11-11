@@ -69,8 +69,13 @@
   vertical-align: top;
 }
 
+.customer-orders-table tbody tr {
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
 .customer-orders-table tbody tr:hover {
-  background: #fcfcfd;
+  background: #fff9f6;
+  box-shadow: inset 4px 0 0 #e9613f;
 }
 
 .customer-orders-table td small {
@@ -594,6 +599,42 @@
   padding: 24px;
   margin-bottom: 20px;
 }
+
+/* ==========================================================================
+   Order Card Item Hover Effects (Order History)
+   ========================================================================== */
+.shopee-order-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 2px 12px rgba(20, 28, 43, 0.05);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.25s ease;
+  will-change: transform, box-shadow, border-color;
+}
+
+.shopee-order-card:hover {
+  transform: translateY(-4px);
+  border-color: #e9613f !important;
+  box-shadow: 0 10px 24px rgba(233, 97, 63, 0.16), 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+}
+
+.shopee-order-card .order-product-row:last-child {
+  border-bottom: none !important;
+}
+
+.shopee-order-card:hover .btn-outline-secondary {
+  border-color: #e9613f;
+  color: #e9613f;
+}
+
+.shopee-order-card:hover .btn-outline-secondary:hover {
+  background-color: #e9613f;
+  color: #ffffff;
+}
+
 
 
 
