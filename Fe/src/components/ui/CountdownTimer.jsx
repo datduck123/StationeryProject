@@ -12,7 +12,7 @@ export const CountdownTimer = ({ targetDate = "2026/12/31" }) => {
       <li>
         <h2>{days}</h2>
         <h6 className="fw-500">{t("common.days")}</h6>
-      </li>a
+      </li>
       <li>
         <h2>{hours}</h2>
         <h6 className="fw-500">{t("common.hrs")}</h6>
