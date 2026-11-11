@@ -28,6 +28,8 @@ public class OrderMapper {
                 .customerName(order.getUser().getFullName())
                 .customerEmail(order.getUser().getEmail())
                 .orderStatus(order.getOrderStatus())
+                .subtotal(order.getSubtotal())
+                .shippingFee(order.getShippingFee())
                 .totalCost(order.getTotalCost())
                 .createdAt(order.getCreatedAt())
                 .itemCount(order.getOrderItems() == null ? 0 : order.getOrderItems().size())

@@ -16,6 +16,8 @@ public class OrderResponseDTO {
     private String customerName;
     private String customerEmail;
     private String orderStatus;
+    private BigDecimal subtotal;
+    private BigDecimal shippingFee;
     private BigDecimal totalCost;
     private LocalDateTime createdAt;
     private int itemCount;

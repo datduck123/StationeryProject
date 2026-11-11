@@ -119,6 +119,8 @@ public class CustomerOrderQueryService {
                 .customerName(order.getUser().getFullName())
                 .customerEmail(order.getUser().getEmail())
                 .orderStatus(order.getOrderStatus())
+                .subtotal(order.getSubtotal())
+                .shippingFee(order.getShippingFee())
                 .totalCost(order.getTotalCost())
                 .createdAt(order.getCreatedAt())
                 .shippingMethod(order.getShippingMethod())
