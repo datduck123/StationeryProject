@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import AdminPagination from "../../components/admin/AdminPagination";
 import { useToast } from "../../providers/ToastContext";
 import {
   adminCreateCategory,
@@ -669,55 +670,15 @@ export const AdminCategoryManagement = () => {
           </table>
         </div>
 
-        {/* PAGINATION BAR (Synchronized with User Management) */}
-        <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 gap-2">
-          <span className="text-muted fs-13">
-            Showing{" "}
-            <strong>
-              {totalElements === 0 ? 0 : page * pageSize + 1} to{" "}
-              {Math.min((page + 1) * pageSize, totalElements)}
-            </strong>{" "}
-            of <strong>{totalElements}</strong> categories
-          </span>
-
-          {totalPages > 1 && (
-            <div className="btn-group btn-group-sm">
-              <button
-                type="button"
-                className="btn btn-light border"
-                disabled={page === 0}
-                onClick={() => setPage((p) => Math.max(p - 1, 0))}
-                title="Previous page"
-              >
-                &lt;
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i).map((pageNum) => (
-                <button
-                  key={pageNum}
-                  type="button"
-                  className={`btn ${
-                    pageNum === page
-                      ? "btn-dark bg-color-primary border-0 fw-700 text-white"
-                      : "btn-light border"
-                  }`}
-                  style={pageNum === page ? { backgroundColor: "#e9613f" } : {}}
-                  onClick={() => setPage(pageNum)}
-                >
-                  {pageNum + 1}
-                </button>
-              ))}
-              <button
-                type="button"
-                className="btn btn-light border"
-                disabled={page >= totalPages - 1}
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages - 1))}
-                title="Next page"
-              >
-                &gt;
-              </button>
-            </div>
-          )}
-        </div>
+        {/* PAGINATION BAR */}
+        <AdminPagination
+          page={page}
+          pageSize={pageSize}
+          totalElements={totalElements}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          noun="categories"
+        />
       </div>
 
       {/* ======================================================== */}
