@@ -126,7 +126,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
   return (
     <div className="checkout-sidebar">
       {/* Voucher Dropdown Widget */}
-      <div className="coupon-widget mb-24" ref={dropdownRef}>
+      <div className="coupon-widget mb-24 position-relative" ref={dropdownRef}>
         <h6 className="fw-600 mb-12">{t("checkout.voucherTitle", "Discount Code (Voucher)")}</h6>
 
         {/* Dropdown Toggle Header */}
@@ -175,8 +175,18 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
         {/* Dropdown Menu Options */}
         {isDropdownOpen && (
           <div
-            className="voucher-dropdown-menu mt-2 p-3 br-10 bg-white border shadow-sm"
-            style={{ maxHeight: "320px", overflowY: "auto", position: "relative", zIndex: 10 }}
+            className="voucher-dropdown-menu mt-2 p-3 br-10 bg-white border shadow"
+            style={{
+              maxHeight: "320px",
+              overflowY: "auto",
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              width: "100%",
+              zIndex: 1050,
+              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.15)"
+            }}
           >
             <div className="text-muted mb-2 fw-500" style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
               Danh sách mã voucher khả dụng:
