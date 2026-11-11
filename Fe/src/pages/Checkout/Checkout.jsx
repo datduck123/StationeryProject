@@ -53,7 +53,7 @@ export const Checkout = () => {
       newErrors.phoneNumber = "Số điện thoại không hợp lệ";
     }
     if (!formData.shippingAddress?.trim()) newErrors.shippingAddress = "Vui lòng nhập địa chỉ nhận hàng";
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -74,8 +74,8 @@ export const Checkout = () => {
     try {
       const response = await checkoutService.validateCheckout(formData);
       showToast(response.message || "Đặt hàng thành công!", "success");
-      
-      // Redirect to Order Detail or History page
+
+      // Redirect to Order Detail or History page, thành công thì trả về lịch sử đơn hàng
       await clearCart(false);
       const targetOrderId = response?.orderId || response?.data?.orderId;
       if (targetOrderId) {
@@ -86,7 +86,7 @@ export const Checkout = () => {
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || "Lỗi khi xử lý đơn hàng";
       showToast(message, "error", 5000);
-      
+
       // If stock changed, we should refresh the cart
       if (err?.response?.data?.data?.validatedCart) {
         setCart(err.response.data.data.validatedCart);
@@ -144,18 +144,18 @@ export const Checkout = () => {
                     {t("checkout.billingDetails")}
                   </h5>
                 </div>
-                
+
                 {/* Reusable Shipping Address Form Component (M3-07) */}
-                <ShippingAddressForm 
-                  formData={formData} 
+                <ShippingAddressForm
+                  formData={formData}
                   setFormData={setFormData}
                   errors={errors}
                 />
-                
+
               </div>
               <div className="col-xl-4">
                 {/* Reusable Checkout Summary Component (M3-08) */}
-                <CheckoutSummary 
+                <CheckoutSummary
                   formData={formData}
                   setFormData={setFormData}
                   isSubmitting={isSubmitting}
