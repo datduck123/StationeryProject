@@ -121,6 +121,20 @@ public class ProductServiceImpl implements ProductService {
             Long brandId,
             String status,
             String sort) {
+        return getProductsAdmin(page, size, keyword, categoryId, brandId, status, null, sort);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageDTO<ProductResponseDTO> getProductsAdmin(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            String status,
+            String stock,
+            String sort) {
         validatePagination(page, size);
 
         if (categoryId != null && categoryId <= 0) {
@@ -133,7 +147,7 @@ public class ProductServiceImpl implements ProductService {
         Sort sortObj = parseSort(sort);
         Pageable pageable = PageRequest.of(page, size, sortObj);
 
-        Specification<Product> spec = ProductSpecification.filterAdminProducts(keyword, categoryId, brandId, status);
+        Specification<Product> spec = ProductSpecification.filterAdminProducts(keyword, categoryId, brandId, status, stock);
         Page<Product> productPage = productRepository.findAll(spec, pageable);
 
         Page<ProductResponseDTO> dtoPage = productPage.map(this::toEnrichedDto);

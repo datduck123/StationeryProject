@@ -89,7 +89,8 @@ public class ProductSpecification {
             String keyword,
             Long categoryId,
             Long brandId,
-            String status) {
+            String status,
+            String stock) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -120,7 +121,30 @@ public class ProductSpecification {
                 predicates.add(cb.equal(root.get("brand").get("brandId"), brandId));
             }
 
+            // Stock filter: OUT_OF_STOCK (<= 0), LOW_STOCK (1..5), IN_STOCK (> 0)
+            if (stock != null && !stock.isBlank() && !stock.equalsIgnoreCase("ALL")) {
+                String s = stock.trim();
+                if ("OUT_OF_STOCK".equalsIgnoreCase(s) || "outOfStock".equalsIgnoreCase(s) || "outStock".equalsIgnoreCase(s)) {
+                    predicates.add(cb.lessThanOrEqualTo(root.get("stockQuantity"), 0));
+                } else if ("LOW_STOCK".equalsIgnoreCase(s) || "lowStock".equalsIgnoreCase(s)) {
+                    predicates.add(cb.and(
+                            cb.greaterThan(root.get("stockQuantity"), 0),
+                            cb.lessThanOrEqualTo(root.get("stockQuantity"), 5)
+                    ));
+                } else if ("IN_STOCK".equalsIgnoreCase(s) || "inStock".equalsIgnoreCase(s)) {
+                    predicates.add(cb.greaterThan(root.get("stockQuantity"), 0));
+                }
+            }
+
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    public static Specification<Product> filterAdminProducts(
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            String status) {
+        return filterAdminProducts(keyword, categoryId, brandId, status, null);
     }
 }

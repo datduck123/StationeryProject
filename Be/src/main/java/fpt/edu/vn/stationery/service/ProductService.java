@@ -40,6 +40,16 @@ public interface ProductService {
             String status,
             String sort);
 
+    PageDTO<ProductResponseDTO> getProductsAdmin(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            String status,
+            String stock,
+            String sort);
+
     ProductResponseDTO getProductById(Long id);
 
     ProductResponseDTO getProductByIdAdmin(Long id);

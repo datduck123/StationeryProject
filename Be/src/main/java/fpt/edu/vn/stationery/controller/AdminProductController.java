@@ -33,8 +33,9 @@ public class AdminProductController {
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Long brandId,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String stock,
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
-        return ResponseEntity.ok(productService.getProductsAdmin(page, size, keyword, categoryId, brandId, status, sort));
+        return ResponseEntity.ok(productService.getProductsAdmin(page, size, keyword, categoryId, brandId, status, stock, sort));
     }
 
     @Operation(summary = "Get product by ID (Admin)")

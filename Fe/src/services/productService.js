@@ -71,6 +71,7 @@ export const adminGetProducts = (params = {}) => {
   if (params.categoryId) query.categoryId = params.categoryId;
   if (params.brandId) query.brandId = params.brandId;
   if (params.status && params.status !== "ALL") query.status = params.status;
+  if (params.stock && params.stock !== "ALL") query.stock = params.stock;
   if (params.sort) query.sort = params.sort;
 
   return api.get("/admin/products", { params: query });

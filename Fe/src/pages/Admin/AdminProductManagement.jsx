@@ -34,6 +34,7 @@ export const AdminProductManagement = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [stockFilter, setStockFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("createdAt,desc");
 
   // Summary statistics state
@@ -46,12 +47,14 @@ export const AdminProductManagement = () => {
 
   const fetchStats = async () => {
     try {
-      // Concurrent calls: total, active, inactive using size:1 to get totalElements
-      const [totalRes, activeRes, inactiveRes, allStockRes] = await Promise.allSettled([
+      // Concurrent calls: total, active, inactive using size:1 to get totalElements,
+      // and inventory query (size: 100 <= max allowed 100) to accurately count stock statuses
+      const [totalRes, activeRes, inactiveRes, inventoryRes, stockFilterRes] = await Promise.allSettled([
         adminGetProducts({ page: 0, size: 1 }),                        // Total all
         adminGetProducts({ page: 0, size: 1, status: "ACTIVE" }),      // Active only
         adminGetProducts({ page: 0, size: 1, status: "INACTIVE" }),    // Inactive only
-        adminGetProducts({ page: 0, size: 2000 }),                     // Fetch all to count outOfStock
+        adminGetProducts({ page: 0, size: 100 }),                     // Fetch inventory (up to 100) to count stock levels
+        adminGetProducts({ page: 0, size: 1, stock: "OUT_OF_STOCK" }), // Server-side stock query
       ]);
 
       const total =
@@ -69,14 +72,19 @@ export const AdminProductManagement = () => {
           ? (inactiveRes.value.data?.totalElements ?? 0)
           : 0;
 
-      // Count out of stock from full content list
+      // Count out of stock: prioritize inventory scan (100% accurate), fallback to server stock query
       let outOfStock = 0;
-      if (allStockRes.status === "fulfilled") {
-        const allContent = allStockRes.value.data?.content || [];
+      if (inventoryRes.status === "fulfilled") {
+        const allContent = inventoryRes.value.data?.content || [];
         allContent.forEach((p) => {
-          const stockNum = p.stockQuantity ?? p.stock_quantity ?? p.stock ?? 0;
-          if (stockNum === 0) outOfStock++;
+          const stockNum = Number(p.stockQuantity ?? p.stock_quantity ?? p.stock ?? 0);
+          if (stockNum <= 0) outOfStock++;
         });
+      } else if (
+        stockFilterRes.status === "fulfilled" &&
+        typeof stockFilterRes.value.data?.totalElements === "number"
+      ) {
+        outOfStock = stockFilterRes.value.data.totalElements;
       }
 
       setStats({ total, active, inactive, outOfStock });
@@ -154,6 +162,8 @@ export const AdminProductManagement = () => {
       if (selectedBrand) params.brandId = selectedBrand;
       // Pass status filter to backend for accurate pagination
       if (statusFilter && statusFilter !== "ALL") params.status = statusFilter;
+      // Pass stock filter to backend
+      if (stockFilter && stockFilter !== "ALL") params.stock = stockFilter;
 
       const res = await adminGetProducts(params);
       const data = res.data;
@@ -178,7 +188,7 @@ export const AdminProductManagement = () => {
   useEffect(() => {
     setPage(0);
     fetchProductList();
-  }, [selectedCategory, selectedBrand, sortBy, statusFilter]);
+  }, [selectedCategory, selectedBrand, sortBy, statusFilter, stockFilter]);
 
   // Page changes trigger fetch without resetting page index
   useEffect(() => {
@@ -201,8 +211,29 @@ export const AdminProductManagement = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Products are already filtered server-side by statusFilter
-  const filteredProducts = products;
+  // Products are filtered server-side with client-side fallback guarantee
+  const filteredProducts = React.useMemo(() => {
+    if (!products || !Array.isArray(products)) return [];
+    if (stockFilter === "OUT_OF_STOCK") {
+      return products.filter((p) => {
+        const qty = Number(p.stockQuantity ?? p.stock_quantity ?? p.stock ?? 0);
+        return qty <= 0;
+      });
+    }
+    if (stockFilter === "LOW_STOCK") {
+      return products.filter((p) => {
+        const qty = Number(p.stockQuantity ?? p.stock_quantity ?? p.stock ?? 0);
+        return qty > 0 && qty <= 5;
+      });
+    }
+    if (stockFilter === "IN_STOCK") {
+      return products.filter((p) => {
+        const qty = Number(p.stockQuantity ?? p.stock_quantity ?? p.stock ?? 0);
+        return qty > 0;
+      });
+    }
+    return products;
+  }, [products, stockFilter]);
 
   // Reset form
   const resetForm = () => {
@@ -534,16 +565,17 @@ export const AdminProductManagement = () => {
         <div className="col-xl-3 col-sm-6">
           <div
             className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
-              statusFilter === "ALL" ? "border-primary" : ""
+              statusFilter === "ALL" && stockFilter === "ALL" ? "border-primary" : ""
             }`}
             style={{
               cursor: "pointer",
               transition: "all 0.2s ease",
-              borderColor: statusFilter === "ALL" ? "#e9613f" : "#e2e8f0",
-              boxShadow: statusFilter === "ALL" ? "0 0 0 1px #e9613f" : undefined,
+              borderColor: statusFilter === "ALL" && stockFilter === "ALL" ? "#e9613f" : "#e2e8f0",
+              boxShadow: statusFilter === "ALL" && stockFilter === "ALL" ? "0 0 0 1px #e9613f" : undefined,
             }}
             onClick={() => {
               setStatusFilter("ALL");
+              setStockFilter("ALL");
               setPage(0);
             }}
             title="Click to show all products"
@@ -572,16 +604,17 @@ export const AdminProductManagement = () => {
         <div className="col-xl-3 col-sm-6">
           <div
             className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
-              statusFilter === "ACTIVE" ? "border-success" : ""
+              statusFilter === "ACTIVE" && stockFilter === "ALL" ? "border-success" : ""
             }`}
             style={{
               cursor: "pointer",
               transition: "all 0.2s ease",
-              borderColor: statusFilter === "ACTIVE" ? "#10b981" : "#e2e8f0",
-              boxShadow: statusFilter === "ACTIVE" ? "0 0 0 1px #10b981" : undefined,
+              borderColor: statusFilter === "ACTIVE" && stockFilter === "ALL" ? "#10b981" : "#e2e8f0",
+              boxShadow: statusFilter === "ACTIVE" && stockFilter === "ALL" ? "0 0 0 1px #10b981" : undefined,
             }}
             onClick={() => {
-              setStatusFilter("ACTIVE");
+              setStatusFilter(statusFilter === "ACTIVE" && stockFilter === "ALL" ? "ALL" : "ACTIVE");
+              setStockFilter("ALL");
               setPage(0);
             }}
             title="Click to filter Active products"
@@ -604,8 +637,25 @@ export const AdminProductManagement = () => {
         {/* Out of stock */}
         <div className="col-xl-3 col-sm-6">
           <div
-            className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between"
-            style={{ borderColor: "#e2e8f0" }}
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              stockFilter === "OUT_OF_STOCK" ? "border-warning" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: stockFilter === "OUT_OF_STOCK" ? "#f59e0b" : "#e2e8f0",
+              boxShadow: stockFilter === "OUT_OF_STOCK" ? "0 0 0 1px #f59e0b" : undefined,
+            }}
+            onClick={() => {
+              if (stockFilter === "OUT_OF_STOCK") {
+                setStockFilter("ALL");
+              } else {
+                setStockFilter("OUT_OF_STOCK");
+                setStatusFilter("ALL");
+              }
+              setPage(0);
+            }}
+            title="Click to filter Out of Stock products"
           >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
@@ -631,16 +681,17 @@ export const AdminProductManagement = () => {
         <div className="col-xl-3 col-sm-6">
           <div
             className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
-              statusFilter === "INACTIVE" ? "border-danger" : ""
+              statusFilter === "INACTIVE" && stockFilter === "ALL" ? "border-danger" : ""
             }`}
             style={{
               cursor: "pointer",
               transition: "all 0.2s ease",
-              borderColor: statusFilter === "INACTIVE" ? "#ef4444" : "#e2e8f0",
-              boxShadow: statusFilter === "INACTIVE" ? "0 0 0 1px #ef4444" : undefined,
+              borderColor: statusFilter === "INACTIVE" && stockFilter === "ALL" ? "#ef4444" : "#e2e8f0",
+              boxShadow: statusFilter === "INACTIVE" && stockFilter === "ALL" ? "0 0 0 1px #ef4444" : undefined,
             }}
             onClick={() => {
-              setStatusFilter("INACTIVE");
+              setStatusFilter(statusFilter === "INACTIVE" && stockFilter === "ALL" ? "ALL" : "INACTIVE");
+              setStockFilter("ALL");
               setPage(0);
             }}
             title="Click to filter Inactive products"
@@ -742,6 +793,22 @@ export const AdminProductManagement = () => {
               <option value="INACTIVE">Inactive</option>
             </select>
 
+            {/* Stock Filter */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "140px" }}
+              value={stockFilter}
+              onChange={(e) => {
+                setStockFilter(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="ALL">All Stock Levels</option>
+              <option value="IN_STOCK">In Stock (&gt; 0)</option>
+              <option value="LOW_STOCK">Low Stock (≤ 5)</option>
+              <option value="OUT_OF_STOCK">Out of Stock (0)</option>
+            </select>
+
             {/* Sort dropdown */}
             <select
               className="admin-select-sm"
@@ -761,7 +828,7 @@ export const AdminProductManagement = () => {
               <option value="name,asc">Name: A → Z</option>
             </select>
 
-            {(searchQuery || selectedCategory || selectedBrand || statusFilter !== "ALL" || sortBy !== "createdAt,desc") && (
+            {(searchQuery || selectedCategory || selectedBrand || statusFilter !== "ALL" || stockFilter !== "ALL" || sortBy !== "createdAt,desc") && (
               <button
                 type="button"
                 className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 rounded-pill px-3"
@@ -771,6 +838,7 @@ export const AdminProductManagement = () => {
                   setSelectedCategory("");
                   setSelectedBrand("");
                   setStatusFilter("ALL");
+                  setStockFilter("ALL");
                   setSortBy("createdAt,desc");
                   setPage(0);
                 }}
