@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import TitleBanner from "../../components/shared/TitleBanner";
 import OrderTrackingTimeline from "../../components/orders/OrderTrackingTimeline";
 import ProductReviewModal from "../../components/reviews/ProductReviewModal";
+import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import orderService from "../../services/orderService";
 import { useToast } from "../../providers/ToastContext";
 import { formatOrderDateTime, formatOrderMoney, orderStatusLabel, paymentMethodLabel, paymentStatusLabel, shippingMethodLabel } from "../../utils/orderFormatters";
@@ -19,6 +20,7 @@ const OrderDetailPage = () => {
   const [reviewedOrderItemIds, setReviewedOrderItemIds] = useState(() => new Set());
 
   const [canceling, setCanceling] = useState(false);
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
 
   const closeReview = useCallback(() => setReviewItem(null), []);
   const markReviewed = useCallback(() => {
@@ -31,7 +33,8 @@ const OrderDetailPage = () => {
   }, [reviewItem]);
 
   const handleCancelOrder = async () => {
-    if (!window.confirm(t("orders.confirmCancel", { number: id }))) return;
+    if (canceling || order?.orderStatus !== "PENDING") return;
+    setConfirmCancelOpen(false);
     setCanceling(true);
     try {
       await orderService.cancelMyOrder(id);
@@ -43,6 +46,8 @@ const OrderDetailPage = () => {
       setCanceling(false);
     }
   };
+
+  useEffect(() => setConfirmCancelOpen(false), [id]);
 
   useEffect(() => {
     let active = true;
@@ -75,7 +80,7 @@ const OrderDetailPage = () => {
                   type="button"
                   className="btn btn-outline-danger btn-sm"
                   disabled={canceling}
-                  onClick={handleCancelOrder}
+                  onClick={() => setConfirmCancelOpen(true)}
                 >
                   {canceling ? t("orders.cancelling") : t("orders.cancelOrder")}
                 </button>
@@ -182,6 +187,16 @@ const OrderDetailPage = () => {
           )}
         </div>
       </section>
+      <ConfirmDialog
+        isOpen={confirmCancelOpen && order?.orderStatus === "PENDING"}
+        title={t("orders.cancelOrder")}
+        message={t("orders.confirmCancel", { number: id })}
+        confirmText={t("orders.cancelOrder")}
+        cancelText={t("orders.cancel")}
+        confirmVariant="danger"
+        onConfirm={handleCancelOrder}
+        onCancel={() => setConfirmCancelOpen(false)}
+      />
       <ProductReviewModal item={reviewItem} onClose={closeReview} onSubmitted={markReviewed} />
     </>
   );
