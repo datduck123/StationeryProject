@@ -281,7 +281,7 @@ export const ShopGridSidebar = () => {
       } else {
         nextParams.delete("minPrice");
       }
-      if (max !== null && max !== undefined && max < 150000) {
+      if (max !== null && max !== undefined && max < 1000000) {
         nextParams.set("maxPrice", String(max));
       } else {
         nextParams.delete("maxPrice");
@@ -461,9 +461,10 @@ export const ShopGridSidebar = () => {
           <div className="content-block mt-16">
             <PriceSlider
               initialMin={minPrice !== null ? minPrice : 0}
-              initialMax={maxPrice !== null ? maxPrice : 150000}
-              maxLimit={150000}
-              step={5000}
+              initialMax={maxPrice !== null ? maxPrice : 1000000}
+              maxLimit={1000000}
+              step={10000}
+              priceGap={10000}
               isFiltered={minPrice !== null || maxPrice !== null}
               onApplyPrice={handleApplyPrice}
               onResetPrice={handleResetPrice}
@@ -818,7 +819,7 @@ export const ShopGridSidebar = () => {
                       <span className="shop-active-chip-value">
                         {minPrice !== null ? formatOrderMoney(minPrice, i18n.language) : "0₫"}
                         {" - "}
-                        {maxPrice !== null ? formatOrderMoney(maxPrice, i18n.language) : "150.000₫"}
+                        {maxPrice !== null ? formatOrderMoney(maxPrice, i18n.language) : formatOrderMoney(1000000, i18n.language)}
                       </span>
                       <button
                         type="button"
@@ -860,15 +861,22 @@ export const ShopGridSidebar = () => {
 
               {/* Product Grid */}
               {loading ? (
-                <div className="text-center py-80">
-                  <div
-                    className="spinner-border"
-                    role="status"
-                    style={{ color: "var(--color-primary, #e57c32)", width: "3rem", height: "3rem" }}
-                  >
-                    <span className="visually-hidden">{t("common.loading", "Loading...")}</span>
-                  </div>
-                  <p className="mt-16 dark-gray">{t("shop.loadingProducts", "Loading products...")}</p>
+                <div className="row row-gap-4 mb-48">
+                  {Array.from({ length: 8 }, (_, i) => (
+                    <div
+                      key={`skeleton-${i}`}
+                      className={`${isSidebarVisible ? "col-xxl-3 col-xl-4 col-md-6 col-sm-6" : "col-xxl-3 col-xl-3 col-lg-4 col-md-6 col-sm-6"}`}
+                    >
+                      <div className="shop-product-skeleton">
+                        <div className="shop-skeleton-img skeleton-shimmer"></div>
+                        <div className="shop-skeleton-body">
+                          <div className="shop-skeleton-line short skeleton-shimmer mb-2"></div>
+                          <div className="shop-skeleton-line title skeleton-shimmer mb-2"></div>
+                          <div className="shop-skeleton-line price skeleton-shimmer"></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : error ? (
                 <div className="text-center py-80">

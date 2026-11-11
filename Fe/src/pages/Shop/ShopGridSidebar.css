@@ -142,6 +142,66 @@
   text-decoration: underline;
 }
 
+/* Product Skeleton Cards */
+.shop-product-skeleton {
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
+  padding: 14px;
+}
+
+.shop-skeleton-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  background-color: #f1f5f9;
+}
+
+.shop-skeleton-body {
+  padding-top: 14px;
+}
+
+.shop-skeleton-line {
+  height: 12px;
+  background-color: #f1f5f9;
+  border-radius: 6px;
+}
+
+.shop-skeleton-line.short {
+  width: 45%;
+}
+
+.shop-skeleton-line.title {
+  width: 85%;
+  height: 16px;
+}
+
+.shop-skeleton-line.price {
+  width: 55%;
+  height: 18px;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 0%,
+    #e2e8f0 50%,
+    #f1f5f9 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 .shop-sidebar-header:hover {
   background-color: #f8fafc;
 }
