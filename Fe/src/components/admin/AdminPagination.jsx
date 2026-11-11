@@ -45,6 +45,7 @@ const AdminPagination = ({ page, pageSize, totalElements, totalPages, onPageChan
                     ? "btn-dark bg-color-primary border-0 fw-bold text-white"
                     : "btn-light border"
                 }`}
+                style={item === currentPage ? { backgroundColor: "#e9613f" } : {}}
                 onClick={() => onPageChange(item - 1)}
               >
                 {item}

@@ -10,6 +10,7 @@ import fpt.edu.vn.stationery.mapper.VoucherMapper;
 import fpt.edu.vn.stationery.repository.VoucherRepository;
 import fpt.edu.vn.stationery.service.VoucherService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@Primary
 @RequiredArgsConstructor
 public class VoucherServiceImpl implements VoucherService {
 
@@ -113,6 +115,14 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<VoucherResponseDTO> getActiveVouchers() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Voucher> vouchers = voucherRepository.findActive(now);
+        return voucherMapper.toDtoList(vouchers);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<VoucherResponseDTO> searchVouchers(String keyword, Boolean isActive) {
         String cleanKeyword = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
         List<Voucher> vouchers = voucherRepository.searchVouchersList(cleanKeyword, isActive);
@@ -177,6 +187,24 @@ public class VoucherServiceImpl implements VoucherService {
         }
 
         return voucherMapper.toDto(voucher);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal calculateDiscount(Long voucherId, BigDecimal subtotal) {
+        if (voucherId == null || subtotal == null || subtotal.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+
+        Voucher voucher = voucherRepository.findById(voucherId)
+                .orElseThrow(() -> new BadRequestException("Mã giảm giá không tồn tại hoặc đã bị xóa."));
+
+        LocalDateTime now = LocalDateTime.now();
+        if (!voucher.isUsableAt(now, subtotal)) {
+            throw new BadRequestException("Mã giảm giá không hợp lệ, chưa tới hạn, đã hết hạn hoặc chưa đạt giá trị tối thiểu.");
+        }
+
+        return voucher.calculateDiscount(subtotal);
     }
 
     private void validateVoucherRules(VoucherRequestDTO request) {

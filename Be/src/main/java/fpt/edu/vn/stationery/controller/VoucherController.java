@@ -6,30 +6,22 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/vouchers")
 @RequiredArgsConstructor
-@Tag(name = "Vouchers", description = "Public / Customer Voucher APIs")
+@Tag(name = "Vouchers", description = "Public voucher catalogue")
 public class VoucherController {
-
     private final VoucherService voucherService;
 
-    @Operation(summary = "Get all active vouchers for customers")
+    @Operation(summary = "List vouchers that are active, in date, and not depleted")
     @GetMapping("/active")
     public ResponseEntity<List<VoucherResponseDTO>> getActiveVouchers() {
-        return ResponseEntity.ok(voucherService.searchVouchers(null, true));
-    }
-
-    @Operation(summary = "Validate voucher code with order subtotal")
-    @GetMapping("/validate")
-    public ResponseEntity<VoucherResponseDTO> validateVoucher(
-            @RequestParam String code,
-            @RequestParam(required = false) BigDecimal orderAmount) {
-        return ResponseEntity.ok(voucherService.validateVoucher(code, orderAmount));
+        return ResponseEntity.ok(voucherService.getActiveVouchers());
     }
 }

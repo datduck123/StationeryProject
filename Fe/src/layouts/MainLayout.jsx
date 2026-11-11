@@ -7,6 +7,7 @@ import Header from "../components/shared/Header";
 import MobileMenu from "../components/shared/MobileMenu";
 import Preloader from "../components/shared/Preloader";
 import QuickViewModal from "../components/shared/QuickViewModal";
+import ErrorBoundary from "../components/shared/ErrorBoundary";
 import SidebarCart from "../components/shared/SidebarCart";
 import SidebarWishlist from "../components/shared/SidebarWishlist";
 
@@ -33,7 +34,9 @@ export const MainLayout = () => {
       <MobileMenu />
       <SidebarCart />
       <SidebarWishlist />
-      <QuickViewModal />
+      <ErrorBoundary>
+        <QuickViewModal />
+      </ErrorBoundary>
       <AuthModal />
     </>
   );

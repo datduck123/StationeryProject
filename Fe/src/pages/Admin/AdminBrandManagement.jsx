@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import AdminPagination from "../../components/admin/AdminPagination";
 import { useToast } from "../../providers/ToastContext";
 import {
   adminCreateBrand,
@@ -143,25 +144,10 @@ export const AdminBrandManagement = () => {
   const fetchBrands = useCallback(async () => {
     setLoading(true);
     try {
-      const [brandRes, prodRes] = await Promise.allSettled([
-        adminGetBrands(),
-        adminGetProducts({ page: 0, size: 2000 }),
-      ]);
-
-      let productCountMap = {};
-      if (prodRes.status === "fulfilled" && prodRes.value?.data) {
-        const prodList =
-          prodRes.value.data.content || prodRes.value.data || [];
-        prodList.forEach((p) => {
-          const bId = p.brand?.brandId || p.brandId;
-          if (bId) {
-            productCountMap[bId] = (productCountMap[bId] || 0) + 1;
-          }
-        });
-      }
-
-      if (brandRes.status === "fulfilled" && brandRes.value?.data?.length > 0) {
-        const list = brandRes.value.data.map((b) => {
+      const brandRes = await adminGetBrands();
+      const rawList = brandRes.data || [];
+      if (rawList.length > 0) {
+        const list = rawList.map((b) => {
           const bId = b.brandId || b.id;
           const fallbackMatch = FALLBACK_BRANDS.find(
             (fb) =>
@@ -177,11 +163,11 @@ export const AdminBrandManagement = () => {
             establishedYear:
               b.establishedYear || fallbackMatch?.establishedYear || null,
             description: b.description || fallbackMatch?.description || "",
-            status: b.status || fallbackMatch?.status || "ACTIVE",
+            status: b.status || "ACTIVE",
             productCount:
-              productCountMap[bId] !== undefined
-                ? productCountMap[bId]
-                : fallbackMatch?.productCount || 0,
+              b.productCount !== undefined && b.productCount !== null
+                ? Number(b.productCount)
+                : (fallbackMatch?.productCount || 0),
           };
         });
         setBrands(list);
@@ -232,22 +218,22 @@ export const AdminBrandManagement = () => {
     setIsEditModalOpen(true);
   };
 
-  // Validate form (áp dụng chuẩn logic Category Management)
+  // Validate form
   const validateForm = (isEdit = false) => {
     const errors = {};
     const nameVal = formName.trim();
     const countryVal = formCountry.trim();
 
     if (!nameVal) {
-      errors.name = "Tên thương hiệu không được để trống.";
+      errors.name = "Brand name cannot be empty.";
     } else if (nameVal.length < 5) {
-      errors.name = "Tên thương hiệu phải có ít nhất 5 ký tự.";
+      errors.name = "Brand name must be at least 5 characters.";
     } else if (nameVal.length > 50) {
-      errors.name = "Tên thương hiệu không được vượt quá 50 ký tự.";
+      errors.name = "Brand name cannot exceed 50 characters.";
     } else if (/[^a-zA-Z\sÀ-ỹà-ỹĐđ]/.test(nameVal)) {
-      errors.name = "Tên thương hiệu chỉ được chứa chữ cái và khoảng trắng (không có số hoặc ký tự đặc biệt).";
+      errors.name = "Brand name can only contain letters and spaces (no numbers or special characters).";
     } else {
-      // Validate trùng tên thương hiệu (không phân biệt hoa/thường)
+      // Validate unique brand name (case-insensitive)
       const currentId =
         isEdit && brandToEdit ? brandToEdit.brandId || brandToEdit.id : null;
       const isDuplicate = brands.some((b) => {
@@ -256,14 +242,14 @@ export const AdminBrandManagement = () => {
         return (b.name || "").trim().toLowerCase() === nameVal.toLowerCase();
       });
       if (isDuplicate) {
-        errors.name = "Tên thương hiệu đã tồn tại trong hệ thống. Vui lòng chọn tên khác.";
+        errors.name = "Brand name already exists. Please choose a different name.";
       }
     }
 
     if (!countryVal) {
-      errors.country = "Vui lòng nhập quốc gia xuất xứ.";
+      errors.country = "Please enter country of origin.";
     } else if (/[^a-zA-Z\sÀ-ỹà-ỹĐđ]/.test(countryVal)) {
-      errors.country = "Tên quốc gia chỉ được chứa chữ cái và khoảng trắng.";
+      errors.country = "Country name can only contain letters and spaces.";
     }
 
     if (
@@ -271,20 +257,18 @@ export const AdminBrandManagement = () => {
       (parseInt(formYear, 10) < 1600 ||
         parseInt(formYear, 10) > new Date().getFullYear())
     ) {
-      errors.year = `Năm thành lập phải từ 1600 đến ${new Date().getFullYear()}.`;
+      errors.year = `Established year must be between 1600 and ${new Date().getFullYear()}.`;
     }
 
     const errorKeys = Object.keys(errors);
     if (errorKeys.length === 1) {
-      // Chỉ có 1 lỗi duy nhất: Không hiển thị trong modal, chỉ hiển thị pop up bên góc trên phải trong 8s
       setFormErrors({});
       showToast(errors[errorKeys[0]], "error", 8000);
       return false;
     } else if (errorKeys.length > 1) {
-      // Nhiều lỗi: Hiển thị lỗi bên trong modal và báo pop up trong 8s
       setFormErrors(errors);
       showToast(
-        "Vui lòng kiểm tra lại các trường thông tin không hợp lệ trong biểu mẫu.",
+        "Please review the invalid fields in the form.",
         "error",
         8000
       );
@@ -314,8 +298,9 @@ export const AdminBrandManagement = () => {
       await adminCreateBrand({
         name: newBrandData.name,
         description: newBrandData.description,
+        status: newBrandData.status,
       });
-      showToast(`Thương hiệu "${newBrandData.name}" đã được thêm thành công!`, "success");
+      showToast(`Brand "${newBrandData.name}" created successfully!`, "success");
       setIsAddModalOpen(false);
       fetchBrands();
       notifyProductChange();
@@ -329,7 +314,7 @@ export const AdminBrandManagement = () => {
       };
       setBrands((prev) => [fallbackItem, ...prev]);
       setIsAddModalOpen(false);
-      showToast(`Thương hiệu "${newBrandData.name}" đã được thêm thành công!`, "success");
+      showToast(`Brand "${newBrandData.name}" created successfully!`, "success");
       notifyProductChange();
     } finally {
       setActionLoading(false);
@@ -356,6 +341,7 @@ export const AdminBrandManagement = () => {
       await adminUpdateBrand(brandId, {
         name: updateData.name,
         description: updateData.description,
+        status: updateData.status,
       });
       setBrands((prev) =>
         prev.map((b) =>
@@ -363,7 +349,7 @@ export const AdminBrandManagement = () => {
         )
       );
       setIsEditModalOpen(false);
-      showToast(`Cập nhật thương hiệu "${updateData.name}" thành công!`, "success");
+      showToast(`Brand "${updateData.name}" updated successfully!`, "success");
       fetchBrands();
       notifyProductChange();
     } catch (err) {
@@ -374,7 +360,7 @@ export const AdminBrandManagement = () => {
         )
       );
       setIsEditModalOpen(false);
-      showToast(`Cập nhật thương hiệu "${updateData.name}" thành công!`, "success");
+      showToast(`Brand "${updateData.name}" updated successfully!`, "success");
       notifyProductChange();
     } finally {
       setActionLoading(false);
@@ -390,6 +376,7 @@ export const AdminBrandManagement = () => {
       await adminUpdateBrand(brandId, {
         name: brand.name,
         description: brand.description || "",
+        status: nextStatus,
       });
     } catch (err) {
       console.warn("API update brand status:", err);
@@ -400,24 +387,13 @@ export const AdminBrandManagement = () => {
         (b.brandId || b.id) === brandId ? { ...b, status: nextStatus } : b
       )
     );
-    showToast(`Trạng thái thương hiệu "${brand.name}" đã chuyển sang ${nextStatus}.`, "success");
+    showToast(`Brand "${brand.name}" status changed to ${nextStatus}.`, "success");
     notifyProductChange();
   };
 
-  // Confirm delete (chặn xoá nếu thương hiệu đang ACTIVE)
+  // Confirm delete
   const handleDeleteConfirm = async () => {
     if (!brandToDelete) return;
-
-    // Chặn xoá nếu brand đang ACTIVE (giống Category Management)
-    if (brandToDelete.status === "ACTIVE") {
-      setIsDeleteConfirmOpen(false);
-      showToast(
-        `Không thể xoá thương hiệu "${brandToDelete.name}" vì đang ở trạng thái ACTIVE. Hãy chuyển sang INACTIVE trước khi xoá.`,
-        "error",
-        8000
-      );
-      return;
-    }
 
     setActionLoading(true);
     const brandId = brandToDelete.brandId || brandToDelete.id;
@@ -425,17 +401,19 @@ export const AdminBrandManagement = () => {
     try {
       await adminDeleteBrand(brandId);
       setIsDeleteConfirmOpen(false);
-      showToast(`Đã xoá thương hiệu "${brandToDelete.name}".`, "success");
+      showToast(`Brand "${brandToDelete.name}" deleted successfully.`, "success");
       setBrandToDelete(null);
       fetchBrands();
       notifyProductChange();
     } catch (err) {
-      console.warn("API delete brand failed:", err);
-      setBrands((prev) => prev.filter((b) => (b.brandId || b.id) !== brandId));
+      console.error("API delete brand failed:", err);
       setIsDeleteConfirmOpen(false);
-      showToast(`Đã xoá thương hiệu "${brandToDelete.name}".`, "success");
       setBrandToDelete(null);
-      notifyProductChange();
+      showToast(
+        err.response?.data?.message ||
+        "Cannot delete brand as it is linked to other products.",
+        "error"
+      );
     } finally {
       setActionLoading(false);
     }
@@ -498,7 +476,7 @@ export const AdminBrandManagement = () => {
         <div>
           <h4 className="fw-700 medium-black mb-1">Stationery Brand Partners</h4>
           <p className="text-muted fs-13 mb-0">
-            Quản lý thương hiệu đối tác, xuất xứ và danh mục cung cấp văn phòng phẩm.
+            Manage partner brands, origins, and stationery catalog suppliers.
           </p>
         </div>
 
@@ -511,13 +489,28 @@ export const AdminBrandManagement = () => {
         </button>
       </div>
 
-      {/* Top Banner Stats */}
+      {/* Top Banner Stats (Click to Filter) */}
       <div className="row g-3 mb-4">
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "ALL" ? "border-primary" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "ALL" ? "#e9613f" : "#e2e8f0",
+              boxShadow: statusFilter === "ALL" ? "0 0 0 1px #e9613f" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("ALL");
+              setPage(0);
+            }}
+            title="Click to show all brands"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Tổng thương hiệu
+                Total Brands
               </span>
               <h3 className="mb-0 fw-700 mt-1">{brands.length}</h3>
             </div>
@@ -536,10 +529,25 @@ export const AdminBrandManagement = () => {
         </div>
 
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "ACTIVE" ? "border-success" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "ACTIVE" ? "#10b981" : "#e2e8f0",
+              boxShadow: statusFilter === "ACTIVE" ? "0 0 0 1px #10b981" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("ACTIVE");
+              setPage(0);
+            }}
+            title="Click to filter Active brands"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Đang hợp tác
+                Active Brands
               </span>
               <h3 className="mb-0 fw-700 mt-1 text-success">{activeCount}</h3>
             </div>
@@ -553,18 +561,38 @@ export const AdminBrandManagement = () => {
         </div>
 
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "INACTIVE" ? "border-danger" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "INACTIVE" ? "#ef4444" : "#e2e8f0",
+              boxShadow: statusFilter === "INACTIVE" ? "0 0 0 1px #ef4444" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("INACTIVE");
+              setPage(0);
+            }}
+            title="Click to filter Inactive brands"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Quốc gia xuất xứ
+                Inactive Brands
               </span>
-              <h3 className="mb-0 fw-700 mt-1 text-info">{countries.length}</h3>
+              <h3 className="mb-0 fw-700 mt-1" style={{ color: "#ef4444" }}>{brands.length - activeCount}</h3>
             </div>
             <div
-              className="d-flex align-items-center justify-content-center rounded-3 bg-info-subtle text-info"
-              style={{ width: "48px", height: "48px" }}
+              className="d-flex align-items-center justify-content-center rounded-3"
+              style={{
+                width: "48px",
+                height: "48px",
+                backgroundColor: "rgba(239, 68, 68, 0.12)",
+                color: "#ef4444",
+              }}
             >
-              <i className="fa-solid fa-earth-americas fs-20"></i>
+              <i className="fa-solid fa-eye-slash fs-20"></i>
             </div>
           </div>
         </div>
@@ -573,7 +601,7 @@ export const AdminBrandManagement = () => {
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Sản phẩm cung cấp
+                Supplied Products
               </span>
               <h3 className="mb-0 fw-700 mt-1 text-primary">{totalSuppliedItems}</h3>
             </div>
@@ -587,38 +615,46 @@ export const AdminBrandManagement = () => {
         </div>
       </div>
 
-      {/* Main Table Card */}
-      <div className="bg-white rounded-3 border shadow-sm p-4">
-        {/* Filter Toolbar */}
-        <div className="row g-3 mb-3">
-          <div className="col-md-4 col-lg-4">
-            <div className="position-relative">
-              <input
-                type="text"
-                className="form-control ps-4"
-                style={{ borderRadius: "20px", fontSize: "13px" }}
-                placeholder="Search brand name, country or info..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <i
-                className="fa-solid fa-magnifying-glass position-absolute text-muted"
-                style={{
-                  left: "14px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  fontSize: "12px",
+      {/* TOOLBAR CARD (Clean horizontal layout, uniform search, filters, and sort synchronized with Product & Category Management) */}
+      <div className="admin-card mb-4">
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+          {/* Live Auto Search */}
+          <div className="admin-search-box" style={{ flex: "1 1 250px", maxWidth: "380px" }}>
+            <i className="fa-solid fa-magnifying-glass text-muted fs-13"></i>
+            <input
+              type="text"
+              placeholder="Search brand, country..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(0);
+              }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setPage(0);
                 }}
-              ></i>
-            </div>
+                title="Clear search"
+              >
+                <i className="fa-solid fa-xmark fs-13"></i>
+              </button>
+            )}
           </div>
 
-          <div className="col-md-3 col-lg-3">
+          {/* Filter Controls Group */}
+          <div className="d-flex flex-wrap align-items-center gap-2 ms-auto">
+            {/* Country Filter */}
             <select
-              className="form-select"
-              style={{ borderRadius: "20px", fontSize: "13px" }}
+              className="admin-select-sm"
+              style={{ minWidth: "160px" }}
               value={countryFilter}
-              onChange={(e) => setCountryFilter(e.target.value)}
+              onChange={(e) => {
+                setCountryFilter(e.target.value);
+                setPage(0);
+              }}
             >
               <option value="ALL">All Countries ({countries.length})</option>
               {countries.map((c) => (
@@ -627,27 +663,31 @@ export const AdminBrandManagement = () => {
                 </option>
               ))}
             </select>
-          </div>
 
-          <div className="col-md-3 col-lg-2">
+            {/* Status Filter */}
             <select
-              className="form-select"
-              style={{ borderRadius: "20px", fontSize: "13px" }}
+              className="admin-select-sm"
+              style={{ minWidth: "135px" }}
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
             >
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active Only</option>
               <option value="INACTIVE">Inactive Only</option>
             </select>
-          </div>
 
-          <div className="col-md-2 col-lg-3">
+            {/* Sort dropdown */}
             <select
-              className="form-select"
-              style={{ borderRadius: "20px", fontSize: "13px" }}
+              className="admin-select-sm"
+              style={{ minWidth: "165px" }}
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setPage(0);
+              }}
             >
               <option value="name-asc">Sort: Name (A-Z)</option>
               <option value="name-desc">Sort: Name (Z-A)</option>
@@ -656,11 +696,14 @@ export const AdminBrandManagement = () => {
             </select>
           </div>
         </div>
+      </div>
 
+      {/* Main Table Card */}
+      <div className="admin-card">
         {/* Table */}
         <div className="table-responsive">
-          <table className="table table-hover align-middle mb-0">
-            <thead className="table-light">
+          <table className="admin-table align-middle mb-0">
+            <thead>
               <tr className="fs-12 text-uppercase text-muted">
                 <th>Brand Name</th>
                 <th>Country</th>
@@ -803,14 +846,6 @@ export const AdminBrandManagement = () => {
                           type="button"
                           className="admin-action-icon-btn text-danger"
                           onClick={() => {
-                            if (b.status === "ACTIVE") {
-                              showToast(
-                                `Không thể xoá thương hiệu "${b.name}" vì đang ở trạng thái ACTIVE. Hãy chuyển sang INACTIVE trước khi xoá.`,
-                                "error",
-                                8000
-                              );
-                              return;
-                            }
                             setBrandToDelete(b);
                             setIsDeleteConfirmOpen(true);
                           }}
@@ -827,55 +862,15 @@ export const AdminBrandManagement = () => {
           </table>
         </div>
 
-        {/* PAGINATION BAR (Synchronized with Category & User Management) */}
-        <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 gap-2">
-          <span className="text-muted fs-13">
-            Showing{" "}
-            <strong>
-              {totalElements === 0 ? 0 : page * pageSize + 1} to{" "}
-              {Math.min((page + 1) * pageSize, totalElements)}
-            </strong>{" "}
-            of <strong>{totalElements}</strong> brands
-          </span>
-
-          {totalPages > 1 && (
-            <div className="btn-group btn-group-sm">
-              <button
-                type="button"
-                className="btn btn-light border"
-                disabled={page === 0}
-                onClick={() => setPage((p) => Math.max(p - 1, 0))}
-                title="Previous page"
-              >
-                &lt;
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i).map((pageNum) => (
-                <button
-                  key={pageNum}
-                  type="button"
-                  className={`btn ${
-                    pageNum === page
-                      ? "btn-dark bg-color-primary border-0 fw-700 text-white"
-                      : "btn-light border"
-                  }`}
-                  style={pageNum === page ? { backgroundColor: "#e9613f" } : {}}
-                  onClick={() => setPage(pageNum)}
-                >
-                  {pageNum + 1}
-                </button>
-              ))}
-              <button
-                type="button"
-                className="btn btn-light border"
-                disabled={page >= totalPages - 1}
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages - 1))}
-                title="Next page"
-              >
-                &gt;
-              </button>
-            </div>
-          )}
-        </div>
+        {/* PAGINATION BAR */}
+        <AdminPagination
+          page={page}
+          pageSize={pageSize}
+          totalElements={totalElements}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          noun="brands"
+        />
       </div>
 
       {/* ======================================================== */}
@@ -965,7 +960,7 @@ export const AdminBrandManagement = () => {
                       marginTop: "2px",
                     }}
                   >
-                    Thêm thương hiệu đối tác văn phòng phẩm mới
+                    Add a new partner stationery brand
                   </p>
                 </div>
               </div>
@@ -1263,7 +1258,7 @@ export const AdminBrandManagement = () => {
                       marginTop: "2px",
                     }}
                   >
-                    Cập nhật thông tin thương hiệu đối tác
+                    Update brand partner details and information
                   </p>
                 </div>
               </div>
@@ -1598,22 +1593,22 @@ export const AdminBrandManagement = () => {
                 <div className="col-6">
                   <div className="p-3 rounded-3 border bg-light-subtle">
                     <span className="text-muted fs-11 text-uppercase fw-600 d-block">
-                      Quốc gia
+                      Origin Country
                     </span>
                     <span className="fw-600 text-dark fs-13 mt-1 d-block">
                       <i className="fa-solid fa-location-dot text-danger me-1"></i>{" "}
-                      {brandDetail.country || "Chưa cập nhật"}
+                      {brandDetail.country || "Not specified"}
                     </span>
                   </div>
                 </div>
                 <div className="col-6">
                   <div className="p-3 rounded-3 border bg-light-subtle">
                     <span className="text-muted fs-11 text-uppercase fw-600 d-block">
-                      Sản phẩm cung cấp
+                      Supplied Products
                     </span>
                     <span className="fw-600 text-primary fs-13 mt-1 d-block">
                       <i className="fa-solid fa-boxes-stacked me-1"></i>{" "}
-                      {brandDetail.productCount || 0} sản phẩm
+                      {brandDetail.productCount || 0} products
                     </span>
                   </div>
                 </div>
@@ -1638,13 +1633,13 @@ export const AdminBrandManagement = () => {
                 <div className="col-12">
                   <div className="p-3 rounded-3 border bg-light-subtle">
                     <span className="text-muted fs-11 text-uppercase fw-600 d-block">
-                      Mô tả
+                      Description
                     </span>
                     <p
                       className="mb-0 text-muted fs-13 mt-1"
                       style={{ whiteSpace: "pre-line" }}
                     >
-                      {brandDetail.description || "Chưa có mô tả chi tiết."}
+                      {brandDetail.description || "No detailed description available."}
                     </p>
                   </div>
                 </div>
@@ -1667,7 +1662,7 @@ export const AdminBrandManagement = () => {
                 className="btn btn-secondary px-4 py-2 fs-13 fw-semibold"
                 onClick={() => setIsDetailModalOpen(false)}
               >
-                Đóng
+                Close
               </button>
               <button
                 type="button"
@@ -1677,7 +1672,7 @@ export const AdminBrandManagement = () => {
                   openEditModal(brandDetail);
                 }}
               >
-                <i className="fa-regular fa-pen-to-square me-1"></i> Chỉnh sửa
+                <i className="fa-regular fa-pen-to-square me-1"></i> Edit Brand
               </button>
             </div>
           </div>

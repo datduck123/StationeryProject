@@ -56,7 +56,7 @@ export const AppRoutes = () => {
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/cart.html" element={<Navigate to="/cart" replace />} />
-        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
         <Route path="/checkout.html" element={<Navigate to="/checkout" replace />} />
 
         <Route

@@ -18,7 +18,7 @@ export default defineConfig({
       strict: false,
     },
     proxy: {
-      "/uploads": "http://localhost:8080",
+      "/uploads": new URL(process.env.VITE_API_BASE_URL || `http://localhost:${process.env.BE_PORT || 8080}/api`).origin,
     },
   },
 });

@@ -1,4 +1,4 @@
-import api from "./api";
+import api, { API_BASE_URL } from "./api";
 
 /**
  * Fetch paginated, filtered, sorted product list.
@@ -20,6 +20,7 @@ export const getProducts = (params = {}) => {
   if (params.brandId) query.brandId = params.brandId;
   if (params.minPrice !== undefined && params.minPrice !== null && params.minPrice !== "") query.minPrice = params.minPrice;
   if (params.maxPrice !== undefined && params.maxPrice !== null && params.maxPrice !== "") query.maxPrice = params.maxPrice;
+  if (params.stock) query.stock = params.stock;
   if (params.sort) query.sort = params.sort;
 
   return api.get("/products", { params: query });
@@ -30,6 +31,20 @@ export const getProducts = (params = {}) => {
  * @param {number|string} id
  */
 export const getProductById = (id) => api.get(`/products/${id}`);
+
+/**
+ * Fetch top featured products ordered by average review rating.
+ * @param {number} limit - max number of products (default 8)
+ */
+export const getFeaturedProducts = (limit = 8) =>
+  api.get("/products/featured", { params: { limit } });
+
+/**
+ * Fetch best-selling products ordered by sold count descending.
+ * @param {number} limit - max number of products (default 8)
+ */
+export const getBestSellerProducts = (limit = 8) =>
+  api.get("/products/bestseller", { params: { limit } });
 
 /**
  * Fetch all public categories.
@@ -56,6 +71,7 @@ export const adminGetProducts = (params = {}) => {
   if (params.categoryId) query.categoryId = params.categoryId;
   if (params.brandId) query.brandId = params.brandId;
   if (params.status && params.status !== "ALL") query.status = params.status;
+  if (params.stock && params.stock !== "ALL") query.stock = params.stock;
   if (params.sort) query.sort = params.sort;
 
   return api.get("/admin/products", { params: query });
@@ -133,7 +149,7 @@ export const adminDeleteBrand = (id) => api.delete(`/admin/brands/${id}`);
 export const getProductImage = (product) => {
   if (product?.imageUrl && !product.imageUrl.includes("example.com")) {
     if (product.imageUrl.startsWith("/uploads/")) {
-      return `http://localhost:8080${product.imageUrl}`;
+      return new URL(product.imageUrl, API_BASE_URL).href;
     }
     return product.imageUrl;
   }

@@ -1462,59 +1462,117 @@ Elements
 
 .quantity {
   display: inline-flex;
-  align-items: flex-start;
-  border: 0;
-  border-radius: 64px;
-  padding: clamp(4px, 0.208vw, 24px) clamp(6px, 0.417vw, 48px);
-  border: 1px solid #1e1f20;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 4px 6px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  vertical-align: middle;
+}
+
+.quantity:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.07);
+}
+
+.quantity:focus-within {
+  border-color: #e57c32;
+  box-shadow: 0 0 0 3px rgba(229, 124, 50, 0.15);
 }
 
 .quantity .input-area {
   display: flex;
   align-items: center;
+  gap: 2px;
 }
 
 .quantity .input-area input {
-  padding: 0;
+  padding: 0 4px;
   border: 0;
   background: transparent;
-  font-size: clamp(16px, 0.938vw, 40px);
+  font-size: 16px;
   font-style: normal;
-  font-weight: 500;
+  font-weight: 700;
   line-height: 130%;
   text-align: center;
+  color: #0f172a;
+  min-width: 38px;
 }
 
 .quantity .input-area input:focus-visible {
   outline: none;
 }
 
-.quantity .input-area .decrement {
-  border-radius: clamp(2px, 0.208vw, 28px);
-  border: none;
-  width: clamp(28px, 1.667vw, 64px);
-  height: clamp(28px, 1.667vw, 64px);
-  transition: all 0.5s ease-in-out;
-  background: transparent;
-}
-
-.quantity .input-area .decrement svg {
-  width: clamp(12px, 0.833vw, 32px);
-  height: clamp(12px, 0.833vw, 32px);
-}
-
+.quantity .input-area .decrement,
 .quantity .input-area .increment {
-  border-radius: clamp(2px, 0.208vw, 28px);
+  border-radius: 50%;
   border: none;
-  width: clamp(28px, 1.667vw, 64px);
-  height: clamp(28px, 1.667vw, 64px);
-  transition: all 0.5s ease-in-out;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   background: transparent;
+  color: #334155;
+  cursor: pointer;
+  user-select: none;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  outline: none;
 }
 
+.quantity .input-area .decrement:not(:disabled):hover,
+.quantity .input-area .increment:not(:disabled):hover {
+  background: rgba(229, 124, 50, 0.12);
+  color: #e57c32;
+  transform: scale(1.15);
+}
+
+.quantity .input-area .decrement:not(:disabled):active,
+.quantity .input-area .increment:not(:disabled):active {
+  background: rgba(229, 124, 50, 0.22);
+  color: #c25e1a;
+  transform: scale(0.88);
+}
+
+/* Hiệu ứng mờ rõ ràng khi đạt ngưỡng không thể tăng hoặc giảm */
+.quantity .input-area .decrement:disabled,
+.quantity .input-area .increment:disabled {
+  opacity: 0.22 !important;
+  cursor: not-allowed !important;
+  color: #94a3b8 !important;
+  transform: none !important;
+  background: transparent !important;
+  pointer-events: auto;
+}
+
+.quantity .input-area .decrement svg,
 .quantity .input-area .increment svg {
-  width: clamp(12px, 0.833vw, 32px);
-  height: clamp(12px, 0.833vw, 32px);
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.quantity .input-area .decrement svg path,
+.quantity .input-area .increment svg path {
+  fill: currentColor;
+}
+
+.quantity .input-area .decrement:disabled svg,
+.quantity .input-area .increment:disabled svg {
+  fill: #94a3b8 !important;
+}
+
+.quantity .input-area .decrement:disabled svg path,
+.quantity .input-area .increment:disabled svg path {
+  fill: #94a3b8 !important;
 }
 
 .pagination {
@@ -5739,6 +5797,106 @@ footer .payment-cards .card-block img {
   padding: 24px;
   border-radius: 10px;
   overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Animate bounceOutLeft & Cart Item Removal Animations */
+@-webkit-keyframes bounceOutLeft {
+  20% {
+    opacity: 1;
+    -webkit-transform: translate3d(25px, 0, 0);
+    transform: translate3d(25px, 0, 0);
+  }
+  to {
+    opacity: 0;
+    -webkit-transform: translate3d(-120vw, 0, 0);
+    transform: translate3d(-120vw, 0, 0);
+  }
+}
+
+@keyframes bounceOutLeft {
+  20% {
+    opacity: 1;
+    -webkit-transform: translate3d(25px, 0, 0);
+    transform: translate3d(25px, 0, 0);
+  }
+  to {
+    opacity: 0;
+    -webkit-transform: translate3d(-120vw, 0, 0);
+    transform: translate3d(-120vw, 0, 0);
+  }
+}
+
+.cart-item-row-wrapper {
+  display: block;
+  width: 100%;
+}
+
+.cart-item-removing {
+  -webkit-animation: bounceOutLeft 0.52s cubic-bezier(0.215, 0.61, 0.355, 1) both !important;
+  animation: bounceOutLeft 0.52s cubic-bezier(0.215, 0.61, 0.355, 1) both !important;
+  pointer-events: none !important;
+}
+
+/* Hover micro-interaction on delete (X) button */
+.cart-table .btn-link.text-danger i,
+.card-item .btn-link.text-danger i {
+  display: inline-block;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease;
+}
+
+.cart-table .btn-link.text-danger:hover i,
+.card-item .btn-link.text-danger:hover i {
+  transform: rotate(90deg) scale(1.25);
+  color: #dc3545 !important;
+}
+
+/*--------------------------------------------------------------
+  Checkout / Billing Form Field Lift & Elevation Floating Effect
+--------------------------------------------------------------*/
+.billing-wrapper {
+  padding: 8px 4px;
+}
+
+.billing-wrapper .input-block {
+  position: relative;
+}
+
+.billing-wrapper .input-block label {
+  transition: color 0.2s ease;
+}
+
+.billing-wrapper .input-block:focus-within label {
+  color: #e9613f !important;
+}
+
+.billing-wrapper .form-control {
+  background-color: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              border-color 0.2s ease,
+              background-color 0.2s ease !important;
+  will-change: transform, box-shadow;
+}
+
+.billing-wrapper .form-control:hover {
+  transform: translateY(-3px);
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.12), 0 4px 8px -2px rgba(15, 23, 42, 0.06) !important;
+}
+
+.billing-wrapper .form-control:focus {
+  transform: translateY(-4px);
+  border-color: #e9613f !important;
+  box-shadow: 0 14px 28px -4px rgba(233, 97, 63, 0.22), 0 6px 12px -2px rgba(233, 97, 63, 0.12) !important;
+}
+
+.billing-wrapper .form-control.is-invalid:hover,
+.billing-wrapper .form-control.is-invalid:focus {
+  border-color: #dc3545 !important;
+  box-shadow: 0 12px 24px -4px rgba(220, 53, 69, 0.25), 0 4px 8px -2px rgba(220, 53, 69, 0.1) !important;
 }
 
 .cart .cart-table.wishlist th:first-child {
@@ -6779,3 +6937,189 @@ footer .payment-cards .card-block img {
   opacity: 0.75;
   box-shadow: none;
 }
+
+/* Shared pagination */
+.app-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.app-pagination-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-pagination button {
+  display: inline-flex;
+  min-width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 11px;
+  border: 1px solid #d8e8f8;
+  border-radius: 9px;
+  background: #fff;
+  color: #3184cc;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.app-pagination button:hover:not(:disabled):not(.active) {
+  border-color: #83bced;
+  background: #f3f9ff;
+}
+
+.app-pagination button.active {
+  border-color: #3f98e5;
+  background: #3f98e5;
+  color: #fff;
+}
+
+.app-pagination button:disabled {
+  border-color: transparent;
+  background: transparent;
+  color: #c5d1de;
+  cursor: default;
+}
+
+.app-pagination-ellipsis {
+  padding: 0 2px;
+  color: #3184cc;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Shared application toast */
+.app-toast-container {
+  position: fixed;
+  z-index: 10050;
+  top: 18px;
+  right: 18px;
+  display: flex;
+  width: min(400px, calc(100vw - 32px));
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.app-toast {
+  --toast-color: #3184cc;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 28px;
+  align-items: start;
+  gap: 12px;
+  min-height: 74px;
+  padding: 14px 12px 14px 16px;
+  border: 1px solid #e5e9ef;
+  border-left: 6px solid var(--toast-color);
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 14px 35px rgba(27, 39, 58, 0.16);
+  color: #283143;
+  pointer-events: auto;
+  animation: app-toast-in 0.24s ease-out;
+}
+
+.app-toast-success { --toast-color: #20b486; }
+.app-toast-error { --toast-color: #e05260; }
+.app-toast-warning { --toast-color: #e7a70b; }
+.app-toast-info { --toast-color: #3184cc; }
+
+.app-toast-icon {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--toast-color);
+  color: #fff;
+  font-size: 14px;
+}
+
+.app-toast-content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.app-toast-content strong {
+  color: #202838;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.app-toast-content span {
+  overflow-wrap: anywhere;
+  color: #596579;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.app-toast-close {
+  border: 0;
+  background: transparent;
+  color: #8994a6;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.app-toast-close:hover { color: #263044; }
+
+@keyframes app-toast-in {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 575.98px) {
+  .app-toast-container {
+    top: 12px;
+    right: 12px;
+    width: calc(100vw - 24px);
+  }
+
+  .app-pagination {
+    justify-content: center;
+  }
+}
+
+/* ==========================================================================
+   QuickView Modal Smooth Hardware-Accelerated Animations
+   ========================================================================== */
+@keyframes qvFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes qvSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.qv-overlay {
+  animation: qvFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity;
+}
+
+.qv-dialog {
+  animation: qvSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+

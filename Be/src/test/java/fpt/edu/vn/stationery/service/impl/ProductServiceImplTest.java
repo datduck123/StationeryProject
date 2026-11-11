@@ -17,6 +17,7 @@ import fpt.edu.vn.stationery.mapper.ProductMapper;
 import fpt.edu.vn.stationery.repository.BrandRepository;
 import fpt.edu.vn.stationery.repository.CategoryRepository;
 import fpt.edu.vn.stationery.repository.ProductRepository;
+import fpt.edu.vn.stationery.repository.ReviewRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,9 @@ public class ProductServiceImplTest {
 
     @Mock
     private ProductMapper productMapper;
+
+    @Mock
+    private ReviewRepository reviewRepository;
 
     @InjectMocks
     private ProductServiceImpl productService;
@@ -230,6 +234,52 @@ public class ProductServiceImplTest {
         assertEquals(5, capturedPageable.getPageSize());
         assertEquals(0, capturedPageable.getPageNumber());
         assertTrue(capturedPageable.getSort().getOrderFor("price").isDescending());
+    }
+
+    @Test
+    @DisplayName("7a. Stock Filter: inStock filters only in-stock items")
+    void testStockFilterInStock() {
+        Page<Product> page = new PageImpl<>(List.of(activeProduct));
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
+
+        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 12, null, null, null, null, null, "inStock", "price,asc");
+
+        assertNotNull(result);
+        assertEquals(1, result.getContent().size());
+        verify(productRepository).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("7b. Stock Filter: outStock filters out-of-stock items")
+    void testStockFilterOutStock() {
+        Product outOfStockProd = Product.builder()
+                .productId(3L)
+                .category(category)
+                .brand(brand)
+                .sku("TL-OUT01")
+                .name("Sold Out Marker")
+                .price(new BigDecimal("25000.00"))
+                .weightKg(new BigDecimal("0.020"))
+                .stockQuantity(0)
+                .status(ProductStatus.ACTIVE)
+                .build();
+        ProductResponseDTO outDto = ProductResponseDTO.builder()
+                .productId(3L)
+                .name("Sold Out Marker")
+                .stockQuantity(0)
+                .build();
+
+        Page<Product> page = new PageImpl<>(List.of(outOfStockProd));
+        when(productRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
+        when(productMapper.toDto(outOfStockProd)).thenReturn(outDto);
+
+        PageDTO<ProductResponseDTO> result = productService.getProducts(0, 12, null, null, null, null, null, "outStock", "price,asc");
+
+        assertNotNull(result);
+        assertEquals(1, result.getContent().size());
+        assertEquals(0, result.getContent().get(0).getStockQuantity());
+        verify(productRepository).findAll(any(Specification.class), any(Pageable.class));
     }
 
     // 8. Empty Result Test
@@ -423,7 +473,7 @@ public class ProductServiceImplTest {
                 .status(ProductStatus.ACTIVE)
                 .build();
 
-        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(activeProduct));
         when(productRepository.existsBySkuAndProductIdNot("TL-GEL01", 1L)).thenReturn(false);
         when(categoryRepository.findById(1L)).thenReturn(Optional.of(category));
         when(brandRepository.findById(1L)).thenReturn(Optional.of(brand));
@@ -450,7 +500,7 @@ public class ProductServiceImplTest {
                 .brandId(1L)
                 .build();
 
-        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(activeProduct));
         when(productRepository.existsBySkuAndProductIdNot("TL-OTHER", 1L)).thenReturn(true);
 
         assertThrows(DuplicateResourceException.class, () -> productService.updateProduct(1L, request));
@@ -470,7 +520,7 @@ public class ProductServiceImplTest {
                 .brandId(1L)
                 .build();
 
-        when(productRepository.findById(999L)).thenReturn(Optional.empty());
+        when(productRepository.findByIdForUpdate(999L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> productService.updateProduct(999L, request));
     }
@@ -479,7 +529,7 @@ public class ProductServiceImplTest {
     @Test
     @DisplayName("20. Admin Delete Product Success")
     void testDeleteProduct_Success() {
-        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(activeProduct));
         when(productRepository.countOrderItemsByProductId(1L)).thenReturn(0L);
         when(productRepository.countCartItemsByProductId(1L)).thenReturn(0L);
 
@@ -492,7 +542,7 @@ public class ProductServiceImplTest {
     @Test
     @DisplayName("21. Admin Delete Product: throws ResourceNotFoundException when product does not exist")
     void testDeleteProduct_NotFound() {
-        when(productRepository.findById(999L)).thenReturn(Optional.empty());
+        when(productRepository.findByIdForUpdate(999L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> productService.deleteProduct(999L));
         verify(productRepository, never()).delete(any(Product.class));
@@ -502,7 +552,7 @@ public class ProductServiceImplTest {
     @Test
     @DisplayName("22. Admin Delete Product: throws BadRequestException when product is referenced by orders")
     void testDeleteProduct_ReferencedByOrders() {
-        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(activeProduct));
         when(productRepository.countOrderItemsByProductId(1L)).thenReturn(3L);
 
         BadRequestException ex = assertThrows(BadRequestException.class, () -> productService.deleteProduct(1L));
@@ -514,7 +564,7 @@ public class ProductServiceImplTest {
     @Test
     @DisplayName("23. Admin Delete Product: throws BadRequestException when product is referenced by carts")
     void testDeleteProduct_ReferencedByCarts() {
-        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(activeProduct));
         when(productRepository.countOrderItemsByProductId(1L)).thenReturn(0L);
         when(productRepository.countCartItemsByProductId(1L)).thenReturn(2L);
 
@@ -529,7 +579,7 @@ public class ProductServiceImplTest {
     void testUpdateStock_Success() {
         UpdateStockRequestDTO stockRequest = UpdateStockRequestDTO.builder().stockQuantity(250).build();
 
-        when(productRepository.findById(1L)).thenReturn(Optional.of(activeProduct));
+        when(productRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(activeProduct));
         when(productRepository.save(activeProduct)).thenReturn(activeProduct);
         when(productMapper.toDto(activeProduct)).thenReturn(productResponseDTO);
 

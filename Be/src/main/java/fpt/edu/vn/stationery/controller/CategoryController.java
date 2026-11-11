@@ -21,10 +21,10 @@ public class CategoryController {
 
     private final CategoryService categoryService;
 
-    @Operation(summary = "Get all categories")
+    @Operation(summary = "Get all active categories for public store")
     @GetMapping
     public ResponseEntity<List<CategoryResponseDTO>> getAllCategories() {
-        return ResponseEntity.ok(categoryService.getAllCategories());
+        return ResponseEntity.ok(categoryService.getActiveCategories());
     }
 
     @Operation(summary = "Get category by ID")

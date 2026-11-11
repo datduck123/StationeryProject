@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
@@ -29,8 +30,9 @@ public class ProductController {
             @RequestParam(required = false) Long brandId,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) String stock,
             @RequestParam(required = false, defaultValue = "price,asc") String sort) {
-        PageDTO<ProductResponseDTO> response = productService.getProducts(page, size, keyword, categoryId, brandId, minPrice, maxPrice, sort);
+        PageDTO<ProductResponseDTO> response = productService.getProducts(page, size, keyword, categoryId, brandId, minPrice, maxPrice, stock, sort);
         return ResponseEntity.ok(response);
     }
 
@@ -39,5 +41,19 @@ public class ProductController {
     public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable Long id) {
         ProductResponseDTO response = productService.getProductById(id);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get top featured products ordered by average rating")
+    @GetMapping("/featured")
+    public ResponseEntity<List<ProductResponseDTO>> getFeaturedProducts(
+            @RequestParam(defaultValue = "8") int limit) {
+        return ResponseEntity.ok(productService.getFeaturedProducts(limit));
+    }
+
+    @Operation(summary = "Get best-selling products ordered by total units sold")
+    @GetMapping("/bestseller")
+    public ResponseEntity<List<ProductResponseDTO>> getBestSellerProducts(
+            @RequestParam(defaultValue = "8") int limit) {
+        return ResponseEntity.ok(productService.getBestSellerProducts(limit));
     }
 }

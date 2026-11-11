@@ -21,10 +21,10 @@ public class BrandController {
 
     private final BrandService brandService;
 
-    @Operation(summary = "Get all brands")
+    @Operation(summary = "Get all active brands for public store")
     @GetMapping
     public ResponseEntity<List<BrandResponseDTO>> getAllBrands() {
-        return ResponseEntity.ok(brandService.getAllBrands());
+        return ResponseEntity.ok(brandService.getActiveBrands());
     }
 
     @Operation(summary = "Get brand by ID")

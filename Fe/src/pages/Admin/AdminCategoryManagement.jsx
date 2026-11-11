@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import AdminPagination from "../../components/admin/AdminPagination";
 import { useToast } from "../../providers/ToastContext";
 import {
   adminCreateCategory,
@@ -125,11 +126,11 @@ export const AdminCategoryManagement = () => {
         adminGetProducts({ page: 0, size: 1 }),
       ]);
 
-      // Lấy tất cả sản phẩm kể cả inactive để thống kê chính xác
+      // Fetch all products including inactive for accurate statistics
       if (prodRes.status === "fulfilled" && prodRes.value?.data?.totalElements !== undefined) {
         setTotalProductsCount(prodRes.value.data.totalElements);
       } else {
-        // Fallback: lấy qua adminGetProducts (bao gồm cả inactive)
+        // Fallback: fetch via adminGetProducts
         try {
           const allProdRes = await adminGetProducts({ page: 0, size: 2000 });
           const total = allProdRes.data?.totalElements || allProdRes.data?.content?.length || 0;
@@ -196,15 +197,15 @@ export const AdminCategoryManagement = () => {
     const nameVal = formName.trim();
 
     if (!nameVal) {
-      errors.name = "Tên danh mục không được để trống.";
+      errors.name = "Category name cannot be empty.";
     } else if (nameVal.length < 5) {
-      errors.name = "Tên danh mục phải có ít nhất 5 ký tự.";
+      errors.name = "Category name must be at least 5 characters.";
     } else if (nameVal.length > 50) {
-      errors.name = "Tên danh mục không được vượt quá 50 ký tự.";
+      errors.name = "Category name cannot exceed 50 characters.";
     } else if (/[^a-zA-Z\sÀ-ỹà-ỹĐđ]/.test(nameVal)) {
-      errors.name = "Tên danh mục chỉ được chứa chữ cái và khoảng trắng (không có số hoặc ký tự đặc biệt).";
+      errors.name = "Category name can only contain letters and spaces (no numbers or special characters).";
     } else {
-      // Bắt trùng tên danh mục (không phân biệt hoa/thường)
+      // Validate unique category name (case-insensitive)
       const currentId = isEdit && categoryToEdit ? (categoryToEdit.categoryId || categoryToEdit.id) : null;
       const isDuplicate = categories.some((c) => {
         const cId = c.categoryId || c.id;
@@ -212,20 +213,18 @@ export const AdminCategoryManagement = () => {
         return (c.name || "").trim().toLowerCase() === nameVal.toLowerCase();
       });
       if (isDuplicate) {
-        errors.name = "Tên danh mục đã tồn tại trong hệ thống. Vui lòng chọn tên khác.";
+        errors.name = "Category name already exists. Please choose a different name.";
       }
     }
 
     const errorKeys = Object.keys(errors);
     if (errorKeys.length === 1) {
-      // Chỉ có 1 lỗi duy nhất: Không hiển thị trong modal, chỉ hiển thị pop up bên góc trên phải trong 8s
       setFormErrors({});
       showToast(errors[errorKeys[0]], "error", 8000);
       return false;
     } else if (errorKeys.length > 1) {
-      // Nhiều lỗi: Hiển thị lỗi bên trong modal và báo pop up trong 8s
       setFormErrors(errors);
-      showToast("Vui lòng kiểm tra lại các trường thông tin không hợp lệ trong biểu mẫu.", "error", 8000);
+      showToast("Please review the invalid fields in the form.", "error", 8000);
       return false;
     }
 
@@ -246,13 +245,13 @@ export const AdminCategoryManagement = () => {
         status: formStatus,
       });
       setIsAddModalOpen(false);
-      showToast(`Danh mục "${formName.trim()}" đã được tạo thành công!`, "success");
+      showToast(`Category "${formName.trim()}" created successfully!`, "success");
       fetchCategories();
       notifyProductChange();
     } catch (err) {
       console.error("API add category failed:", err);
       showToast(
-        err.response?.data?.message || "Tạo danh mục thất bại. Tên danh mục có thể đã tồn tại.",
+        err.response?.data?.message || "Failed to create category. Name may already exist.",
         "error"
       );
     } finally {
@@ -274,12 +273,12 @@ export const AdminCategoryManagement = () => {
         status: formStatus,
       });
       setIsEditModalOpen(false);
-      showToast(`Cập nhật danh mục "${formName.trim()}" thành công!`, "success");
+      showToast(`Category "${formName.trim()}" updated successfully!`, "success");
       fetchCategories();
       notifyProductChange();
     } catch (err) {
       console.error("API update category failed:", err);
-      showToast(err.response?.data?.message || "Cập nhật danh mục thất bại.", "error");
+      showToast(err.response?.data?.message || "Failed to update category.", "error");
     } finally {
       setActionLoading(false);
     }
@@ -300,11 +299,11 @@ export const AdminCategoryManagement = () => {
           (c.categoryId || c.id) === catId ? { ...c, status: nextStatus } : c
         )
       );
-      showToast(`Trạng thái danh mục "${cat.name}" đã chuyển sang ${nextStatus}.`, "success");
+      showToast(`Category "${cat.name}" status changed to ${nextStatus}.`, "success");
       notifyProductChange();
     } catch (err) {
       console.error("Toggle status failed:", err);
-      showToast(err.response?.data?.message || "Không thể thay đổi trạng thái danh mục.", "error");
+      showToast(err.response?.data?.message || "Failed to change category status.", "error");
     }
   };
 
@@ -312,22 +311,12 @@ export const AdminCategoryManagement = () => {
   const handleDeleteConfirm = async () => {
     if (!categoryToDelete) return;
 
-    // Chặn xoá nếu category đang ACTIVE
-    if (categoryToDelete.status === "ACTIVE") {
-      setIsDeleteConfirmOpen(false);
-      showToast(
-        `Không thể xoá danh mục "${categoryToDelete.name}" vì đang ở trạng thái ACTIVE. Hãy chuyển sang INACTIVE trước khi xoá.`,
-        "error"
-      );
-      return;
-    }
-
     setActionLoading(true);
     const catId = categoryToDelete.categoryId || categoryToDelete.id;
     try {
       await adminDeleteCategory(catId);
       setIsDeleteConfirmOpen(false);
-      showToast(`Đã xoá danh mục "${categoryToDelete.name}".`, "success");
+      showToast(`Category "${categoryToDelete.name}" deleted successfully.`, "success");
       setCategoryToDelete(null);
       fetchCategories();
       notifyProductChange();
@@ -337,7 +326,7 @@ export const AdminCategoryManagement = () => {
       setCategoryToDelete(null);
       showToast(
         err.response?.data?.message ||
-        "Không thể xoá danh mục vì danh mục này đang chứa sản phẩm hoặc có lỗi xảy ra.",
+        "Cannot delete category as it is linked to other products.",
         "error"
       );
     } finally {
@@ -401,7 +390,7 @@ export const AdminCategoryManagement = () => {
         <div>
           <h4 className="fw-700 medium-black mb-1">Stationery Categories</h4>
           <p className="text-muted fs-13 mb-0">
-            Quản lý danh mục văn phòng phẩm, phân loại và hiển thị trong cửa hàng.
+            Manage stationery categories, classification, and store visibility.
           </p>
         </div>
 
@@ -414,14 +403,29 @@ export const AdminCategoryManagement = () => {
         </button>
       </div>
 
-      {/* Top Banner Stats (Professional Cards with Icons) */}
+      {/* Top Banner Stats (Professional Cards with Icons - Click to Filter) */}
       <div className="row g-3 mb-4">
         {/* Total Categories */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "ALL" ? "border-primary" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "ALL" ? "#e9613f" : "#e2e8f0",
+              boxShadow: statusFilter === "ALL" ? "0 0 0 1px #e9613f" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("ALL");
+              setPage(0);
+            }}
+            title="Click to show all categories"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Tổng danh mục
+                Total Categories
               </span>
               <h3 className="mb-0 fw-700 mt-1">{categories.length}</h3>
             </div>
@@ -441,10 +445,25 @@ export const AdminCategoryManagement = () => {
 
         {/* Active Categories */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "ACTIVE" ? "border-success" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "ACTIVE" ? "#10b981" : "#e2e8f0",
+              boxShadow: statusFilter === "ACTIVE" ? "0 0 0 1px #10b981" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("ACTIVE");
+              setPage(0);
+            }}
+            title="Click to filter Active categories"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Đang hoạt động
+                Active Categories
               </span>
               <h3 className="mb-0 fw-700 mt-1 text-success">{activeCount}</h3>
             </div>
@@ -459,10 +478,25 @@ export const AdminCategoryManagement = () => {
 
         {/* Inactive Categories */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "INACTIVE" ? "border-danger" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "INACTIVE" ? "#ef4444" : "#e2e8f0",
+              boxShadow: statusFilter === "INACTIVE" ? "0 0 0 1px #ef4444" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("INACTIVE");
+              setPage(0);
+            }}
+            title="Click to filter Inactive categories"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Tạm ngưng / Đã ẩn
+                Inactive / Hidden
               </span>
               <h3 className="mb-0 fw-700 mt-1" style={{ color: "#ef4444" }}>{inactiveCount}</h3>
             </div>
@@ -485,7 +519,7 @@ export const AdminCategoryManagement = () => {
           <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Tổng sản phẩm hiện có
+                Total Products
               </span>
               <h3 className="mb-0 fw-700 mt-1 text-primary">{totalProductsInSystem}</h3>
             </div>
@@ -501,13 +535,13 @@ export const AdminCategoryManagement = () => {
 
       {/* TOOLBAR CARD (Clean horizontal layout, uniform search, filters, and sort like User Management) */}
       <div className="admin-card mb-4">
-        <div className="d-flex flex-wrap align-items-center gap-3">
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
           {/* Live Auto Search */}
-          <div className="admin-search-box">
+          <div className="admin-search-box" style={{ flex: "1 1 260px", maxWidth: "380px" }}>
             <i className="fa-solid fa-magnifying-glass text-muted fs-13"></i>
             <input
               type="text"
-              placeholder="Search by category name, slug or description..."
+              placeholder="Search category name, slug..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -525,36 +559,39 @@ export const AdminCategoryManagement = () => {
             )}
           </div>
 
-          {/* Status Filter */}
-          <select
-            className="admin-select-sm"
-            style={{ width: "140px" }}
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-          </select>
+          {/* Filter Controls Group */}
+          <div className="d-flex flex-wrap align-items-center gap-2 ms-auto">
+            {/* Status Filter */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "140px" }}
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
 
-          {/* Sort dropdown */}
-          <select
-            className="admin-select-sm"
-            style={{ width: "160px" }}
-            value={sortBy}
-            onChange={(e) => {
-              setSortBy(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="name-asc">Name (A-Z)</option>
-            <option value="name-desc">Name (Z-A)</option>
-            <option value="id-desc">Newest First</option>
-            <option value="id-asc">Oldest First</option>
-          </select>
+            {/* Sort dropdown */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "165px" }}
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="name-asc">Name (A-Z)</option>
+              <option value="name-desc">Name (Z-A)</option>
+              <option value="id-desc">Newest First</option>
+              <option value="id-asc">Oldest First</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -587,7 +624,7 @@ export const AdminCategoryManagement = () => {
 
                   return (
                     <tr key={catId}>
-                      {/* STT (Số Thứ Tự replacing previous icons) */}
+                      {/* Item Index */}
                       <td>
                         <span className="fw-700 color-primary fs-13">
                           #{itemStt}
@@ -639,7 +676,7 @@ export const AdminCategoryManagement = () => {
                           type="button"
                           className="admin-action-icon-btn me-1"
                           onClick={() => handleOpenDetail(cat)}
-                          title="Xem chi tiết danh mục"
+                          title="View category details"
                         >
                           <i className="fa-regular fa-eye"></i>
                         </button>
@@ -678,55 +715,15 @@ export const AdminCategoryManagement = () => {
           </table>
         </div>
 
-        {/* PAGINATION BAR (Synchronized with User Management) */}
-        <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 gap-2">
-          <span className="text-muted fs-13">
-            Showing{" "}
-            <strong>
-              {totalElements === 0 ? 0 : page * pageSize + 1} to{" "}
-              {Math.min((page + 1) * pageSize, totalElements)}
-            </strong>{" "}
-            of <strong>{totalElements}</strong> categories
-          </span>
-
-          {totalPages > 1 && (
-            <div className="btn-group btn-group-sm">
-              <button
-                type="button"
-                className="btn btn-light border"
-                disabled={page === 0}
-                onClick={() => setPage((p) => Math.max(p - 1, 0))}
-                title="Previous page"
-              >
-                &lt;
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i).map((pageNum) => (
-                <button
-                  key={pageNum}
-                  type="button"
-                  className={`btn ${
-                    pageNum === page
-                      ? "btn-dark bg-color-primary border-0 fw-700 text-white"
-                      : "btn-light border"
-                  }`}
-                  style={pageNum === page ? { backgroundColor: "#e9613f" } : {}}
-                  onClick={() => setPage(pageNum)}
-                >
-                  {pageNum + 1}
-                </button>
-              ))}
-              <button
-                type="button"
-                className="btn btn-light border"
-                disabled={page >= totalPages - 1}
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages - 1))}
-                title="Next page"
-              >
-                &gt;
-              </button>
-            </div>
-          )}
-        </div>
+        {/* PAGINATION BAR */}
+        <AdminPagination
+          page={page}
+          pageSize={pageSize}
+          totalElements={totalElements}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          noun="categories"
+        />
       </div>
 
       {/* ======================================================== */}
@@ -797,7 +794,7 @@ export const AdminCategoryManagement = () => {
                     Add New Category
                   </h5>
                   <p style={{ margin: 0, fontSize: "12px", color: "#8a94a6", marginTop: "2px" }}>
-                    Tạo danh mục mới để phân loại văn phòng phẩm
+                    Create a new category to organize stationery products
                   </p>
                 </div>
               </div>
@@ -831,7 +828,7 @@ export const AdminCategoryManagement = () => {
                   <input
                     type="text"
                     className={`form-control ${formErrors.name ? "is-invalid" : ""}`}
-                    placeholder="e.g. Bút viết & Mực"
+                    placeholder="e.g. Writing Instruments & Inks"
                     value={formName}
                     onChange={handleNameChange}
                     style={{ borderRadius: "8px", fontSize: "13.5px" }}
@@ -848,7 +845,7 @@ export const AdminCategoryManagement = () => {
                   <textarea
                     className="form-control"
                     rows="3"
-                    placeholder="Mô tả tóm tắt về các sản phẩm thuộc danh mục này..."
+                    placeholder="Brief description of products in this category..."
                     value={formDescription}
                     onChange={(e) => setFormDescription(e.target.value)}
                     style={{ borderRadius: "8px", fontSize: "13.5px", resize: "vertical" }}
@@ -980,7 +977,7 @@ export const AdminCategoryManagement = () => {
                     Edit Category
                   </h5>
                   <p style={{ margin: 0, fontSize: "12px", color: "#8a94a6", marginTop: "2px" }}>
-                    Chỉnh sửa thông tin danh mục
+                    Update category details and information
                   </p>
                 </div>
               </div>
@@ -1199,10 +1196,10 @@ export const AdminCategoryManagement = () => {
                 <div className="col-6">
                   <div className="p-3 rounded-3 border bg-white h-100">
                     <span className="text-muted d-block fs-11 text-uppercase fw-600 mb-1">
-                      <i className="fa-solid fa-boxes-stacked me-1 text-primary"></i> Số sản phẩm
+                      <i className="fa-solid fa-boxes-stacked me-1 text-primary"></i> Product Count
                     </span>
                     <span className="fw-700 fs-16 text-dark">
-                      {categoryDetail.productCount || 0} sản phẩm
+                      {categoryDetail.productCount || 0} products
                     </span>
                   </div>
                 </div>
@@ -1210,10 +1207,10 @@ export const AdminCategoryManagement = () => {
                 <div className="col-6">
                   <div className="p-3 rounded-3 border bg-white h-100">
                     <span className="text-muted d-block fs-11 text-uppercase fw-600 mb-1">
-                      <i className="fa-solid fa-toggle-on me-1 text-primary"></i> Trạng thái
+                      <i className="fa-solid fa-toggle-on me-1 text-primary"></i> Status
                     </span>
                     <span className="fw-700 fs-14 text-dark">
-                      {categoryDetail.status === "ACTIVE" ? "Đang hiển thị" : "Đã tạm ẩn"}
+                      {categoryDetail.status === "ACTIVE" ? "Active / Displayed" : "Inactive / Hidden"}
                     </span>
                   </div>
                 </div>
@@ -1221,10 +1218,10 @@ export const AdminCategoryManagement = () => {
                 <div className="col-12">
                   <div className="p-3 rounded-3 border bg-white">
                     <span className="text-muted d-block fs-11 text-uppercase fw-600 mb-1">
-                      <i className="fa-solid fa-align-left me-1 text-primary"></i> Mô tả danh mục
+                      <i className="fa-solid fa-align-left me-1 text-primary"></i> Category Description
                     </span>
                     <p className="mb-0 text-dark fs-13" style={{ lineHeight: 1.6 }}>
-                      {categoryDetail.description || "Chưa có mô tả chi tiết cho danh mục này."}
+                      {categoryDetail.description || "No detailed description available for this category."}
                     </p>
                   </div>
                 </div>
@@ -1247,7 +1244,7 @@ export const AdminCategoryManagement = () => {
                 className="btn btn-light rounded-pill px-4 fw-600 border"
                 onClick={() => setIsDetailModalOpen(false)}
               >
-                Đóng
+                Close
               </button>
               <button
                 type="button"
@@ -1258,7 +1255,7 @@ export const AdminCategoryManagement = () => {
                   openEditModal(cat);
                 }}
               >
-                <i className="fa-regular fa-pen-to-square me-1"></i> Chỉnh sửa danh mục
+                <i className="fa-regular fa-pen-to-square me-1"></i> Edit Category
               </button>
             </div>
           </div>

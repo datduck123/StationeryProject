@@ -15,6 +15,7 @@ import fpt.edu.vn.stationery.mapper.ProductMapper;
 import fpt.edu.vn.stationery.repository.BrandRepository;
 import fpt.edu.vn.stationery.repository.CategoryRepository;
 import fpt.edu.vn.stationery.repository.ProductRepository;
+import fpt.edu.vn.stationery.repository.ReviewRepository;
 import fpt.edu.vn.stationery.service.ProductService;
 import fpt.edu.vn.stationery.specification.ProductSpecification;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -34,12 +36,26 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
-    private static final List<String> ALLOWED_SORT_FIELDS = List.of("price", "name", "createdAt", "productId", "stockQuantity");
+    private static final List<String> ALLOWED_SORT_FIELDS = List.of("price", "name", "createdAt", "productId", "stockQuantity", "sold");
 
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final BrandRepository brandRepository;
     private final ProductMapper productMapper;
+    private final ReviewRepository reviewRepository;
+
+    /** Converts a Product entity to DTO and enriches it with live rating/review-count data. */
+    private ProductResponseDTO toEnrichedDto(Product product) {
+        ProductResponseDTO dto = productMapper.toDto(product);
+        Double rawAverage = reviewRepository.averageRatingByProductId(product.getProductId());
+        double avg = rawAverage == null ? 0.0 : BigDecimal.valueOf(rawAverage).setScale(1, RoundingMode.HALF_UP).doubleValue();
+        dto.setAvgRating(avg);
+        dto.setReviewCount(reviewRepository.countByProductId(product.getProductId()));
+        if (dto.getSold() == null) {
+            dto.setSold(0);
+        }
+        return dto;
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -51,6 +67,21 @@ public class ProductServiceImpl implements ProductService {
             Long brandId,
             java.math.BigDecimal minPrice,
             java.math.BigDecimal maxPrice,
+            String sort) {
+        return getProducts(page, size, keyword, categoryId, brandId, minPrice, maxPrice, null, sort);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageDTO<ProductResponseDTO> getProducts(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            java.math.BigDecimal minPrice,
+            java.math.BigDecimal maxPrice,
+            String stock,
             String sort) {
         validatePagination(page, size);
 
@@ -73,10 +104,10 @@ public class ProductServiceImpl implements ProductService {
         Sort sortObj = parseSort(sort);
         Pageable pageable = PageRequest.of(page, size, sortObj);
 
-        Specification<Product> spec = ProductSpecification.filterPublicProducts(keyword, categoryId, brandId, minPrice, maxPrice);
+        Specification<Product> spec = ProductSpecification.filterPublicProducts(keyword, categoryId, brandId, minPrice, maxPrice, stock);
         Page<Product> productPage = productRepository.findAll(spec, pageable);
 
-        Page<ProductResponseDTO> dtoPage = productPage.map(productMapper::toDto);
+        Page<ProductResponseDTO> dtoPage = productPage.map(this::toEnrichedDto);
         return PageDTO.from(dtoPage);
     }
 
@@ -90,6 +121,20 @@ public class ProductServiceImpl implements ProductService {
             Long brandId,
             String status,
             String sort) {
+        return getProductsAdmin(page, size, keyword, categoryId, brandId, status, null, sort);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageDTO<ProductResponseDTO> getProductsAdmin(
+            int page,
+            int size,
+            String keyword,
+            Long categoryId,
+            Long brandId,
+            String status,
+            String stock,
+            String sort) {
         validatePagination(page, size);
 
         if (categoryId != null && categoryId <= 0) {
@@ -102,10 +147,10 @@ public class ProductServiceImpl implements ProductService {
         Sort sortObj = parseSort(sort);
         Pageable pageable = PageRequest.of(page, size, sortObj);
 
-        Specification<Product> spec = ProductSpecification.filterAdminProducts(keyword, categoryId, brandId, status);
+        Specification<Product> spec = ProductSpecification.filterAdminProducts(keyword, categoryId, brandId, status, stock);
         Page<Product> productPage = productRepository.findAll(spec, pageable);
 
-        Page<ProductResponseDTO> dtoPage = productPage.map(productMapper::toDto);
+        Page<ProductResponseDTO> dtoPage = productPage.map(this::toEnrichedDto);
         return PageDTO.from(dtoPage);
     }
 
@@ -123,7 +168,7 @@ public class ProductServiceImpl implements ProductService {
             throw new ResourceNotFoundException("Product not found with id: " + id);
         }
 
-        return productMapper.toDto(product);
+        return toEnrichedDto(product);
     }
 
     @Override
@@ -136,12 +181,14 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
-        return productMapper.toDto(product);
+        return toEnrichedDto(product);
     }
 
     @Override
     @Transactional
     public ProductResponseDTO createProduct(ProductRequestDTO request) {
+        validateProductName(request.getName());
+
         // Auto-generate SKU if not provided
         String sku;
         if (request.getSku() == null || request.getSku().isBlank()) {
@@ -176,7 +223,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Product savedProduct = productRepository.save(product);
-        return productMapper.toDto(savedProduct);
+        return toEnrichedDto(savedProduct);
     }
 
     @Override
@@ -185,8 +232,9 @@ public class ProductServiceImpl implements ProductService {
         if (id == null || id <= 0) {
             throw new BadRequestException("Invalid product ID: " + id);
         }
+        validateProductName(request.getName());
 
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         // Keep existing SKU if not provided, otherwise update it
@@ -220,7 +268,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Product updatedProduct = productRepository.save(product);
-        return productMapper.toDto(updatedProduct);
+        return toEnrichedDto(updatedProduct);
     }
 
     @Override
@@ -230,11 +278,11 @@ public class ProductServiceImpl implements ProductService {
             throw new BadRequestException("Invalid product ID: " + id);
         }
 
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         if (productRepository.countOrderItemsByProductId(id) > 0) {
-            throw new BadRequestException("Cannot delete product as it is referenced by existing orders. Consider deactivating the product instead.");
+            throw new BadRequestException("Cannot delete product as it is referenced by existing customer orders. Consider deactivating the product instead.");
         }
 
         if (productRepository.countCartItemsByProductId(id) > 0) {
@@ -251,7 +299,7 @@ public class ProductServiceImpl implements ProductService {
             throw new BadRequestException("Invalid product ID: " + id);
         }
 
-        Product product = productRepository.findById(id)
+        Product product = productRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         product.setStockQuantity(request.getStockQuantity());
@@ -299,5 +347,56 @@ public class ProductServiceImpl implements ProductService {
         }
 
         return Sort.by(direction, property);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> getFeaturedProducts(int limit) {
+        int safeLimit = limit > 0 && limit <= 50 ? limit : 8;
+        Pageable pageable = PageRequest.of(0, safeLimit);
+        List<Long> topRatedIds = reviewRepository.findTopRatedProductIds(pageable);
+        List<Product> products = new java.util.ArrayList<>();
+        if (!topRatedIds.isEmpty()) {
+            List<Product> found = productRepository.findAllById(topRatedIds).stream()
+                    .filter(p -> p.getStatus() == ProductStatus.ACTIVE)
+                    .toList();
+            for (Long id : topRatedIds) {
+                found.stream().filter(p -> p.getProductId().equals(id)).findFirst().ifPresent(products::add);
+            }
+        }
+        if (products.size() < safeLimit) {
+            Pageable fillPageable = PageRequest.of(0, safeLimit, Sort.by(Sort.Direction.DESC, "productId"));
+            List<Product> fillers = productRepository.findAll(
+                    ProductSpecification.filterPublicProducts(null, null, null, null, null),
+                    fillPageable
+            ).getContent();
+            for (Product p : fillers) {
+                if (products.stream().noneMatch(x -> x.getProductId().equals(p.getProductId()))) {
+                    products.add(p);
+                    if (products.size() >= safeLimit) break;
+                }
+            }
+        }
+        return products.stream().map(this::toEnrichedDto).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductResponseDTO> getBestSellerProducts(int limit) {
+        int safeLimit = limit > 0 && limit <= 50 ? limit : 8;
+        Pageable pageable = PageRequest.of(0, safeLimit);
+        return productRepository.findTopBySoldDesc(pageable)
+                .stream().map(this::toEnrichedDto).toList();
+    }
+
+    private void validateProductName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new BadRequestException("Product name cannot be empty");
+        }
+        String trimmed = name.trim();
+        boolean hasLetter = trimmed.codePoints().anyMatch(Character::isLetter);
+        if (!hasLetter) {
+            throw new BadRequestException("Product name must contain letters and cannot consist of numbers only");
+        }
     }
 }

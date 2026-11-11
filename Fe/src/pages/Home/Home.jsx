@@ -1,9 +1,12 @@
 // Migrated from: index.html, lines 198-2992
 // HTML->JSX conversion: class -> className, for -> htmlFor, img / br / input self-closing, Link integration, CartContext integration, i18n support
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { getFeaturedProducts, getBestSellerProducts, getProductImage, getBrands, getProducts } from "../../services/productService";
+import { formatOrderMoney } from "../../utils/orderFormatters";
 import CountdownTimer from "../../components/ui/CountdownTimer";
+import ProductRatingSold from "../../components/shared/ProductRatingSold";
 import { useCartContext } from "../../providers/CartContext";
 
 const RatingStars = () => (
@@ -26,10 +29,12 @@ const RatingStars = () => (
   </div>
 );
 
-const ProductCard = ({ product, openCart, openQuickView, t }) => {
-  const { toggleWishlist, isInWishlist } = useCartContext();
+const ProductCard = ({ product, openQuickView, t }) => {
+  const { toggleWishlist, isInWishlist, addToCart } = useCartContext();
+  const { i18n } = useTranslation();
   const prodId = product.id || product.productId;
   const isWishlisted = isInWishlist(prodId);
+  const inStock = (product.stockQuantity ?? product.stock_quantity ?? 0) > 0;
   const normalizedProduct = {
     ...product,
     name: product.name || product.title,
@@ -37,22 +42,48 @@ const ProductCard = ({ product, openCart, openQuickView, t }) => {
   };
 
   return (
-    <div className="latest-product-card">
-      <div className="image-box mb-16">
-        {product.badge && (
+    <div className={`latest-product-card ${!inStock ? "is-out-of-stock" : ""}`}>
+      <div className="image-box mb-16" style={{ position: "relative" }}>
+        {product.badge && inStock && (
           <span className="sale-label subtitle fw-400 white">
             {product.badge === "Sale" ? t("common.sale") : product.badge}
           </span>
         )}
+        {!inStock && (
+          <span
+            style={{
+              position: "absolute",
+              top: "10px",
+              left: "10px",
+              background: "#dc2626",
+              color: "#fff",
+              fontSize: "11px",
+              fontWeight: 700,
+              padding: "4px 9px",
+              borderRadius: "6px",
+              zIndex: 3,
+              boxShadow: "0 2px 8px rgba(220, 38, 38, 0.4)",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
+          >
+            {t("common.outOfStock", "Hết hàng")}
+          </span>
+        )}
         <Link to={`/product/${prodId}`} className="image">
-          <img src={product.image} className="product-image" alt={product.title || product.name || ""} />
+          <img
+            src={product.image}
+            className="product-image"
+            alt={product.title || product.name || ""}
+            style={!inStock ? { opacity: 0.82 } : {}}
+          />
         </Link>
         <div className="side-icons">
           <ul className="list-unstyled">
             <li>
               <a
                 href="#wishlist"
-                title={isWishlisted ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
+                title={isWishlisted ? t("wishlist.remove", "Remove from wishlist") : t("wishlist.add", "Add to wishlist")}
                 onClick={(e) => {
                   e.preventDefault();
                   toggleWishlist(normalizedProduct);
@@ -60,7 +91,7 @@ const ProductCard = ({ product, openCart, openQuickView, t }) => {
                 style={{ color: isWishlisted ? "#e57c32" : undefined }}
               >
                 <i
-                  className={isWishlisted ? "fa-solid fa-heart" : "fa-light fa-heart"}
+                  className={isWishlisted ? "fa-solid fa-heart" : "fa-regular fa-heart"}
                   style={{ color: isWishlisted ? "#e57c32" : undefined }}
                 ></i>
               </a>
@@ -69,9 +100,10 @@ const ProductCard = ({ product, openCart, openQuickView, t }) => {
               <a
                 href="#quickview"
                 className="btn"
-                title="Xem nhanh"
+                title={t("modals.quickView", "Quick View")}
                 onClick={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   openQuickView(normalizedProduct, e);
                 }}
               >
@@ -80,17 +112,35 @@ const ProductCard = ({ product, openCart, openQuickView, t }) => {
             </li>
           </ul>
         </div>
-      <a
-        href="#cart"
-        className="cus-btn"
-        onClick={(e) => {
-          e.preventDefault();
-          openCart();
-        }}
-      >
-        <span className="btn-text">{t("common.addCart")}</span>
-        <span>{t("common.goToCart")}</span>
-      </a>
+      {inStock ? (
+        <a
+          href="#cart"
+          className="cus-btn"
+          onClick={(e) => {
+            e.preventDefault();
+            addToCart(product, 1);
+          }}
+        >
+          <span className="btn-text">{t("common.addCart")}</span>
+          <span>{t("common.goToCart")}</span>
+        </a>
+      ) : (
+        <button
+          type="button"
+          className="cus-btn"
+          disabled
+          style={{
+            backgroundColor: "#94a3b8",
+            borderColor: "#94a3b8",
+            cursor: "not-allowed",
+            opacity: 0.85,
+            pointerEvents: "none",
+          }}
+        >
+          <span className="btn-text">{t("common.outOfStock", "Hết hàng")}</span>
+          <span>{t("common.outOfStock", "Hết hàng")}</span>
+        </button>
+      )}
     </div>
     <div className="product-desc">
       <div>
@@ -100,11 +150,24 @@ const ProductCard = ({ product, openCart, openQuickView, t }) => {
         >
           {product.title}
         </Link>
-        <div className="d-flex align-items-center gap-8 justify-content-center mb-8">
-          <RatingStars />
-          <p className="fw-500">(02)</p>
+        <ProductRatingSold product={product} variant="card" className="mb-8" />
+        <div className="d-flex align-items-center justify-content-between">
+          <h5 className="medium-black fw-700 mb-0">{formatOrderMoney(product.price, i18n.language)}</h5>
+          {!inStock && (
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#dc2626",
+                backgroundColor: "#fee2e2",
+                padding: "2px 8px",
+                borderRadius: "6px",
+              }}
+            >
+              {t("common.outOfStock", "Hết hàng")}
+            </span>
+          )}
         </div>
-        <h5 className="medium-black fw-700">{product.price}</h5>
       </div>
     </div>
   </div>
@@ -112,13 +175,17 @@ const ProductCard = ({ product, openCart, openQuickView, t }) => {
 };
 
 export const Home = () => {
-  const { openCart, openQuickView } = useCartContext();
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [bestSellerProducts, setBestSellerProducts] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [brandsLoaded, setBrandsLoaded] = useState(false);
+  const { openQuickView } = useCartContext();
   const { t } = useTranslation();
 
   useEffect(() => {
     if (window.$ && window.$.fn && window.$.fn.slick) {
       const $featured = window.$(".featured-product-slider");
-      if ($featured.length && !$featured.hasClass("slick-initialized")) {
+      if ($featured.length && featuredProducts.length > 0 && !$featured.hasClass("slick-initialized")) {
         $featured.slick({
           slidesToShow: 4,
           slidesToScroll: 1,
@@ -170,177 +237,80 @@ export const Home = () => {
         }
       }
     };
+  }, [featuredProducts]);
+
+  /** Normalize a raw API product into the shape ProductCard expects. */
+  const normalizeProduct = (product) => ({
+    ...product,
+    id: product.productId ?? product.id,
+    title: product.name,
+    image: getProductImage(product),
+  });
+
+  useEffect(() => {
+    let active = true;
+    // Featured: top-rated products
+    getFeaturedProducts(8)
+      .then((response) => {
+        const list = Array.isArray(response.data) ? response.data : [];
+        if (active) setFeaturedProducts(list.map(normalizeProduct));
+      })
+      .catch(() => { if (active) setFeaturedProducts([]); });
+
+    // Best Seller: top-sold products
+    getBestSellerProducts(8)
+      .then((response) => {
+        const list = Array.isArray(response.data) ? response.data : [];
+        if (active) setBestSellerProducts(list.map(normalizeProduct));
+      })
+      .catch(() => { if (active) setBestSellerProducts([]); });
+
+    // Brands from DB
+    Promise.allSettled([getBrands(), getProducts({ size: 100 })])
+      .then(([brandSettled, prodSettled]) => {
+        if (!active) return;
+        const brandRes = brandSettled.status === "fulfilled" ? brandSettled.value : null;
+        const prodRes = prodSettled.status === "fulfilled" ? prodSettled.value : null;
+
+        // API /brands trả về array trực tiếp
+        const rawBrands = brandRes && Array.isArray(brandRes.data)
+          ? brandRes.data
+          : (brandRes?.data?.data ?? brandRes?.data?.content ?? []);
+
+        // API /products trả về { content, totalPages, ... }
+        const rawProds = prodRes?.data?.content ?? (Array.isArray(prodRes?.data) ? prodRes.data : []);
+        const delays = ["200ms", "300ms", "400ms", "500ms", "600ms", "700ms", "800ms"];
+        const mapped = rawBrands.map((b, index) => {
+          const bid = b.brandId ?? b.id;
+          const prodsBrand = rawProds.filter((p) => {
+            const pbid = p.brand?.brandId ?? p.brand?.id ?? p.brandId;
+            return pbid === bid;
+          });
+          const firstProdImg = prodsBrand.length > 0 ? getProductImage(prodsBrand[0]) : null;
+          const fallback = `/assets/media/collection/collection-${(index % 7) + 1}.png`;
+          return {
+            id: bid,
+            name: b.name ?? b.brandName,
+            count: prodsBrand.length,
+            image: firstProdImg || fallback,
+            delay: delays[index % delays.length],
+          };
+        });
+        setBrands(mapped);
+        setBrandsLoaded(true);
+      })
+      .catch((err) => {
+        console.error("Failed to load brands:", err);
+        if (active) {
+          setBrands([]);
+          setBrandsLoaded(true);
+        }
+      });
+
+    return () => { active = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const categories = [
-    {
-      id: 1,
-      name: "Book Pin",
-      count: "12",
-      image: "/assets/media/collection/collection-1.png",
-      delay: "200ms",
-    },
-    {
-      id: 2,
-      name: "Pencil",
-      count: "18",
-      image: "/assets/media/collection/collection-2.png",
-      delay: "300ms",
-    },
-    {
-      id: 3,
-      name: "Pencil Pocket",
-      count: "5",
-      image: "/assets/media/collection/collection-3.png",
-      delay: "400ms",
-    },
-    {
-      id: 4,
-      name: "Notebook",
-      count: "8",
-      image: "/assets/media/collection/collection-4.png",
-      delay: "500ms",
-    },
-    {
-      id: 5,
-      name: "Tape",
-      count: "16",
-      image: "/assets/media/collection/collection-5.png",
-      delay: "600ms",
-    },
-    {
-      id: 6,
-      name: "Book Pin",
-      count: "10",
-      image: "/assets/media/collection/collection-6.png",
-      delay: "700ms",
-    },
-    {
-      id: 7,
-      name: "Geometry",
-      count: "5",
-      image: "/assets/media/collection/collection-7.png",
-      delay: "400ms",
-    },
-  ];
-
-  const featuredProducts = [
-    {
-      id: 1,
-      title: "Daily Planner Pro",
-      image: "/assets/media/products/product-1.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 2,
-      title: "SmoothFlow Pens",
-      image: "/assets/media/products/product-2.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 3,
-      title: "Premium Bags",
-      image: "/assets/media/products/product-3.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 4,
-      title: "Premium Letter Paper",
-      image: "/assets/media/products/product-4.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 5,
-      title: "Daily Planner Pro",
-      image: "/assets/media/products/product-1.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 6,
-      title: "SmoothFlow Pens",
-      image: "/assets/media/products/product-2.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 7,
-      title: "Premium Bags",
-      image: "/assets/media/products/product-3.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 8,
-      title: "Premium Letter Paper",
-      image: "/assets/media/products/product-4.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-  ];
-
-  const bestSellerProducts = [
-    {
-      id: 1,
-      title: "Classic Ballpoint Pens",
-      image: "/assets/media/products/product-5.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 2,
-      title: "Magnetic Paper Clips",
-      image: "/assets/media/products/product-6.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 3,
-      title: "Pen's Box",
-      image: "/assets/media/products/product-7.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 4,
-      title: "Calculator",
-      image: "/assets/media/products/product-8.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 5,
-      title: "Watercolor Paper Pad",
-      image: "/assets/media/products/product-9.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-    {
-      id: 6,
-      title: "Watercolor Paper Pad",
-      image: "/assets/media/products/product-10.png",
-      price: "$59.00",
-      badge: "",
-    },
-    {
-      id: 7,
-      title: "Daily Planner Pro",
-      image: "/assets/media/products/product-11.png",
-      price: "$59.00",
-      badge: "-15%",
-    },
-    {
-      id: 8,
-      title: "Hardcover Notebook",
-      image: "/assets/media/products/product-12.png",
-      price: "$59.00",
-      badge: "Sale",
-    },
-  ];
 
   const testimonials = [
     {
@@ -476,23 +446,77 @@ export const Home = () => {
             </h2>
             <p>{t("home.catSubtitle")}</p>
           </div>
-          <div className="collection-wrapper">
-            {categories.map((cat) => (
-              <Link
-                key={cat.id}
-                to="/shop"
-                className="collection-block w-100 wow fadeInUp animated"
-                data-wow-delay={cat.delay}
-              >
-                <div className="image-box mb-12">
-                  <img src={cat.image} alt="" />
-                </div>
-                <div className="text-box">
-                  <h6 className="title-text fw-700 text-center">{cat.name}</h6>
-                  <p className="dark-gray">{cat.count}</p>
-                </div>
-              </Link>
-            ))}
+          <div
+            className="collection-wrapper d-flex flex-wrap justify-content-center align-items-center"
+            style={{ gap: "36px" }}
+          >
+            {!brandsLoaded ? (
+              <p className="text-center text-muted w-100" style={{ padding: "20px" }}>
+                <i className="fa-solid fa-spinner fa-spin me-2"></i>
+                {t("common.loading", "Loading...")}
+              </p>
+            ) : brands.length === 0 ? (
+              <p className="text-center text-muted w-100">{t("shop.noProducts", "No brands found")}</p>
+            ) : (
+              brands.map((brand) => (
+                <Link
+                  key={brand.id}
+                  to={`/shop?brandId=${brand.id}`}
+                  className="collection-block wow fadeInUp animated"
+                  data-wow-delay={brand.delay}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    textDecoration: "none",
+                    width: "140px",
+                  }}
+                >
+                  <div
+                    className="image-box mb-12"
+                    style={{
+                      width: "120px",
+                      height: "120px",
+                      borderRadius: "50%",
+                      overflow: "hidden",
+                      backgroundColor: "#f8f9fa",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 4px 15px rgba(0,0,0,0.06)",
+                    }}
+                  >
+                    <img
+                      src={brand.image}
+                      alt={brand.name}
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  </div>
+                  <div
+                    className="text-box"
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      textAlign: "center",
+                      gap: "4px",
+                    }}
+                  >
+                    <h6 className="title-text fw-700 text-center m-0" style={{ whiteSpace: "nowrap" }}>
+                      {brand.name}
+                    </h6>
+                    <p className="dark-gray m-0" style={{ fontSize: "13px" }}>
+                      {brand.count} {t("home.products", "products")}
+                    </p>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -518,7 +542,6 @@ export const Home = () => {
               <ProductCard
                 key={prod.id}
                 product={prod}
-                openCart={openCart}
                 openQuickView={openQuickView}
                 t={t}
               />
@@ -527,6 +550,42 @@ export const Home = () => {
         </div>
       </section>
       {/* FEATURED PRODUCT END */}
+
+      {/* BEST SELLER START */}
+      <section className="best-seller-sec py-40">
+        <img
+          src="/assets/media/images/element-1.png"
+          alt=""
+          className="element-1"
+        />
+        <div className="container-2">
+          <div
+            className="heading mb-48 text-center wow fadeInUp animated"
+            data-wow-delay="400ms"
+          >
+            <h2 className="medium-black fw-700 mb-16">
+              <span className="color-primary">{t("home.bestSeller")}</span>{" "}
+              {t("home.bestSellerHighlight")}
+            </h2>
+            <p>{t("home.bestSellerSubtitle")}</p>
+          </div>
+          <div className="row row-gap-4">
+            {bestSellerProducts.map((prod) => (
+              <div
+                key={prod.id}
+                className="col-xl-3 col-lg-4 col-md-6 col-sm-6"
+              >
+                <ProductCard
+                  product={prod}
+                  openQuickView={openQuickView}
+                  t={t}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+      {/* BEST SELLER END */}
 
       {/* COLLECTION GRIDS START */}
       <section className="collection-grid-sec py-40">
@@ -631,43 +690,6 @@ export const Home = () => {
         </div>
       </section>
       {/* INNER BANNER END */}
-
-      {/* BEST SELLER START */}
-      <section className="best-seller-sec py-40">
-        <img
-          src="/assets/media/images/element-1.png"
-          alt=""
-          className="element-1"
-        />
-        <div className="container-2">
-          <div
-            className="heading mb-48 text-center wow fadeInUp animated"
-            data-wow-delay="400ms"
-          >
-            <h2 className="medium-black fw-700 mb-16">
-              <span className="color-primary">{t("home.bestSeller")}</span>{" "}
-              {t("home.bestSellerHighlight")}
-            </h2>
-            <p>{t("home.bestSellerSubtitle")}</p>
-          </div>
-          <div className="row row-gap-4">
-            {bestSellerProducts.map((prod) => (
-              <div
-                key={prod.id}
-                className="col-xl-3 col-lg-4 col-md-6 col-sm-6"
-              >
-                <ProductCard
-                  product={prod}
-                  openCart={openCart}
-                  openQuickView={openQuickView}
-                  t={t}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-      {/* BEST SELLER END */}
 
       {/* INNER BANNER 2 START */}
       <section

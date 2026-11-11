@@ -19,7 +19,7 @@ export const SidebarWishlist = () => {
     wishlist,
     removeFromWishlist,
     clearWishlist,
-    openCart,
+    addToCart,
   } = useCartContext();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -49,7 +49,7 @@ export const SidebarWishlist = () => {
           <div className="d-flex align-items-center gap-2">
             <i className="fa-solid fa-heart text-danger fs-18"></i>
             <h6 className="fw-700 medium-black mb-0">
-              Sản phẩm yêu thích (
+              {t("wishlist.title", "Wishlist")} (
               {wishlist.length < 10 ? `0${wishlist.length}` : wishlist.length})
             </h6>
           </div>
@@ -85,10 +85,10 @@ export const SidebarWishlist = () => {
                 <i className="fa-regular fa-heart"></i>
               </div>
               <h6 className="fw-700 medium-black mb-2">
-                Chưa có sản phẩm yêu thích nào
+                {t("wishlist.empty", "Your wishlist is empty")}
               </h6>
               <p className="text-muted fs-13 mb-4">
-                Hãy nhấn vào biểu tượng trái tim ở các sản phẩm bạn quan tâm để lưu lại tại đây!
+                {t("wishlist.emptyDesc", "Click the heart icon on any product you love to save it here!")}
               </p>
               <Link
                 to="/shop"
@@ -96,7 +96,7 @@ export const SidebarWishlist = () => {
                 onClick={closeWishlist}
                 style={{ padding: "10px 24px", fontSize: "14px" }}
               >
-                Khám phá cửa hàng ngay
+                {t("wishlist.exploreShop", "Explore shop now")}
               </Link>
             </div>
           ) : (
@@ -175,7 +175,7 @@ export const SidebarWishlist = () => {
                             color: inStock ? "#2e7d32" : "#c62828",
                           }}
                         >
-                          {inStock ? "Còn hàng" : "Hết hàng"}
+                          {inStock ? t("common.inStock", "In Stock") : t("common.outOfStock", "Out of Stock")}
                         </span>
                       </div>
 
@@ -191,7 +191,7 @@ export const SidebarWishlist = () => {
                           }}
                           onClick={() => handleProductClick(prodId)}
                         >
-                          Xem chi tiết →
+                          {t("common.viewDetailArrow", "View Details →")}
                         </button>
                         <button
                           type="button"
@@ -199,11 +199,11 @@ export const SidebarWishlist = () => {
                           style={{ fontSize: "12px", fontWeight: 500 }}
                           onClick={() => {
                             closeWishlist();
-                            openCart();
+                            addToCart(prodId, 1);
                           }}
                         >
                           <i className="fa-solid fa-cart-plus me-1"></i>
-                          Thêm giỏ
+                          {t("common.addCart", "Add Cart")}
                         </button>
                       </div>
                     </div>
@@ -220,7 +220,7 @@ export const SidebarWishlist = () => {
                         fontSize: "14px",
                       }}
                       onClick={() => removeFromWishlist(prodId)}
-                      title="Xóa khỏi danh sách yêu thích"
+                      title={t("wishlist.remove", "Remove from wishlist")}
                     >
                       <i className="fa-regular fa-trash-can text-danger"></i>
                     </button>
@@ -239,14 +239,14 @@ export const SidebarWishlist = () => {
               className="btn btn-outline-secondary btn-sm w-50 py-2 fs-13 fw-600 rounded-pill"
               onClick={clearWishlist}
             >
-              <i className="fa-regular fa-trash-can me-1"></i> Xóa tất cả
+              <i className="fa-regular fa-trash-can me-1"></i> {t("wishlist.clearAll", "Clear all")}
             </button>
             <Link
               to="/shop"
               className="admin-btn-primary btn-sm w-50 py-2 fs-13 text-center text-decoration-none rounded-pill"
               onClick={closeWishlist}
             >
-              Tiếp tục mua sắm
+              {t("orders.continueShopping", "Continue shopping")}
             </Link>
           </div>
         )}

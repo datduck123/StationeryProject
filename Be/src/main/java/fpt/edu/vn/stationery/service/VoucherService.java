@@ -20,6 +20,8 @@ public interface VoucherService {
 
     List<VoucherResponseDTO> getAllVouchers();
 
+    List<VoucherResponseDTO> getActiveVouchers();
+
     List<VoucherResponseDTO> searchVouchers(String keyword, Boolean isActive);
 
     VoucherResponseDTO toggleVoucherStatus(Long id);
@@ -27,4 +29,6 @@ public interface VoucherService {
     VoucherResponseDTO updateVoucherStatus(Long id, Boolean isActive);
 
     VoucherResponseDTO validateVoucher(String code, BigDecimal orderAmount);
+
+    BigDecimal calculateDiscount(Long voucherId, BigDecimal subtotal);
 }

@@ -1,31 +1,30 @@
-// Migrated from: assets/js/app.js, lines 416-429; HTML quantity block
 // HTML->JSX conversion: class -> className, input value/onChange handling
-import { useState } from "react";
+import useQuantityInput from "../../hooks/useQuantityInput";
 
-export const QuantitySelector = ({ initialValue = 1, min = 1, onChange }) => {
-  const [quantity, setQuantity] = useState(initialValue);
+export const QuantitySelector = ({
+  initialValue = 1,
+  value,
+  min = 1,
+  max = 999,
+  maxStock,
+  onChange,
+  disabled = false,
+}) => {
+  const effectiveMaxStock = maxStock ?? max;
+  const currentVal = value !== undefined ? value : initialValue;
 
-  const handleDecrement = (e) => {
-    e.preventDefault();
-    if (quantity > min) {
-      const next = quantity - 1;
-      setQuantity(next);
-      if (onChange) onChange(next);
-    }
-  };
-
-  const handleIncrement = (e) => {
-    e.preventDefault();
-    const next = quantity + 1;
-    setQuantity(next);
-    if (onChange) onChange(next);
-  };
-
-  const handleChange = (e) => {
-    const val = parseInt(e.target.value) || min;
-    setQuantity(Math.max(min, val));
-    if (onChange) onChange(Math.max(min, val));
-  };
+  const {
+    inputProps,
+    handleIncrement,
+    handleDecrement,
+    isAtMin,
+    isAtMax,
+  } = useQuantityInput({
+    value: currentVal,
+    maxStock: effectiveMaxStock,
+    min,
+    onChange,
+  });
 
   return (
     <div className="quantity quantity-wrap">
@@ -34,21 +33,21 @@ export const QuantitySelector = ({ initialValue = 1, min = 1, onChange }) => {
           className="decrement"
           type="button"
           value="-"
+          disabled={disabled || isAtMin}
           onClick={handleDecrement}
         />
         <input
-          type="text"
           name="quantity"
-          value={quantity}
-          maxLength={2}
-          size={1}
-          className="number"
-          onChange={handleChange}
+          className="number text-center"
+          disabled={disabled}
+          style={{ width: "45px" }}
+          {...inputProps}
         />
         <input
           className="increment"
           type="button"
           value="+"
+          disabled={disabled || isAtMax}
           onClick={handleIncrement}
         />
       </div>

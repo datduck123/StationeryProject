@@ -51,7 +51,7 @@ export const PriceSlider = ({
               marginBottom: "6px",
             }}
           >
-            {t("shop.from", "Từ")}
+            {t("shop.from", "From")}
           </label>
           <div
             style={{
@@ -104,7 +104,7 @@ export const PriceSlider = ({
               marginBottom: "6px",
             }}
           >
-            {t("shop.to", "Đến")}
+            {t("shop.to", "To")}
           </label>
           <div
             style={{
@@ -195,6 +195,7 @@ export const PriceSlider = ({
               pointerEvents: "none",
               appearance: "none",
               WebkitAppearance: "none",
+              zIndex: minPrice > maxLimit - 1000 ? 5 : 3,
             }}
           />
           <input
@@ -214,6 +215,7 @@ export const PriceSlider = ({
               pointerEvents: "none",
               appearance: "none",
               WebkitAppearance: "none",
+              zIndex: 4,
             }}
           />
         </div>
@@ -247,7 +249,7 @@ export const PriceSlider = ({
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
           </svg>
-          Áp dụng
+          {t("shop.apply", "Apply")}
         </button>
         {isFiltered && (
           <button
@@ -277,7 +279,7 @@ export const PriceSlider = ({
               e.currentTarget.style.borderColor = "#d1d5db";
             }}
           >
-            Bỏ lọc
+            {t("shop.resetFilter", "Reset")}
           </button>
         )}
       </div>

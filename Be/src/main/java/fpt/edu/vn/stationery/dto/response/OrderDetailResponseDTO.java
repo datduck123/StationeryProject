@@ -11,10 +11,14 @@ import java.util.List;
 @Builder
 public class OrderDetailResponseDTO {
     private Long orderId;
+    private String trackingCode;
     private Long userId;
     private String customerName;
     private String customerEmail;
     private Long voucherId;
+    private String voucherCode;
+    private String paymentMethod;
+    private String paymentStatus;
     private BigDecimal subtotal;
     private BigDecimal discountAmount;
     private String shippingMethod;

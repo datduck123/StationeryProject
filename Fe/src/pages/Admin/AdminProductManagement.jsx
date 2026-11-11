@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import AdminPagination from "../../components/admin/AdminPagination";
 import { useToast } from "../../providers/ToastContext";
 import {
   adminCreateProduct,
@@ -33,6 +34,7 @@ export const AdminProductManagement = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedBrand, setSelectedBrand] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [stockFilter, setStockFilter] = useState("ALL");
   const [sortBy, setSortBy] = useState("createdAt,desc");
 
   // Summary statistics state
@@ -45,12 +47,14 @@ export const AdminProductManagement = () => {
 
   const fetchStats = async () => {
     try {
-      // Gọi song song: tổng, active, inactive — dùng size:1 để chỉ lấy totalElements
-      const [totalRes, activeRes, inactiveRes, allStockRes] = await Promise.allSettled([
-        adminGetProducts({ page: 0, size: 1 }),                        // Tổng tất cả
-        adminGetProducts({ page: 0, size: 1, status: "ACTIVE" }),      // Chỉ ACTIVE
-        adminGetProducts({ page: 0, size: 1, status: "INACTIVE" }),    // Chỉ INACTIVE
-        adminGetProducts({ page: 0, size: 2000 }),                     // Fetch all để đếm outOfStock
+      // Concurrent calls: total, active, inactive using size:1 to get totalElements,
+      // and inventory query (size: 100 <= max allowed 100) to accurately count stock statuses
+      const [totalRes, activeRes, inactiveRes, inventoryRes, stockFilterRes] = await Promise.allSettled([
+        adminGetProducts({ page: 0, size: 1 }),                        // Total all
+        adminGetProducts({ page: 0, size: 1, status: "ACTIVE" }),      // Active only
+        adminGetProducts({ page: 0, size: 1, status: "INACTIVE" }),    // Inactive only
+        adminGetProducts({ page: 0, size: 100 }),                     // Fetch inventory (up to 100) to count stock levels
+        adminGetProducts({ page: 0, size: 1, stock: "OUT_OF_STOCK" }), // Server-side stock query
       ]);
 
       const total =
@@ -68,14 +72,19 @@ export const AdminProductManagement = () => {
           ? (inactiveRes.value.data?.totalElements ?? 0)
           : 0;
 
-      // Đếm hết hàng từ toàn bộ danh sách content
+      // Count out of stock: prioritize inventory scan (100% accurate), fallback to server stock query
       let outOfStock = 0;
-      if (allStockRes.status === "fulfilled") {
-        const allContent = allStockRes.value.data?.content || [];
+      if (inventoryRes.status === "fulfilled") {
+        const allContent = inventoryRes.value.data?.content || [];
         allContent.forEach((p) => {
-          const stockNum = p.stockQuantity ?? p.stock_quantity ?? p.stock ?? 0;
-          if (stockNum === 0) outOfStock++;
+          const stockNum = Number(p.stockQuantity ?? p.stock_quantity ?? p.stock ?? 0);
+          if (stockNum <= 0) outOfStock++;
         });
+      } else if (
+        stockFilterRes.status === "fulfilled" &&
+        typeof stockFilterRes.value.data?.totalElements === "number"
+      ) {
+        outOfStock = stockFilterRes.value.data.totalElements;
       }
 
       setStats({ total, active, inactive, outOfStock });
@@ -151,8 +160,10 @@ export const AdminProductManagement = () => {
       if (searchQuery.trim()) params.keyword = searchQuery.trim();
       if (selectedCategory) params.categoryId = selectedCategory;
       if (selectedBrand) params.brandId = selectedBrand;
-      // Truyền status filter lên backend để phân trang chính xác
+      // Pass status filter to backend for accurate pagination
       if (statusFilter && statusFilter !== "ALL") params.status = statusFilter;
+      // Pass stock filter to backend
+      if (stockFilter && stockFilter !== "ALL") params.stock = stockFilter;
 
       const res = await adminGetProducts(params);
       const data = res.data;
@@ -168,7 +179,7 @@ export const AdminProductManagement = () => {
       setProducts(data.content || []);
     } catch (err) {
       console.error("Failed to fetch products:", err);
-      showToast("Không thể tải danh sách sản phẩm. Vui lòng thử lại!", "error");
+      showToast("Failed to load products list. Please try again!", "error");
     } finally {
       setLoading(false);
     }
@@ -177,14 +188,14 @@ export const AdminProductManagement = () => {
   useEffect(() => {
     setPage(0);
     fetchProductList();
-  }, [selectedCategory, selectedBrand, sortBy, statusFilter]);
+  }, [selectedCategory, selectedBrand, sortBy, statusFilter, stockFilter]);
 
-  // Riêng page không reset về 0
+  // Page changes trigger fetch without resetting page index
   useEffect(() => {
     fetchProductList();
   }, [page]);
 
-  // Tự động điều chỉnh trang nếu trang hiện tại vượt quá tổng số trang sau khi xoá/lọc
+  // Automatically adjust page if current page exceeds total pages after delete/filter
   useEffect(() => {
     if (page >= totalPages && totalPages > 0) {
       setPage(Math.max(0, totalPages - 1));
@@ -200,8 +211,29 @@ export const AdminProductManagement = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // products đã được filter server-side theo statusFilter, không cần filter lại client-side
-  const filteredProducts = products;
+  // Products are filtered server-side with client-side fallback guarantee
+  const filteredProducts = React.useMemo(() => {
+    if (!products || !Array.isArray(products)) return [];
+    if (stockFilter === "OUT_OF_STOCK") {
+      return products.filter((p) => {
+        const qty = Number(p.stockQuantity ?? p.stock_quantity ?? p.stock ?? 0);
+        return qty <= 0;
+      });
+    }
+    if (stockFilter === "LOW_STOCK") {
+      return products.filter((p) => {
+        const qty = Number(p.stockQuantity ?? p.stock_quantity ?? p.stock ?? 0);
+        return qty > 0 && qty <= 5;
+      });
+    }
+    if (stockFilter === "IN_STOCK") {
+      return products.filter((p) => {
+        const qty = Number(p.stockQuantity ?? p.stock_quantity ?? p.stock ?? 0);
+        return qty > 0;
+      });
+    }
+    return products;
+  }, [products, stockFilter]);
 
   // Reset form
   const resetForm = () => {
@@ -265,11 +297,11 @@ export const AdminProductManagement = () => {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      showToast("Vui lòng chọn tệp hình ảnh hợp lệ (PNG, JPG, WEBP, GIF)", "error");
+      showToast("Please select a valid image file (PNG, JPG, WEBP, GIF)", "error");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      showToast("Dung lượng ảnh tối đa là 5MB", "error");
+      showToast("Maximum image size is 5MB", "error");
       return;
     }
 
@@ -282,10 +314,10 @@ export const AdminProductManagement = () => {
       const res = await uploadProductImage(file);
       const uploadedUrl = res.data?.url || res.data?.relativePath || "";
       setFormImageUrl(uploadedUrl);
-      showToast("Tải ảnh từ máy tính lên thành công!", "success");
+      showToast("Product image uploaded successfully!", "success");
     } catch (err) {
       console.error("Image upload failed:", err);
-      showToast(err.response?.data?.message || "Tải ảnh thất bại. Vui lòng thử lại!", "error");
+      showToast(err.response?.data?.message || "Image upload failed. Please try again!", "error");
     } finally {
       setIsUploadingImage(false);
     }
@@ -295,74 +327,73 @@ export const AdminProductManagement = () => {
   const validateForm = () => {
     const errs = {};
 
-    // --- Tên sản phẩm ---
+    // --- Product Name ---
     const nameVal = formName.trim();
     if (!nameVal) {
-      errs.name = "Tên sản phẩm không được để trống.";
+      errs.name = "Product name cannot be empty.";
     } else if (nameVal.length < 5) {
-      errs.name = "Tên sản phẩm phải có ít nhất 5 ký tự.";
+      errs.name = "Product name must be at least 5 characters.";
     } else if (nameVal.length > 50) {
-      errs.name = "Tên sản phẩm không được vượt quá 50 ký tự.";
-    } else if (/[^a-zA-Z0-9\sÀ-ỹà-ỹĐđ]/.test(nameVal)) {
-      errs.name = "Tên sản phẩm chỉ được chứa chữ cái, chữ số và khoảng trắng (không có ký tự đặc biệt).";
+      errs.name = "Product name cannot exceed 50 characters.";
+    } else if (/[^a-zA-Z0-9\sÀ-ỹà-ỹĐđ\p{L}]/u.test(nameVal)) {
+      errs.name = "Product name can only contain letters, numbers, and spaces (no special characters).";
+    } else if (!/[a-zA-ZÀ-ỹà-ỹĐđ\p{L}]/u.test(nameVal)) {
+      errs.name = "Product name must contain letters and cannot consist of numbers only.";
     }
 
-    // --- CODE (SKU) - tuỳ chọn, nếu nhập phải đúng chuẩn ---
+    // --- CODE (SKU) ---
     const skuVal = formSku.trim();
     if (skuVal) {
-      // Chuẩn: PREFIX-SUFFIX, prefix chỉ chữ/số, suffix chỉ chữ/số và không quá 10 ký tự
       const skuRegex = /^[A-Za-z0-9]+-[A-Za-z0-9]{1,10}$/;
       if (!skuRegex.test(skuVal)) {
-        errs.sku = "CODE phải theo chuẩn 'PREFIX-SUFFIX' (VD: SKU-123, SKU-LT14). Phần sau dấu '-' tối đa 10 ký tự, không chứa ký tự đặc biệt.";
+        errs.sku = "CODE must follow 'PREFIX-SUFFIX' pattern (e.g. SKU-123, SKU-LT14). Suffix max 10 chars, no special characters.";
       }
     }
 
-    // --- Giá ---
+    // --- Price ---
     if (formPrice === "" || isNaN(formPrice)) {
-      errs.price = "Giá sản phẩm không được để trống.";
+      errs.price = "Product price cannot be empty.";
     } else if (Number(formPrice) < 5000) {
-      errs.price = "Giá sản phẩm tối thiểu là 5.000 VND.";
+      errs.price = "Minimum product price is 5,000 VND.";
     } else if (Number(formPrice) > 1000000) {
-      errs.price = "Giá sản phẩm tối đa là 1.000.000 VND.";
+      errs.price = "Maximum product price is 1,000,000 VND.";
     }
 
-    // --- Tồn kho ---
+    // --- Stock ---
     if (formStock === "" || isNaN(formStock)) {
-      errs.stock = "Số lượng tồn kho không được để trống.";
+      errs.stock = "Stock quantity cannot be empty.";
     } else if (Number(formStock) < 0) {
-      errs.stock = "Số lượng tồn kho không được âm.";
+      errs.stock = "Stock quantity cannot be negative.";
     } else if (Number(formStock) > 10000) {
-      errs.stock = "Số lượng tồn kho tối đa là 10.000 sản phẩm.";
+      errs.stock = "Maximum stock quantity is 10,000 items.";
     }
 
-    // --- Trọng lượng ---
+    // --- Weight ---
     if (formWeight === "" || isNaN(formWeight)) {
-      errs.weight = "Trọng lượng không được để trống.";
+      errs.weight = "Weight cannot be empty.";
     } else if (Number(formWeight) <= 0) {
-      errs.weight = "Trọng lượng phải lớn hơn 0.";
+      errs.weight = "Weight must be greater than 0.";
     } else if (Number(formWeight) > 10) {
-      errs.weight = "Trọng lượng tối đa là 10 kg.";
+      errs.weight = "Maximum weight is 10 kg.";
     }
 
-    // --- Danh mục & Thương hiệu ---
+    // --- Category & Brand ---
     if (!formCategoryId || Number(formCategoryId) <= 0) {
-      errs.categoryId = "Vui lòng chọn danh mục hợp lệ.";
+      errs.categoryId = "Please select a valid category.";
     }
     if (!formBrandId || Number(formBrandId) <= 0) {
-      errs.brandId = "Vui lòng chọn thương hiệu hợp lệ.";
+      errs.brandId = "Please select a valid brand.";
     }
 
     const errorKeys = Object.keys(errs);
     if (errorKeys.length === 1) {
-      // Chỉ có 1 lỗi: Không hiển thị lỗi trong modal, chỉ hiển thị pop up bên góc trên phải trong 8s
-      setFormErrors({});
+      setFormErrors(errs);
       showToast(errs[errorKeys[0]], "error", 8000);
       return false;
     } else if (errorKeys.length > 1) {
-      // Nhiều trường phạm lỗi: Hiển thị lỗi bên trong modal để người dùng dễ chỉnh sửa và báo pop up trong 8s
       setFormErrors(errs);
       showToast(
-        `Có ${errorKeys.length} trường thông tin chưa hợp lệ. Vui lòng kiểm tra lại biểu mẫu.`,
+        `There are ${errorKeys.length} invalid fields. Please review the form.`,
         "error",
         8000
       );
@@ -395,7 +426,7 @@ export const AdminProductManagement = () => {
 
       await adminCreateProduct(payload);
       setIsAddModalOpen(false);
-      showToast(`Đã thêm sản phẩm "${payload.name}" thành công!`, "success");
+      showToast(`Product "${payload.name}" has been created successfully!`, "success");
       fetchProductList();
       fetchStats();
       notifyProductChange();
@@ -405,7 +436,7 @@ export const AdminProductManagement = () => {
         err.response?.data?.message ||
         (err.response?.data?.errors
           ? Object.values(err.response.data.errors).join(", ")
-          : "Không thể thêm sản phẩm. Kiểm tra mã SKU đã tồn tại chưa.");
+          : "Failed to create product. Please verify if the SKU already exists.");
       showToast(msg, "error");
     } finally {
       setActionLoading(false);
@@ -435,13 +466,13 @@ export const AdminProductManagement = () => {
       const id = productToEdit.productId || productToEdit.id;
       await adminUpdateProduct(id, payload);
       setIsEditModalOpen(false);
-      showToast(`Cập nhật sản phẩm "${payload.name}" thành công!`, "success");
+      showToast(`Product "${payload.name}" updated successfully!`, "success");
       fetchProductList();
       fetchStats();
       notifyProductChange();
     } catch (err) {
       console.error("Failed to update product:", err);
-      const msg = err.response?.data?.message || "Cập nhật sản phẩm thất bại.";
+      const msg = err.response?.data?.message || "Failed to update product.";
       showToast(msg, "error");
     } finally {
       setActionLoading(false);
@@ -452,7 +483,7 @@ export const AdminProductManagement = () => {
   const handleSaveStock = async (e) => {
     e.preventDefault();
     if (stockToUpdate < 0) {
-      showToast("Số lượng tồn kho không được âm.", "error");
+      showToast("Stock quantity cannot be negative.", "error");
       return;
     }
 
@@ -462,7 +493,7 @@ export const AdminProductManagement = () => {
       await adminUpdateStock(id, parseInt(stockToUpdate, 10));
       setIsStockModalOpen(false);
       showToast(
-        `Đã cập nhật tồn kho cho "${productToEdit.name}" thành ${stockToUpdate} sản phẩm.`,
+        `Stock quantity for "${productToEdit.name}" updated to ${stockToUpdate} pcs.`,
         "success"
       );
       fetchProductList();
@@ -470,7 +501,7 @@ export const AdminProductManagement = () => {
       notifyProductChange();
     } catch (err) {
       console.error("Failed to update stock:", err);
-      showToast(err.response?.data?.message || "Cập nhật tồn kho thất bại.", "error");
+      showToast(err.response?.data?.message || "Failed to update stock.", "error");
     } finally {
       setActionLoading(false);
     }
@@ -480,22 +511,12 @@ export const AdminProductManagement = () => {
   const handleConfirmDelete = async () => {
     if (!productToDelete) return;
 
-    // Chặn xoá nếu sản phẩm đang ACTIVE
-    if (productToDelete.status === "ACTIVE") {
-      setIsDeleteConfirmOpen(false);
-      showToast(
-        `Không thể xoá sản phẩm "${productToDelete.name}" vì đang ở trạng thái ACTIVE. Hãy chuyển sang INACTIVE trước khi xoá.`,
-        "error"
-      );
-      return;
-    }
-
     setActionLoading(true);
     try {
       const id = productToDelete.productId || productToDelete.id;
       await adminDeleteProduct(id);
       setIsDeleteConfirmOpen(false);
-      showToast(`Đã xoá sản phẩm "${productToDelete.name}".`, "success");
+      showToast(`Product "${productToDelete.name}" deleted successfully.`, "success");
       fetchProductList();
       fetchStats();
       notifyProductChange();
@@ -504,7 +525,7 @@ export const AdminProductManagement = () => {
       setIsDeleteConfirmOpen(false);
       showToast(
         err.response?.data?.message ||
-        "Không thể xoá sản phẩm vì đã có đơn hàng hoặc giỏ hàng liên kết.",
+        "Cannot delete product as it is referenced by existing orders.",
         "error"
       );
     } finally {
@@ -525,7 +546,7 @@ export const AdminProductManagement = () => {
         <div>
           <h4 className="fw-700 medium-black mb-1">Product Management</h4>
           <p className="text-muted fs-13 mb-0">
-            Quản lý danh sách sản phẩm, giá bán, trọng lượng, số lượng tồn kho và hình ảnh.
+            Manage product inventory, pricing, weight, stock levels, and gallery images.
           </p>
         </div>
 
@@ -538,14 +559,30 @@ export const AdminProductManagement = () => {
         </button>
       </div>
 
-      {/* Top Banner Stats (Professional Cards with Icons - matching Category Management) */}
+      {/* Top Banner Stats (Professional Cards with Icons - Click to Filter) */}
       <div className="row g-3 mb-4">
         {/* Total Products */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "ALL" && stockFilter === "ALL" ? "border-primary" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "ALL" && stockFilter === "ALL" ? "#e9613f" : "#e2e8f0",
+              boxShadow: statusFilter === "ALL" && stockFilter === "ALL" ? "0 0 0 1px #e9613f" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter("ALL");
+              setStockFilter("ALL");
+              setPage(0);
+            }}
+            title="Click to show all products"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Tổng sản phẩm
+                Total Products
               </span>
               <h3 className="mb-0 fw-700 mt-1">{stats.total}</h3>
             </div>
@@ -565,10 +602,26 @@ export const AdminProductManagement = () => {
 
         {/* Active Products */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "ACTIVE" && stockFilter === "ALL" ? "border-success" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "ACTIVE" && stockFilter === "ALL" ? "#10b981" : "#e2e8f0",
+              boxShadow: statusFilter === "ACTIVE" && stockFilter === "ALL" ? "0 0 0 1px #10b981" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter(statusFilter === "ACTIVE" && stockFilter === "ALL" ? "ALL" : "ACTIVE");
+              setStockFilter("ALL");
+              setPage(0);
+            }}
+            title="Click to filter Active products"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Đang kinh doanh
+                Active Products
               </span>
               <h3 className="mb-0 fw-700 mt-1 text-success">{stats.active}</h3>
             </div>
@@ -583,10 +636,30 @@ export const AdminProductManagement = () => {
 
         {/* Out of stock */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              stockFilter === "OUT_OF_STOCK" ? "border-warning" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: stockFilter === "OUT_OF_STOCK" ? "#f59e0b" : "#e2e8f0",
+              boxShadow: stockFilter === "OUT_OF_STOCK" ? "0 0 0 1px #f59e0b" : undefined,
+            }}
+            onClick={() => {
+              if (stockFilter === "OUT_OF_STOCK") {
+                setStockFilter("ALL");
+              } else {
+                setStockFilter("OUT_OF_STOCK");
+                setStatusFilter("ALL");
+              }
+              setPage(0);
+            }}
+            title="Click to filter Out of Stock products"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Hết hàng
+                Out of Stock
               </span>
               <h3 className="mb-0 fw-700 mt-1" style={{ color: "#f59e0b" }}>{stats.outOfStock}</h3>
             </div>
@@ -606,10 +679,26 @@ export const AdminProductManagement = () => {
 
         {/* Inactive Products */}
         <div className="col-xl-3 col-sm-6">
-          <div className="admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between">
+          <div
+            className={`admin-stat-card p-3 bg-white rounded-3 border shadow-sm d-flex align-items-center justify-content-between ${
+              statusFilter === "INACTIVE" && stockFilter === "ALL" ? "border-danger" : ""
+            }`}
+            style={{
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              borderColor: statusFilter === "INACTIVE" && stockFilter === "ALL" ? "#ef4444" : "#e2e8f0",
+              boxShadow: statusFilter === "INACTIVE" && stockFilter === "ALL" ? "0 0 0 1px #ef4444" : undefined,
+            }}
+            onClick={() => {
+              setStatusFilter(statusFilter === "INACTIVE" && stockFilter === "ALL" ? "ALL" : "INACTIVE");
+              setStockFilter("ALL");
+              setPage(0);
+            }}
+            title="Click to filter Inactive products"
+          >
             <div>
               <span className="text-muted fs-12 fw-600 text-uppercase">
-                Tạm ngưng / Đã ẩn
+                Inactive / Hidden
               </span>
               <h3 className="mb-0 fw-700 mt-1" style={{ color: "#ef4444" }}>{stats.inactive}</h3>
             </div>
@@ -630,9 +719,9 @@ export const AdminProductManagement = () => {
 
       {/* TOOLBAR CARD (Clean horizontal layout, uniform search, filters, and sort like User Management) */}
       <div className="admin-card mb-4">
-        <div className="d-flex flex-wrap align-items-center gap-3">
+        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
           {/* Live Auto Search */}
-          <div className="admin-search-box">
+          <div className="admin-search-box" style={{ flex: "1 1 240px", maxWidth: "360px" }}>
             <i className="fa-solid fa-magnifying-glass text-muted fs-13"></i>
             <input
               type="text"
@@ -651,73 +740,115 @@ export const AdminProductManagement = () => {
             )}
           </div>
 
-          {/* Category Filter */}
-          <select
-            className="admin-select-sm"
-            style={{ width: "160px" }}
-            value={selectedCategory}
-            onChange={(e) => {
-              setSelectedCategory(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="">All Categories</option>
-            {categories.map((c) => (
-              <option key={c.categoryId} value={c.categoryId}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          {/* Filter Controls Group */}
+          <div className="d-flex flex-wrap align-items-center gap-2 ms-auto">
+            {/* Category Filter */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "140px" }}
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="">All Categories</option>
+              {categories.map((c) => (
+                <option key={c.categoryId} value={c.categoryId}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
 
-          {/* Brand Filter */}
-          <select
-            className="admin-select-sm"
-            style={{ width: "160px" }}
-            value={selectedBrand}
-            onChange={(e) => {
-              setSelectedBrand(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="">All Brands</option>
-            {brands.map((b) => (
-              <option key={b.brandId} value={b.brandId}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+            {/* Brand Filter */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "135px" }}
+              value={selectedBrand}
+              onChange={(e) => {
+                setSelectedBrand(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="">All Brands</option>
+              {brands.map((b) => (
+                <option key={b.brandId} value={b.brandId}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
 
-          {/* Status Filter */}
-          <select
-            className="admin-select-sm"
-            style={{ width: "140px" }}
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Inactive</option>
-          </select>
+            {/* Status Filter */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "125px" }}
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="ALL">All Statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
 
-          {/* Sort dropdown */}
-          <select
-            className="admin-select-sm"
-            style={{ width: "165px" }}
-            value={sortBy}
-            onChange={(e) => {
-              setSortBy(e.target.value);
-              setPage(0);
-            }}
-          >
-            <option value="createdAt,desc">Newest First</option>
-            <option value="price,asc">Price: Low to High</option>
-            <option value="price,desc">Price: High to Low</option>
-            <option value="stockQuantity,asc">Stock: Low to High</option>
-            <option value="stockQuantity,desc">Stock: High to Low</option>
-          </select>
+            {/* Stock Filter */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "140px" }}
+              value={stockFilter}
+              onChange={(e) => {
+                setStockFilter(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="ALL">All Stock Levels</option>
+              <option value="IN_STOCK">In Stock (&gt; 0)</option>
+              <option value="LOW_STOCK">Low Stock (≤ 5)</option>
+              <option value="OUT_OF_STOCK">Out of Stock (0)</option>
+            </select>
+
+            {/* Sort dropdown */}
+            <select
+              className="admin-select-sm"
+              style={{ minWidth: "155px" }}
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="createdAt,desc">Newest First</option>
+              <option value="sold,desc">Best Selling (Top Sold)</option>
+              <option value="price,asc">Price: Low to High</option>
+              <option value="price,desc">Price: High to Low</option>
+              <option value="stockQuantity,asc">Stock: Low to High</option>
+              <option value="stockQuantity,desc">Stock: High to Low</option>
+              <option value="name,asc">Name: A → Z</option>
+            </select>
+
+            {(searchQuery || selectedCategory || selectedBrand || statusFilter !== "ALL" || stockFilter !== "ALL" || sortBy !== "createdAt,desc") && (
+              <button
+                type="button"
+                className="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1 rounded-pill px-3"
+                style={{ fontSize: "12px", height: "34px" }}
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategory("");
+                  setSelectedBrand("");
+                  setStatusFilter("ALL");
+                  setStockFilter("ALL");
+                  setSortBy("createdAt,desc");
+                  setPage(0);
+                }}
+                title="Reset all filters"
+              >
+                <i className="fa-solid fa-arrow-rotate-left fs-11"></i>
+                Reset
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -840,18 +971,29 @@ export const AdminProductManagement = () => {
                       <td className="text-center">
                         <button
                           type="button"
-                          className={`badge border-0 cursor-pointer ${stockNum === 0
+                          className={`badge border-0 cursor-pointer ${
+                            stockNum === 0
                               ? "bg-danger text-white"
-                              : stockNum < 10
+                              : stockNum <= 5
                                 ? "bg-warning text-dark"
                                 : "bg-light text-dark border"
-                            }`}
+                          }`}
                           style={{ fontSize: "12px", padding: "6px 10px", cursor: "pointer" }}
                           onClick={() => openStockModal(p)}
                           title="Click to quick update stock"
                         >
                           {stockNum} pcs <i className="fa-solid fa-pencil ms-1 fs-10"></i>
                         </button>
+                        {stockNum === 0 && (
+                          <span className="badge bg-danger text-white ms-1" style={{ fontSize: "10px" }}>
+                            Hết hàng
+                          </span>
+                        )}
+                        {stockNum > 0 && stockNum <= 5 && (
+                          <span className="badge bg-warning text-dark ms-1" style={{ fontSize: "10px" }}>
+                            Sắp hết
+                          </span>
+                        )}
                       </td>
 
                       {/* Status */}
@@ -908,54 +1050,15 @@ export const AdminProductManagement = () => {
           </table>
         </div>
 
-        {/* PAGINATION BAR (Synchronized with User Management - 10 records max per page) */}
-        <div className="d-flex flex-wrap justify-content-between align-items-center mt-3 pt-3 gap-2">
-          <span className="text-muted fs-13">
-            Showing{" "}
-            <strong>
-              {totalElements === 0 ? 0 : page * size + 1} to{" "}
-              {Math.min((page + 1) * size, totalElements)}
-            </strong>{" "}
-            of <strong>{totalElements}</strong> products
-          </span>
-
-          {totalPages > 1 && (
-            <div className="btn-group btn-group-sm">
-              <button
-                type="button"
-                className="btn btn-light border"
-                disabled={page === 0}
-                onClick={() => setPage((p) => Math.max(p - 1, 0))}
-                title="Previous page"
-              >
-                &lt;
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i).map((pageNum) => (
-                <button
-                  key={pageNum}
-                  type="button"
-                  className={`btn ${pageNum === page
-                      ? "btn-dark bg-color-primary border-0 fw-700 text-white"
-                      : "btn-light border"
-                    }`}
-                  style={pageNum === page ? { backgroundColor: "#e9613f" } : {}}
-                  onClick={() => setPage(pageNum)}
-                >
-                  {pageNum + 1}
-                </button>
-              ))}
-              <button
-                type="button"
-                className="btn btn-light border"
-                disabled={page >= totalPages - 1}
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages - 1))}
-                title="Next page"
-              >
-                &gt;
-              </button>
-            </div>
-          )}
-        </div>
+        {/* PAGINATION BAR */}
+        <AdminPagination
+          page={page}
+          pageSize={size}
+          totalElements={totalElements}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          noun="products"
+        />
       </div>
 
       {/* ======================================================== */}
@@ -1042,8 +1145,8 @@ export const AdminProductManagement = () => {
                   </h5>
                   <p style={{ margin: 0, fontSize: "12px", color: "#8a94a6", marginTop: "2px" }}>
                     {isAddModalOpen
-                      ? "Điền thông tin và tải ảnh lên từ máy tính để thêm sản phẩm mới"
-                      : `Đang chỉnh sửa: ${productToEdit?.name || `#${productToEdit?.productId || productToEdit?.id}`}`}
+                      ? "Fill in product information and upload an image to create a new product"
+                      : `Editing: ${productToEdit?.name || `#${productToEdit?.productId || productToEdit?.id}`}`}
                   </p>
                 </div>
               </div>
@@ -1093,9 +1196,14 @@ export const AdminProductManagement = () => {
                       <input
                         type="text"
                         className={`form-control ${formErrors.name ? "is-invalid" : ""}`}
-                        placeholder="e.g. Bút bi Thiên Long TL-027"
+                        placeholder="e.g. Classic Ballpoint Pen TL027"
                         value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
+                        onChange={(e) => {
+                          setFormName(e.target.value);
+                          if (formErrors.name) {
+                            setFormErrors((prev) => ({ ...prev, name: undefined }));
+                          }
+                        }}
                         style={{ borderRadius: "8px", fontSize: "13.5px" }}
                       />
                       {formErrors.name && <div className="invalid-feedback d-block">{formErrors.name}</div>}
@@ -1107,7 +1215,7 @@ export const AdminProductManagement = () => {
                       <input
                         type="text"
                         className={`form-control ${formErrors.sku ? "is-invalid" : ""}`}
-                        placeholder="Tự động tạo nếu để trống"
+                        placeholder="Auto-generated if left empty"
                         value={formSku}
                         onChange={(e) => setFormSku(e.target.value.toUpperCase())}
                         style={{ borderRadius: "8px", fontSize: "13.5px", fontFamily: "monospace" }}
@@ -1254,7 +1362,7 @@ export const AdminProductManagement = () => {
                   <div className="row g-3">
                     <div className="col-12">
                       <label className="form-label" style={{ fontSize: "13px", fontWeight: 600, color: "#374151" }}>
-                        Hình ảnh sản phẩm (Chọn file tải lên từ máy tính)
+                        Product Image (Upload from computer)
                       </label>
 
                       {/* Hidden File Input */}
@@ -1308,10 +1416,10 @@ export const AdminProductManagement = () => {
                             <i className="fa-solid fa-cloud-arrow-up fs-24"></i>
                           </div>
                           <div className="fw-700 fs-14 text-dark mb-1">
-                            Nhấp vào đây để tải hình ảnh từ máy tính
+                            Click here to upload an image from your device
                           </div>
                           <div className="text-muted fs-12 mb-3">
-                            Hỗ trợ định dạng: PNG, JPG, JPEG, WEBP, GIF (Dung lượng tối đa 5MB)
+                            Supported formats: PNG, JPG, JPEG, WEBP, GIF (Max 5MB)
                           </div>
                           <button
                             type="button"
@@ -1321,12 +1429,12 @@ export const AdminProductManagement = () => {
                             {isUploadingImage ? (
                               <>
                                 <span className="spinner-border spinner-border-sm me-2" role="status" />
-                                Đang tải lên...
+                                Uploading...
                               </>
                             ) : (
                               <>
                                 <i className="fa-solid fa-folder-open me-1"></i>
-                                Duyệt tệp từ thiết bị
+                                Browse files from device
                               </>
                             )}
                           </button>
@@ -1367,17 +1475,17 @@ export const AdminProductManagement = () => {
                               <div className="d-flex align-items-center gap-2">
                                 <span className="badge bg-success-subtle text-success fs-11 fw-600">
                                   <i className="fa-solid fa-circle-check me-1"></i>
-                                  Ảnh đã được tải lên
+                                  Image uploaded successfully
                                 </span>
                               </div>
                               <div
                                 className="fs-12 text-truncate text-secondary mt-1"
                                 style={{ maxWidth: "320px", fontFamily: "monospace" }}
                               >
-                                {formImageUrl || "Hình ảnh đã chọn"}
+                                {formImageUrl || "Selected image"}
                               </div>
                               <span className="text-muted fs-11">
-                                Nhấp vào "Đổi ảnh khác" nếu muốn thay đổi
+                                Click "Change image" to select a different photo
                               </span>
                             </div>
                           </div>
@@ -1392,19 +1500,19 @@ export const AdminProductManagement = () => {
                               {isUploadingImage ? (
                                 <>
                                   <span className="spinner-border spinner-border-sm me-2" role="status" />
-                                  Đang tải lên...
+                                  Uploading...
                                 </>
                               ) : (
                                 <>
                                   <i className="fa-solid fa-arrow-rotate-right me-1"></i>
-                                  Đổi ảnh khác
+                                  Change image
                                 </>
                               )}
                             </button>
                             <button
                               type="button"
                               className="btn btn-sm btn-light border text-danger rounded-3 p-2"
-                              title="Xoá ảnh"
+                              title="Remove image"
                               onClick={() => {
                                 setFormImageUrl("");
                                 setImagePreview("");
@@ -1425,7 +1533,7 @@ export const AdminProductManagement = () => {
                       <textarea
                         className="form-control"
                         rows="3"
-                        placeholder="Mô tả chi tiết về sản phẩm..."
+                        placeholder="Detailed description of the product..."
                         value={formDescription}
                         onChange={(e) => setFormDescription(e.target.value)}
                         style={{ borderRadius: "8px", fontSize: "13.5px", resize: "vertical" }}
@@ -1637,10 +1745,10 @@ export const AdminProductManagement = () => {
                 <div className="col-sm-6">
                   <div className="p-3 rounded-3 border bg-white h-100">
                     <span className="text-muted d-block fs-11 text-uppercase fw-600 mb-1">
-                      <i className="fa-solid fa-barcode me-1 text-primary"></i> Mã SKU
+                      <i className="fa-solid fa-barcode me-1 text-primary"></i> SKU Code
                     </span>
                     <code className="fw-700 fs-13 text-dark">
-                      {selectedProductDetail.sku || "Chưa có SKU"}
+                      {selectedProductDetail.sku || "No SKU"}
                     </code>
                   </div>
                 </div>
@@ -1648,17 +1756,17 @@ export const AdminProductManagement = () => {
                 <div className="col-sm-6">
                   <div className="p-3 rounded-3 border bg-white h-100">
                     <span className="text-muted d-block fs-11 text-uppercase fw-600 mb-1">
-                      <i className="fa-solid fa-boxes-stacked me-1 text-primary"></i> Tồn kho (Stock)
+                      <i className="fa-solid fa-boxes-stacked me-1 text-primary"></i> Stock Quantity
                     </span>
                     <span className="fw-700 fs-14 text-dark">
                       {selectedProductDetail.stockQuantity ?? selectedProductDetail.stock ?? 0} pcs
                     </span>
                     {(selectedProductDetail.stockQuantity ?? selectedProductDetail.stock ?? 0) === 0 ? (
-                      <span className="badge bg-danger ms-2">Hết hàng</span>
+                      <span className="badge bg-danger ms-2">Out of Stock</span>
                     ) : (selectedProductDetail.stockQuantity ?? selectedProductDetail.stock ?? 0) < 10 ? (
-                      <span className="badge bg-warning text-dark ms-2">Sắp hết</span>
+                      <span className="badge bg-warning text-dark ms-2">Low Stock</span>
                     ) : (
-                      <span className="badge bg-success ms-2">Còn hàng</span>
+                      <span className="badge bg-success ms-2">In Stock</span>
                     )}
                   </div>
                 </div>
@@ -1666,7 +1774,7 @@ export const AdminProductManagement = () => {
                 <div className="col-sm-6">
                   <div className="p-3 rounded-3 border bg-white h-100">
                     <span className="text-muted d-block fs-11 text-uppercase fw-600 mb-1">
-                      <i className="fa-solid fa-weight-hanging me-1 text-primary"></i> Trọng lượng (Weight)
+                      <i className="fa-solid fa-weight-hanging me-1 text-primary"></i> Weight
                     </span>
                     <span className="fw-700 fs-13 text-dark">
                       {selectedProductDetail.weightKg || selectedProductDetail.weight || "0.100"} kg
@@ -1677,13 +1785,13 @@ export const AdminProductManagement = () => {
                 <div className="col-sm-6">
                   <div className="p-3 rounded-3 border bg-white h-100">
                     <span className="text-muted d-block fs-11 text-uppercase fw-600 mb-1">
-                      <i className="fa-solid fa-clock me-1 text-primary"></i> Ngày cập nhật
+                      <i className="fa-solid fa-clock me-1 text-primary"></i> Last Updated
                     </span>
                     <span className="fw-600 fs-13 text-dark">
                       {selectedProductDetail.updatedAt
-                        ? new Date(selectedProductDetail.updatedAt).toLocaleString("vi-VN")
+                        ? new Date(selectedProductDetail.updatedAt).toLocaleString("en-US")
                         : selectedProductDetail.createdAt
-                          ? new Date(selectedProductDetail.createdAt).toLocaleString("vi-VN")
+                          ? new Date(selectedProductDetail.createdAt).toLocaleString("en-US")
                           : "—"}
                     </span>
                   </div>
@@ -1693,10 +1801,10 @@ export const AdminProductManagement = () => {
                 <div className="col-12">
                   <div className="p-3 rounded-3 border bg-white">
                     <span className="text-muted d-block fs-11 text-uppercase fw-600 mb-1">
-                      <i className="fa-solid fa-align-left me-1 text-primary"></i> Mô tả sản phẩm
+                      <i className="fa-solid fa-align-left me-1 text-primary"></i> Product Description
                     </span>
                     <p className="mb-0 text-dark fs-13" style={{ whiteSpace: "pre-line", lineHeight: 1.6 }}>
-                      {selectedProductDetail.description || "Chưa có mô tả chi tiết cho sản phẩm này."}
+                      {selectedProductDetail.description || "No detailed description available for this product."}
                     </p>
                   </div>
                 </div>
@@ -1719,7 +1827,7 @@ export const AdminProductManagement = () => {
                 className="btn btn-light rounded-pill px-4 fw-600 border"
                 onClick={() => setIsDetailModalOpen(false)}
               >
-                Đóng
+                Close
               </button>
               <button
                 type="button"
@@ -1730,7 +1838,7 @@ export const AdminProductManagement = () => {
                   openEditModal(prod);
                 }}
               >
-                <i className="fa-regular fa-pen-to-square me-1"></i> Chỉnh sửa sản phẩm
+                <i className="fa-regular fa-pen-to-square me-1"></i> Edit Product
               </button>
             </div>
           </div>
@@ -1828,7 +1936,15 @@ export const AdminProductManagement = () => {
                   required
                   style={{ borderRadius: "10px", borderColor: "#cbd5e1" }}
                 />
-                <div className="d-flex justify-content-center gap-2 mt-3">
+                <div className="d-flex flex-wrap justify-content-center gap-2 mt-3">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => setStockToUpdate(0)}
+                    title="Set to out of stock"
+                  >
+                    Set 0 (Hết hàng)
+                  </button>
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-secondary"
@@ -1864,6 +1980,23 @@ export const AdminProductManagement = () => {
                   >
                     +50
                   </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => setStockToUpdate((s) => Number(s) + 100)}
+                  >
+                    +100
+                  </button>
+                </div>
+                <div className="text-center mt-3 fs-12">
+                  <span className="text-muted">Trạng thái dự kiến: </span>
+                  {Number(stockToUpdate) === 0 ? (
+                    <span className="badge bg-danger text-white">Hết hàng</span>
+                  ) : Number(stockToUpdate) <= 5 ? (
+                    <span className="badge bg-warning text-dark">Sắp hết hàng (Low Stock)</span>
+                  ) : (
+                    <span className="badge bg-success text-white">Còn hàng</span>
+                  )}
                 </div>
               </div>
 

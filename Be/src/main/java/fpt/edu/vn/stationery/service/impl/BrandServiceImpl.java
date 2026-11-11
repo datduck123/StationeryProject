@@ -32,8 +32,15 @@ public class BrandServiceImpl implements BrandService {
             throw new DuplicateResourceException("Brand name already exists");
         }
         Brand brand = brandMapper.toEntity(request);
+        if (request.getStatus() != null && !request.getStatus().isBlank()) {
+            brand.setStatus(request.getStatus().trim().toUpperCase());
+        } else {
+            brand.setStatus("ACTIVE");
+        }
         Brand savedBrand = brandRepository.save(brand);
-        return brandMapper.toDto(savedBrand);
+        BrandResponseDTO dto = brandMapper.toDto(savedBrand);
+        dto.setProductCount(0L);
+        return dto;
     }
 
     @Override
@@ -47,8 +54,13 @@ public class BrandServiceImpl implements BrandService {
         }
 
         brandMapper.updateEntity(brand, request);
+        if (request.getStatus() != null && !request.getStatus().isBlank()) {
+            brand.setStatus(request.getStatus().trim().toUpperCase());
+        }
         Brand updatedBrand = brandRepository.save(brand);
-        return brandMapper.toDto(updatedBrand);
+        BrandResponseDTO dto = brandMapper.toDto(updatedBrand);
+        dto.setProductCount(productRepository.countByBrandBrandId(id));
+        return dto;
     }
 
     @Override
@@ -59,7 +71,7 @@ public class BrandServiceImpl implements BrandService {
         }
 
         if (productRepository.existsByBrandBrandId(id)) {
-            throw new BadRequestException("Cannot delete brand as it is being used by one or more products");
+            throw new BadRequestException("Cannot delete brand as it is linked to one or more products.");
         }
 
         brandRepository.deleteById(id);
@@ -69,7 +81,31 @@ public class BrandServiceImpl implements BrandService {
     @Transactional(readOnly = true)
     public List<BrandResponseDTO> getAllBrands() {
         return brandRepository.findAll().stream()
-                .map(brandMapper::toDto)
+                .map(brand -> {
+                    BrandResponseDTO dto = brandMapper.toDto(brand);
+                    if (brand.getBrandId() != null) {
+                        dto.setProductCount(productRepository.countByBrandBrandId(brand.getBrandId()));
+                    } else {
+                        dto.setProductCount(0L);
+                    }
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BrandResponseDTO> getActiveBrands() {
+        return brandRepository.findByStatus("ACTIVE").stream()
+                .map(brand -> {
+                    BrandResponseDTO dto = brandMapper.toDto(brand);
+                    if (brand.getBrandId() != null) {
+                        dto.setProductCount(productRepository.countByBrandBrandId(brand.getBrandId()));
+                    } else {
+                        dto.setProductCount(0L);
+                    }
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -78,6 +114,8 @@ public class BrandServiceImpl implements BrandService {
     public BrandResponseDTO getBrandById(Long id) {
         Brand brand = brandRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Brand not found with id: " + id));
-        return brandMapper.toDto(brand);
+        BrandResponseDTO dto = brandMapper.toDto(brand);
+        dto.setProductCount(productRepository.countByBrandBrandId(id));
+        return dto;
     }
 }

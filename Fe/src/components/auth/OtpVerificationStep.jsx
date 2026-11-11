@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useToast } from "../../providers/ToastContext";
 import OtpSixBoxInput from "./OtpSixBoxInput";
 
@@ -17,6 +18,7 @@ export const OtpVerificationStep = ({
   subtitle = "We sent a 6-digit verification code to",
   submitButtonText = "Verify & Complete",
 }) => {
+  const { t } = useTranslation();
   const { showToast } = useToast();
 
   // Expiry countdown: 5 minutes (300 seconds)
@@ -68,7 +70,7 @@ export const OtpVerificationStep = ({
   const handleVerifySubmit = (e) => {
     e?.preventDefault();
     if (otp.length < 6) {
-      showToast("Please enter all 6 digits of the OTP code.", "warning");
+      showToast(t("notifications.otpRequired"), "warning");
       return;
     }
     onVerify();
