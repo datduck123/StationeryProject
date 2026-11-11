@@ -27,8 +27,7 @@ const AdminOrderManagement = () => {
   const { showToast } = useToast();
   const [searchInput, setSearchInput] = useState("");
   const [keyword, setKeyword] = useState("");
-  const [status, setStatus] = useState("");
-  const [sort, setSort] = useState("createdAt:desc");
+  const [status, setStatus] = useState("SHIPPING");
   const [page, setPage] = useState(0);
   const [pageData, setPageData] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -49,21 +48,10 @@ const AdminOrderManagement = () => {
   const detailRequestId = useRef(0);
   const closeDetailButton = useRef(null);
   const closeStatusButton = useRef(null);
-  const statusOptions = [
-    { value: "", label: t("adminOrders.filters.allStatuses") },
-    ...["PENDING", "CONFIRMED", "SHIPPING", "DELIVERED", "CANCELLED"].map((value) => ({
-      value,
-      label: t(`orders.statuses.${value}`),
-    })),
-  ];
-  const sortOptions = [
-    { value: "createdAt:desc", label: t("orders.sort.newest") },
-    { value: "createdAt:asc", label: t("orders.sort.oldest") },
-    { value: "totalCost:desc", label: t("orders.sort.totalHighLow") },
-    { value: "totalCost:asc", label: t("orders.sort.totalLowHigh") },
-    { value: "orderId:desc", label: t("orders.sort.idDescending") },
-    { value: "orderId:asc", label: t("orders.sort.idAscending") },
-  ];
+  const statusOptions = ["SHIPPING", "DELIVERED"].map((value) => ({
+    value,
+    label: t(`orders.statuses.${value}`),
+  }));
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -77,12 +65,9 @@ const AdminOrderManagement = () => {
     let active = true;
     setLoading(true);
     setError("");
-    const [sortBy, sortDir] = sort.split(":");
     orderService.getOrders({
       page,
       size: PAGE_SIZE,
-      sortBy,
-      sortDir,
       ...(status ? { status } : {}),
       ...(keyword ? { keyword } : {}),
     }).then((data) => {
@@ -97,7 +82,7 @@ const AdminOrderManagement = () => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [page, sort, status, keyword, refreshKey, showToast, t]);
+  }, [page, status, keyword, refreshKey, showToast, t]);
 
   useEffect(() => {
     let active = true;
@@ -217,10 +202,6 @@ const AdminOrderManagement = () => {
           onChange: (value) => { setStatus(value); setPage(0); },
           options: statusOptions,
         }]}
-        sort={sort}
-        sortLabel={t("adminOrders.filters.sort")}
-        onSortChange={(value) => { setSort(value); setPage(0); }}
-        sortOptions={sortOptions}
       />
       <div className="admin-card">
         <div className="table-responsive">
