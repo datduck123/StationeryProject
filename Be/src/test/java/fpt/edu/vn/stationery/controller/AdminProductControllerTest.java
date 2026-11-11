@@ -255,5 +255,25 @@ public class AdminProductControllerTest {
                         .content(objectMapper.writeValueAsString(stockRequest)))
                 .andExpect(status().isOk());
     }
+
+    // 13. Sort by sold (200 OK)
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    @DisplayName("13. GET /api/admin/products: Success with sold sorting")
+    void testGetAllProductsAdmin_WithSoldSort() throws Exception {
+        fpt.edu.vn.stationery.dto.response.PageDTO<ProductResponseDTO> pageDTO = new fpt.edu.vn.stationery.dto.response.PageDTO<>();
+        pageDTO.setContent(java.util.List.of(sampleResponse));
+        pageDTO.setPageNumber(0);
+        pageDTO.setPageSize(10);
+        pageDTO.setTotalElements(1);
+        pageDTO.setTotalPages(1);
+        pageDTO.setLast(true);
+        when(productService.getProductsAdmin(0, 10, null, null, null, null, "sold,desc"))
+                .thenReturn(pageDTO);
+
+        mockMvc.perform(get("/api/admin/products?sort=sold,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray());
+    }
 }
 
