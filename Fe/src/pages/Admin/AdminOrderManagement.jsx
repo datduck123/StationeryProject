@@ -4,6 +4,7 @@ import i18next from "i18next";
 import { I18nextProvider, useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import AdminListControls from "../../components/admin/AdminListControls";
+import OrderPriceBreakdown from "../../components/orders/OrderPriceBreakdown";
 import OrderTrackingTimeline from "../../components/orders/OrderTrackingTimeline";
 import OrderStatusChanger from "../../components/orders/OrderStatusChanger";
 import { nextStatuses } from "../../components/orders/orderStatusTransitions";
@@ -322,7 +323,7 @@ const AdminOrderManagementContent = () => {
                 </>
               )}
             </div>
-            {selectedOrder && <div className="admin-order-dialog-footer customer-order-modal-footer"><span>{t("orders.total")}</span><strong>{money(selectedOrder.totalCost, i18n.language)}</strong></div>}
+            {selectedOrder && <div className="admin-order-dialog-footer customer-order-modal-footer order-price-breakdown-container"><OrderPriceBreakdown order={selectedOrder} /></div>}
           </div>
         </div>,
         document.body,
