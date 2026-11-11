@@ -375,7 +375,6 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
             <label htmlFor="payment-vnpay">{t("checkout.vnpay", "Thanh toán trực tuyến (ONLINE)")}</label>
           </div>
         </div>
-
         <button
           className="cus-btn w-100"
           type="submit"

@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import useQuantityInput from "../../hooks/useQuantityInput";
 
 export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
   const { t } = useTranslation();
+  const [isRemoving, setIsRemoving] = useState(false);
   const quantity = item.finalQuantity || item.requestedQuantity || 1;
   const maxStock = item.currentStock ?? 999;
   const unitPrice = Number(item.unitPrice || 0);
@@ -24,20 +25,36 @@ export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
     commitOnBlurOnly: true,
   });
 
+  const handleRemove = (e) => {
+    if (e?.stopPropagation) e.stopPropagation();
+    if (isRemoving) return;
+    setIsRemoving(true);
+    // Chờ 500ms cho hiệu ứng bounceOutLeft văng sang trái hoàn tất trước khi gọi API xóa
+    setTimeout(() => {
+      onRemove(item.cartItemId);
+    }, 500);
+  };
+
   return (
-    <table className="cart-table mb-16">
-      <tbody>
-        <tr className="table-row">
-          <td className="pd" style={{ width: "45%" }}>
-            <div className="product-detail-box d-flex align-items-center gap-16">
-              <button
-                type="button"
-                className="btn btn-link text-danger p-0 border-0 me-2"
-                title={t("cart.removeProduct", "Remove product")}
-                onClick={() => onRemove(item.cartItemId)}
-              >
-                <i className="fa-solid fa-xmark fs-5"></i>
-              </button>
+    <div
+      className={`cart-item-row-wrapper ${
+        isRemoving ? "cart-item-removing" : ""
+      }`}
+    >
+      <table className="cart-table mb-16">
+        <tbody>
+          <tr className="table-row">
+            <td className="pd" style={{ width: "45%" }}>
+              <div className="product-detail-box d-flex align-items-center gap-16">
+                <button
+                  type="button"
+                  className="btn btn-link text-danger p-0 border-0 me-2"
+                  title={t("cart.removeProduct", "Remove product")}
+                  onClick={handleRemove}
+                  disabled={isRemoving}
+                >
+                  <i className="fa-solid fa-xmark fs-5"></i>
+                </button>
               <div
                 className="img-block br-8 overflow-hidden bg-semi-white"
                 style={{ width: "70px", height: "70px", flexShrink: 0 }}
@@ -116,7 +133,8 @@ export const CartItemRow = ({ item, onUpdateQuantity, onRemove }) => {
         </tr>
       </tbody>
     </table>
-  );
+  </div>
+);
 };
 
 export default CartItemRow;
