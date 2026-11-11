@@ -362,7 +362,7 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
         {/* Payment Methods */}
         <div className="payment-accordion mb-24">
           <h6 className="fw-600 mb-16">{t("checkout.paymentMethod", "Payment Method")}</h6>
-          <div className="cus-radio mb-12">
+          <div className="cus-radio">
             <input
               type="radio"
               id="payment-cod"
@@ -372,17 +372,6 @@ export const CheckoutSummary = ({ formData, setFormData, isSubmitting }) => {
               onChange={handleChange}
             />
             <label htmlFor="payment-cod">{t("checkout.cashOnDelivery", "Cash on delivery (COD)")}</label>
-          </div>
-          <div className="cus-radio">
-            <input
-              type="radio"
-              id="payment-vnpay"
-              name="paymentMethod"
-              value="ONLINE"
-              checked={formData.paymentMethod === "ONLINE" || formData.paymentMethod === "VNPAY"}
-              onChange={handleChange}
-            />
-            <label htmlFor="payment-vnpay">{t("checkout.vnpay", "Thanh toán trực tuyến (ONLINE)")}</label>
           </div>
         </div>
         <button
