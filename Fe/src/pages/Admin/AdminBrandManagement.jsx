@@ -143,25 +143,10 @@ export const AdminBrandManagement = () => {
   const fetchBrands = useCallback(async () => {
     setLoading(true);
     try {
-      const [brandRes, prodRes] = await Promise.allSettled([
-        adminGetBrands(),
-        adminGetProducts({ page: 0, size: 2000 }),
-      ]);
-
-      let productCountMap = {};
-      if (prodRes.status === "fulfilled" && prodRes.value?.data) {
-        const prodList =
-          prodRes.value.data.content || prodRes.value.data || [];
-        prodList.forEach((p) => {
-          const bId = p.brand?.brandId || p.brandId;
-          if (bId) {
-            productCountMap[bId] = (productCountMap[bId] || 0) + 1;
-          }
-        });
-      }
-
-      if (brandRes.status === "fulfilled" && brandRes.value?.data?.length > 0) {
-        const list = brandRes.value.data.map((b) => {
+      const brandRes = await adminGetBrands();
+      const rawList = brandRes.data || [];
+      if (rawList.length > 0) {
+        const list = rawList.map((b) => {
           const bId = b.brandId || b.id;
           const fallbackMatch = FALLBACK_BRANDS.find(
             (fb) =>
@@ -177,11 +162,11 @@ export const AdminBrandManagement = () => {
             establishedYear:
               b.establishedYear || fallbackMatch?.establishedYear || null,
             description: b.description || fallbackMatch?.description || "",
-            status: b.status || fallbackMatch?.status || "ACTIVE",
+            status: b.status || "ACTIVE",
             productCount:
-              productCountMap[bId] !== undefined
-                ? productCountMap[bId]
-                : fallbackMatch?.productCount || 0,
+              b.productCount !== undefined && b.productCount !== null
+                ? Number(b.productCount)
+                : (fallbackMatch?.productCount || 0),
           };
         });
         setBrands(list);
@@ -312,6 +297,7 @@ export const AdminBrandManagement = () => {
       await adminCreateBrand({
         name: newBrandData.name,
         description: newBrandData.description,
+        status: newBrandData.status,
       });
       showToast(`Brand "${newBrandData.name}" created successfully!`, "success");
       setIsAddModalOpen(false);
@@ -354,6 +340,7 @@ export const AdminBrandManagement = () => {
       await adminUpdateBrand(brandId, {
         name: updateData.name,
         description: updateData.description,
+        status: updateData.status,
       });
       setBrands((prev) =>
         prev.map((b) =>
@@ -388,6 +375,7 @@ export const AdminBrandManagement = () => {
       await adminUpdateBrand(brandId, {
         name: brand.name,
         description: brand.description || "",
+        status: nextStatus,
       });
     } catch (err) {
       console.warn("API update brand status:", err);
