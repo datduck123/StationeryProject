@@ -82,7 +82,6 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
         otpService.deleteOtp(email, AppConstants.TYPE_REGISTER);
-        log.info(">>> New user registered successfully: {}", email);
     }
 
     @Override
