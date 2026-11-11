@@ -248,7 +248,7 @@ const OrderDetailPage = () => {
                   </div>
                 </div>
 
-                {/* Right Column: Order Summary (Checkout-style Sidebar Card) */}
+                {/* Right Column: Orderary (Order-style SidebarCard ) */}
                 <div className="col-xl-4">
                   <div className="checkout-sidebar">
                     <div className="cart-total-box bg-white p-24 br-15 border shadow-sm">
@@ -309,8 +309,8 @@ const OrderDetailPage = () => {
                               {order.voucherCode
                                 ? ` (${order.voucherCode})`
                                 : order.voucherId
-                                ? ` (#${order.voucherId})`
-                                : ""}
+                                  ? ` (#${order.voucherId})`
+                                  : ""}
                             </span>
                             <span className="fw-600">
                               -{formatOrderMoney(order.discountAmount, i18n.language)}
